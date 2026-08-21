@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Concerns\ScopedToUser;
 use App\Shared\Traits\HasPermissions;
 use App\Shared\Enums\UserRole;
 
@@ -17,12 +18,19 @@ use App\Shared\Enums\UserRole;
  */
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasPermissions {
+    use HasFactory, Notifiable, HasPermissions, ScopedToUser {
         HasPermissions::hasPermission as hasGranularPermission;
     }
 
     /** Rôles à périmètre restreint (isolation multi-tenant) */
     public const TENANT_ROLES = ['federation', 'ligue', 'maitre'];
+
+    /** Colonnes de périmètre directement sur `users` (pas de relation à traverser). */
+    protected static array $scopePaths = [
+        'salle_id' => 'salle_id',
+        'ligue_id' => 'ligue_id',
+        'federation_id' => 'federation_id',
+    ];
 
     /** Alias legacy de permissions (repris de PermissionService.java). */
     private const LEGACY_ALIASES = [

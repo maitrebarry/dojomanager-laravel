@@ -10,6 +10,7 @@ use App\Models\Federation;
 use App\Models\Grade;
 use App\Models\Ligue;
 use App\Models\Salle;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -68,7 +69,29 @@ class CeintureNoireController extends Controller
                 'editable' => true,
             ]);
 
-        $ceinturesNoires = $disciplesDan->concat($manuelles)->sortBy('full_name')->values();
+        // Maîtres / responsables de ligue / fédération : leur grade personnel n'est
+        // jamais un Disciple (ils gèrent une structure, ils n'en sont pas membres) —
+        // on les inclut ici dès qu'ils détiennent un grade DAN, avec le même périmètre
+        // visibleTo() que le reste (un maître est d'office rattaché à une salle → ligue
+        // → fédération, cf. User::scopeContext()).
+        $gestionnairesDan = User::query()
+            ->visibleTo($request->user())
+            ->whereIn('role', User::TENANT_ROLES)
+            ->whereHas('grade', fn ($q) => $q->where('type_grade', 'DAN'))
+            ->with(['grade:id,nom_grade', 'salle:id,nom'])
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+            ->get()
+            ->map(fn (User $u) => (object) [
+                'origine' => 'GESTIONNAIRE',
+                'id' => $u->id,
+                'full_name' => $u->name,
+                'sexe' => null,
+                'grade_nom' => $u->grade?->nom_grade,
+                'salle_nom' => $u->salle?->nom,
+                'editable' => false,
+            ]);
+
+        $ceinturesNoires = $disciplesDan->concat($manuelles)->concat($gestionnairesDan)->sortBy('full_name')->values();
 
         return view('admin.ceintures-noires.index', [
             'ceinturesNoires' => $ceinturesNoires,

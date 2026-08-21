@@ -917,6 +917,25 @@
             });
             return false;
         };
+        // Confirmation générique (non destructive) : ex. « Finaliser la session ? ».
+        window.dojoConfirmAction = function (formEl, message, title) {
+            if (!window.Swal) { return confirm(message || 'Confirmer ?'); }
+            Swal.fire({
+                title: title || @json(__('messages.confirm')),
+                text: message || '',
+                icon: 'question', showCancelButton: true,
+                confirmButtonColor: '#0f5132', cancelButtonColor: '#6c757d',
+                confirmButtonText: @json(__('messages.confirm')),
+                cancelButtonText: @json(__('messages.cancel')),
+            }).then((r) => {
+                if (r.isConfirmed) {
+                    dojoShowButtonSpinner(formEl.querySelector('button[type="submit"], input[type="submit"]'));
+                    formEl.submit();
+                }
+            });
+            return false;
+        };
+
         document.addEventListener('DOMContentLoaded', function () {
             @if(session('success')) window.dojoToast('success', @json(session('success'))); @endif
             @if(session('error')) window.dojoToast('error', @json(session('error'))); @endif

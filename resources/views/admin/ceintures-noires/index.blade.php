@@ -57,9 +57,15 @@
                         <td><span class="badge bg-dark">{{ $cn->grade_nom ?? '-' }}</span></td>
                         <td>{{ $cn->salle_nom ?? '-' }}</td>
                         <td>
-                            <span class="badge bg-{{ $cn->origine === 'MANUELLE' ? 'info' : 'secondary' }}">
-                                {{ $cn->origine === 'MANUELLE' ? __('messages.ceintures_noires.manual') : __('messages.ceintures_noires.disciple') }}
-                            </span>
+                            @php
+                                $originBadge = ['MANUELLE' => 'info', 'DISCIPLE' => 'secondary', 'GESTIONNAIRE' => 'success'][$cn->origine] ?? 'secondary';
+                                $originLabel = [
+                                    'MANUELLE' => __('messages.ceintures_noires.manual'),
+                                    'DISCIPLE' => __('messages.ceintures_noires.disciple'),
+                                    'GESTIONNAIRE' => __('messages.ceintures_noires.manager'),
+                                ][$cn->origine] ?? __('messages.ceintures_noires.disciple');
+                            @endphp
+                            <span class="badge bg-{{ $originBadge }}">{{ $originLabel }}</span>
                         </td>
                         <td class="text-end">
                             @if($cn->editable)

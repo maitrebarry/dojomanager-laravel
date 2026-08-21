@@ -55,7 +55,7 @@
             <span class="badge bg-light text-dark">{{ __('messages.grade_passages.exam_progress', ['done' => $completion['evaluated'], 'total' => $completion['total']]) }}</span>
             @if($canManage && !$session->finalisee && $completion['complete'])
                 <span class="badge bg-success">{{ __('messages.grade_passages.exam_all_done') }}</span>
-                <form action="{{ route('admin.grade-passages.finalize', $session) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('{{ __('messages.grade_passages.finalize_confirm') }}');">
+                <form action="{{ route('admin.grade-passages.finalize', $session) }}" method="POST" class="d-inline m-0" onsubmit="return dojoConfirmAction(this, @json(__('messages.grade_passages.finalize_confirm')));">
                     @csrf
                     <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-lock me-1"></i> {{ __('messages.grade_passages.finalize') }}</button>
                 </form>

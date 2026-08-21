@@ -11,7 +11,7 @@
 @section('actions')
     @if(!$session->finalisee && Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('PASSAGEGRADES_MANAGE')))
         <a href="{{ route('admin.grade-passages.edit', $session) }}" class="btn btn-outline-primary shadow-sm"><i class="fas fa-edit me-1"></i> {{ __('messages.edit') }}</a>
-        <form action="{{ route('admin.grade-passages.finalize', $session) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('messages.grade_passages.finalize_confirm') }}');">
+        <form action="{{ route('admin.grade-passages.finalize', $session) }}" method="POST" class="d-inline" onsubmit="return dojoConfirmAction(this, @json(__('messages.grade_passages.finalize_confirm')));">
             @csrf
             <button type="submit" class="btn btn-success shadow-sm"><i class="fas fa-lock me-1"></i> {{ __('messages.grade_passages.finalize') }}</button>
         </form>

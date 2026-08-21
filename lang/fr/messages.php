@@ -433,6 +433,7 @@ return [
     'confirm_delete' => 'Confirmer la suppression',
     'delete_warning' => 'Cette action est irréversible.',
     'yes_delete' => 'Oui, supprimer',
+    'confirm' => 'Confirmer',
 
     'dojo_dashboard' => [
         'total_disciples' => 'Total disciples',
@@ -644,6 +645,7 @@ return [
         'origin' => 'Origine',
         'manual' => 'Saisie manuelle',
         'disciple' => 'Disciple',
+        'manager' => 'Maître / Responsable',
         'empty' => 'Aucune ceinture noire. Les disciples au grade DAN apparaissent automatiquement ici.',
         'created' => 'Ceinture noire ajoutée avec succès.',
         'updated' => 'Ceinture noire modifiée avec succès.',
