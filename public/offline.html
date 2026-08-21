@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hors ligne - DojoManager</title>
+    <style>
+        body {
+            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: #0b1120; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center; padding: 24px;
+        }
+        .box { max-width: 380px; }
+        img { width: 84px; height: 84px; border-radius: 18px; margin-bottom: 18px; }
+        h1 { font-size: 20px; margin: 0 0 8px; }
+        p { color: #9aa3b2; font-size: 14px; line-height: 1.6; margin: 0 0 20px; }
+        button {
+            background: #152645; color: #fff; border: 0; border-radius: 8px;
+            padding: 11px 22px; font-weight: 600; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <img src="/images/icons/dojo-192.png" alt="DojoManager">
+        <h1>Pas de connexion</h1>
+        <p>Cette page n'est pas disponible hors ligne. Vérifiez votre connexion Internet puis réessayez.</p>
+        <button type="button" onclick="window.location.reload()">Réessayer</button>
+    </div>
+</body>
+</html>
