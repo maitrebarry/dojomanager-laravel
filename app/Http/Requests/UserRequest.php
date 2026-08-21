@@ -80,10 +80,10 @@ class UserRequest extends FormRequest
         
         if (!$isUpdate) {
             // En création : mot de passe obligatoire
-            $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
+            $rules['password'] = ['required', 'string', 'min:4', 'confirmed'];
         } else {
             // En modification : mot de passe optionnel
-            $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
+            $rules['password'] = ['nullable', 'string', 'min:4', 'confirmed'];
         }
         
         return $rules;
@@ -97,7 +97,7 @@ class UserRequest extends FormRequest
             'email.unique' => 'Cet email est déjà utilisé.',
             'phone.unique' => 'Ce numéro de téléphone est déjà utilisé.',
             'password.required' => 'Le mot de passe est obligatoire.',
-            'password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
+            'password.min' => 'Le mot de passe doit contenir au moins 4 caractères.',
             'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
             'role.required' => 'Le rôle est obligatoire.',
             'role.in' => 'Vous ne pouvez attribuer que les rôles autorisés par votre niveau.',
