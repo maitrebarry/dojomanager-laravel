@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Disciple;
+use App\Models\DiscipleGradeHistorique;
 use App\Models\Grade;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -106,6 +107,15 @@ class DiscipleGradeController extends Controller
             }
 
             $disciple->update($payload);
+
+            // Journalise la date d'obtention de CE grade précis (distinct de
+            // date_obtention_grade, qui ne garde que le grade courant) — alimente
+            // automatiquement le tableau des grades au verso de la carte de licence.
+            DiscipleGradeHistorique::updateOrCreate(
+                ['disciple_id' => $disciple->id, 'grade_id' => $targetGradeId],
+                ['date_obtention' => $payload['date_obtention_grade'] ?? now()->toDateString()]
+            );
+
             $updated++;
         }
 
@@ -117,6 +127,61 @@ class DiscipleGradeController extends Controller
         return redirect()
             ->route('admin.disciples.grades.index', $request->only(['search', 'grade_id']))
             ->with('success', $message);
+    }
+
+    /**
+     * Historique des dates d'obtention, grade par grade — permet de rattraper
+     * les grades obtenus avant l'usage de l'application (aucune trace créée
+     * automatiquement pour eux) et de corriger une date. Alimente le tableau
+     * des grades imprimé au verso de la carte de licence (planche.blade.php).
+     */
+    public function history(Disciple $disciple): View
+    {
+        $this->authorizeScope($disciple);
+        $disciple->load('grade', 'gradeHistoriques');
+
+        $sequence = $this->gradeSequence(request()->user());
+        $dates = $disciple->gradeHistoriques->pluck('date_obtention', 'grade_id');
+
+        return view('admin.disciples.grade-history', [
+            'disciple' => $disciple,
+            'grades' => $sequence,
+            'dates' => $dates,
+            'page_title' => __('messages.disciple_grades.history_title'),
+        ]);
+    }
+
+    public function saveHistory(Request $request, Disciple $disciple): RedirectResponse
+    {
+        $this->authorizeScope($disciple);
+        $sequence = $this->gradeSequence($request->user());
+
+        $validated = $request->validate([
+            'dates' => ['nullable', 'array'],
+            'dates.*' => ['nullable', 'date'],
+        ]);
+
+        $validGradeIds = $sequence->pluck('id')->all();
+
+        foreach ($validated['dates'] ?? [] as $gradeId => $date) {
+            if (!in_array((int) $gradeId, $validGradeIds, true)) {
+                continue;
+            }
+
+            if (blank($date)) {
+                DiscipleGradeHistorique::where('disciple_id', $disciple->id)->where('grade_id', $gradeId)->delete();
+                continue;
+            }
+
+            DiscipleGradeHistorique::updateOrCreate(
+                ['disciple_id' => $disciple->id, 'grade_id' => $gradeId],
+                ['date_obtention' => $date]
+            );
+        }
+
+        return redirect()
+            ->route('admin.disciples.grades.history', $disciple)
+            ->with('success', __('messages.disciple_grades.history_saved'));
     }
 
     public function attestation(Disciple $disciple)

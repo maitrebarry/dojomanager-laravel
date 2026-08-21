@@ -65,6 +65,11 @@ class Disciple extends Model
         return $this->belongsTo(Grade::class);
     }
 
+    public function gradeHistoriques(): HasMany
+    {
+        return $this->hasMany(DiscipleGradeHistorique::class);
+    }
+
     public function cotisations(): HasMany
     {
         return $this->hasMany(Cotisation::class);

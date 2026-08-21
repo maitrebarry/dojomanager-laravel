@@ -104,6 +104,9 @@
         .sheet-grade-table th:nth-child(1), .sheet-grade-table td:nth-child(1) { width: 24%; }
         .sheet-grade-table th:nth-child(2), .sheet-grade-table td:nth-child(2) { width: 25%; }
         .sheet-grade-table th:nth-child(3), .sheet-grade-table td:nth-child(3) { width: 51%; }
+        .sheet-grade-sig { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+        .sheet-grade-sig img { max-height: 2.3mm; max-width: 22mm; object-fit: contain; display: block; }
+        .sheet-grade-sig span { font-size: 1.15mm; font-weight: 800; text-transform: uppercase; }
 
         .empty-sheet { padding-top: 80mm; text-align: center; color: #6b7280; font-weight: 800; }
 
@@ -119,7 +122,6 @@
     </style>
 </head>
 @php
-    $gradeRows = ['9ème Kieup','8ème Kieup','7ème Kieup','6ème Kieup','5ème Kieup','4ème Kieup','3ème Kieup','2ème Kieup','1er Kieup'];
     $chunks = collect($cards)->chunk(8);
 @endphp
 <body>
@@ -190,12 +192,25 @@
                                                     <tr>
                                                         <th>Grade</th>
                                                         <th>Date d'obtention du Grade</th>
-                                                        <th>Signature du Directeur Technique</th>
+                                                        <th>Signature du Maître de salle</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach($gradeRows as $gradeRow)
-                                                        <tr><td>{{ $gradeRow }}</td><td></td><td></td></tr>
+                                                    @foreach($c['grade_rows'] as $gradeRow)
+                                                        <tr>
+                                                            <td>{{ $gradeRow['label'] }}</td>
+                                                            <td>{{ $gradeRow['date'] }}</td>
+                                                            <td>
+                                                                @if($gradeRow['date'])
+                                                                    <div class="sheet-grade-sig">
+                                                                        @if(!empty($gradeRow['signature']))
+                                                                            <img src="{{ $gradeRow['signature'] }}" alt="Signature">
+                                                                        @endif
+                                                                        <span>{{ $gradeRow['signer_name'] }}{{ $gradeRow['signer_grade'] ? ' — ' . $gradeRow['signer_grade'] : '' }}</span>
+                                                                    </div>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
                                                     @endforeach
                                                 </tbody>
                                             </table>

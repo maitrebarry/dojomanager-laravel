@@ -11,6 +11,7 @@
 @section('actions')
     <a href="{{ route('admin.disciples.receipt', $disciple) }}" target="_blank" class="btn btn-success shadow-sm"><i class="fas fa-receipt me-1"></i> {{ __('messages.disciples.receipt') }}</a>
     @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('DISCIPLE_UPDATE')))
+        <a href="{{ route('admin.disciples.grades.history', $disciple) }}" class="btn btn-outline-secondary shadow-sm"><i class="fas fa-calendar-check me-1"></i> {{ __('messages.disciple_grades.history_title') }}</a>
         <a href="{{ route('admin.disciples.edit', $disciple) }}" class="btn btn-primary shadow-sm"><i class="fas fa-edit me-1"></i> {{ __('messages.edit') }}</a>
     @endif
     <a href="{{ route('admin.disciples.index') }}" class="btn btn-light shadow-sm"><i class="fas fa-arrow-left me-1"></i> {{ __('messages.back') }}</a>

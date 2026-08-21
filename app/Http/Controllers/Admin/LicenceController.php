@@ -46,7 +46,7 @@ class LicenceController extends Controller
         $disciples = Disciple::query()
             ->visibleTo($request->user())
             ->whereIn('id', $ids)
-            ->with(['grade:id,nom_grade', 'salle.ligue.federation', 'salle.maitre', 'salle.maitreUser.grade'])
+            ->with(['grade:id,nom_grade,niveau', 'salle.ligue.federation', 'salle.maitre', 'salle.maitreUser.grade', 'gradeHistoriques.grade'])
             ->orderBy('nom')->orderBy('prenom')
             ->get();
 
@@ -189,6 +189,9 @@ class LicenceController extends Controller
         //   fédérale (fédér.)   → signature du président de la fédération
         $signature = $this->signatureForScope($role, $salle, $ligue, $federation) ?? $issuerSignature;
 
+        $signerName = $signature?->master_name ?: ($salle?->maitre_display_name ?? '');
+        $signerGrade = $signature?->master_grade ?: ($salle?->maitre_display_grade ?? '');
+
         return [
             'nom' => $d->nom,
             'prenom' => $d->prenom,
@@ -212,9 +215,39 @@ class LicenceController extends Controller
             'photo' => $this->photoData($d),
             'signature' => $signature?->signature_data,
             'signer' => $meta['signer'],
-            'signer_name' => $signature?->master_name ?: ($salle?->maitre_display_name ?? ''),
-            'signer_grade' => $signature?->master_grade ?: ($salle?->maitre_display_grade ?? ''),
+            'signer_name' => $signerName,
+            'signer_grade' => $signerGrade,
+            'grade_rows' => $this->gradeRows($d, $federation, $signature?->signature_data, $signerName, $signerGrade),
         ];
+    }
+
+    /**
+     * Lignes du tableau des grades (verso de la carte planche) : grades KEUP de la
+     * fédération, dans l'ordre (niveau croissant), avec la date d'obtention et la
+     * signature/nom/grade du maître dès qu'un DiscipleGradeHistorique existe.
+     */
+    private function gradeRows(Disciple $d, $federation, ?string $signatureData, string $signerName, string $signerGrade): array
+    {
+        $keupGrades = $federation
+            ? Grade::where('federation_id', $federation->id)
+                ->where('type_grade', 'KEUP')
+                ->orderBy('niveau')
+                ->get(['id', 'nom_grade'])
+            : collect();
+
+        $historyByGrade = $d->gradeHistoriques->keyBy('grade_id');
+
+        return $keupGrades->map(function (Grade $grade) use ($historyByGrade, $signatureData, $signerName, $signerGrade) {
+            $entry = $historyByGrade->get($grade->id);
+
+            return [
+                'label' => $grade->nom_grade,
+                'date' => $entry ? $entry->date_obtention->format('d/m/Y') : '',
+                'signature' => $entry ? $signatureData : null,
+                'signer_name' => $entry ? $signerName : '',
+                'signer_grade' => $entry ? $signerGrade : '',
+            ];
+        })->all();
     }
 
     /** Sépare date/lieu de naissance ("12/01/2000 à Bamako"). */

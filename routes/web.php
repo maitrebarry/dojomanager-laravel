@@ -91,6 +91,8 @@ Route::middleware('auth')->group(function () {
         Route::post('disciples/grades', [DiscipleGradeController::class, 'apply'])->name('disciples.grades.apply');
         Route::post('disciples/grades/attestations', [DiscipleGradeController::class, 'attestationsSelection'])->name('disciples.grades.attestations.selection');
         Route::post('disciples/grades/candidats', [DiscipleGradeController::class, 'candidatesList'])->name('disciples.grades.candidates');
+        Route::get('disciples/{disciple}/grades-historique', [DiscipleGradeController::class, 'history'])->name('disciples.grades.history');
+        Route::post('disciples/{disciple}/grades-historique', [DiscipleGradeController::class, 'saveHistory'])->name('disciples.grades.history.save');
         Route::get('disciples/{disciple}/attestation-grade', [DiscipleGradeController::class, 'attestation'])->name('disciples.grades.attestation');
 
         Route::resource('disciples', DiscipleController::class);

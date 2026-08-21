@@ -832,6 +832,10 @@ return [
         'result' => 'Résultat',
         'candidate_signature' => 'Signature',
         'exam_date' => "Date de l'examen",
+        'history_title' => 'Historique des grades',
+        'history_subtitle' => "Renseignez la date d'obtention de chaque grade déjà obtenu — utile pour rattraper les grades obtenus avant l'utilisation de l'application. Les grades appliqués depuis « Mise à jour des grades » sont déjà enregistrés automatiquement.",
+        'date_obtained' => "Date d'obtention",
+        'history_saved' => 'Historique des grades enregistré.',
     ],
 
     'competitions' => [
