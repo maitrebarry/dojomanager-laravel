@@ -7,7 +7,6 @@ use App\Models\CeintureNoireManuelle;
 use App\Models\CotisationAnnuelle;
 use App\Models\CotisationAnnuelleCeintureNoire;
 use App\Models\Disciple;
-use App\Models\Salle;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -189,15 +188,15 @@ class CotisationAnnuelleController extends Controller
 
         // Un maître (ou un responsable de ligue/fédération) est lui-même une ceinture
         // noire de sa structure : son grade DAN n'est jamais un Disciple. Il ne compte
-        // que s'il est responsable d'au moins une salle (un maître y est rattaché
-        // directement ; une ligue/fédération sans salle enregistrée ne compte pas).
+        // que s'il a lui-même une salle rattachée (users.salle_id) : un responsable de
+        // ligue/fédération sans salle personnelle n'est pas encore « maître responsable ».
         User::query()
             ->visibleTo($user)
             ->whereIn('role', User::TENANT_ROLES)
+            ->whereHas('salle')
             ->whereHas('grade', fn ($q) => $q->where('type_grade', 'DAN'))
             ->with(['grade', 'federation', 'ligue', 'salle.ligue.federation'])
             ->get()
-            ->filter(fn (User $u) => Salle::query()->visibleTo($u)->exists())
             ->each(function (User $u) use ($cotisation, $montant) {
                 $federation = $u->federation ?? $u->salle?->ligue?->federation;
                 $ligue = $u->ligue ?? $u->salle?->ligue;
