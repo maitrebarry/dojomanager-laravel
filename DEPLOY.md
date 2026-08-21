@@ -23,11 +23,13 @@ fichiers `.env`, `app/`, etc. seraient exposés publiquement).
 - **Solution propre** : dans l'espace client LWS (Multisites), définir le
   **dossier racine** du domaine sur `DojoManager_laravel/public` (disponible sur la
   plupart des plans mutualisés récents).
-- **Si l'option n'existe pas sur le plan souscrit** : déposer tout le projet dans un
-  dossier hors de la racine web (ex. `dojomanager_app/`), et ne mettre dans la racine
-  web qu'un `index.php` + `.htaccess` qui redirigent vers `dojomanager_app/public/`
-  (variante du « front controller » — demander si besoin, pas fait par défaut ici pour
-  ne pas complexifier une installation qui a l'option propre).
+- **Si l'option n'existe pas sur le plan souscrit** : cloner le projet directement dans
+  la racine web du domaine — un `.htaccess` à la racine du dépôt (déjà présent,
+  `.htaccess` à côté de `composer.json`) redirige en interne toute requête vers
+  `public/`, sans exposer `app/`, `.env`, etc. Vérifié en conditions réelles sur LWS
+  (webdb32xx, Apache + mod_rewrite) : les fichiers hors `public/` restent inaccessibles
+  même sans dossier séparé, cette solution suffit et évite l'indirection par un second
+  dossier + `index.php` de redirection.
 
 ## 3. Déploiement des fichiers
 
