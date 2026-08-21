@@ -41,7 +41,7 @@
         .image-side {
             flex: 1;
             position: relative;
-            background: url('{{ asset('images/login-hero.svg') }}') center top/cover no-repeat var(--login-primary);
+            background: url('{{ asset('images/login-hero.png') }}') center top/cover no-repeat var(--login-primary);
         }
 
         .login-side {
