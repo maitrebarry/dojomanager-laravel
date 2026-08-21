@@ -3,6 +3,11 @@
 @section('title', __('messages.disciples.title'))
 
 @section('actions')
+    @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('DISCIPLE_UPDATE')))
+        <a href="{{ route('admin.disciples.grades.index') }}" class="btn btn-outline-secondary shadow-sm">
+            <i class="fas fa-arrow-up-right-dots me-1"></i> {{ __('messages.disciple_grades.button') }}
+        </a>
+    @endif
     @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('DISCIPLE_CREATE')))
         <a href="{{ route('admin.disciples.create') }}" class="btn text-white shadow-sm" style="background-color: var(--navbar-bg);">
             <i class="fas fa-plus-circle me-1"></i> {{ __('messages.disciples.add') }}

@@ -795,6 +795,39 @@ return [
         'the_president' => 'Le Président',
     ],
 
+    // Mise à jour directe des grades par le maître, sans passer par une session
+    // de passage de grade (utile tant que la ligue/fédération n'utilise pas
+    // encore l'application pour organiser des sessions officielles).
+    'disciple_grades' => [
+        'title' => 'Mise à jour des grades',
+        'button' => 'Mise à jour des grades',
+        'subtitle' => 'Faites évoluer les grades de vos disciples directement, sans session de passage.',
+        'search_placeholder' => 'Nom, prénom ou matricule…',
+        'current_grade' => 'Grade actuel',
+        'all_grades' => 'Tous les grades',
+        'next_grade' => 'Grade suivant',
+        'no_higher_grade' => 'Aucun grade supérieur',
+        'no_grade' => 'Sans grade',
+        'select_all' => 'Tout sélectionner',
+        'not_found' => 'Aucun disciple trouvé pour ces filtres.',
+        'update_mode' => 'Mode de mise à jour',
+        'mode_next' => 'Appliquer le grade suivant',
+        'mode_custom' => 'Appliquer un grade choisi',
+        'target_grade' => 'Grade à appliquer',
+        'refresh_date' => "Actualiser la date d'obtention",
+        'apply' => 'Mettre à jour',
+        'print_attestations' => 'Attestations (sélection)',
+        'attestation' => 'Attestation',
+        'no_selection' => 'Veuillez sélectionner au moins un disciple.',
+        'choose_target' => 'Veuillez choisir le grade à appliquer.',
+        'invalid_target' => 'Le grade choisi est invalide.',
+        'updated_count' => ':count disciple(s) mis à jour.',
+        'skipped_count' => ':count ignoré(s), déjà au grade maximal.',
+        'attestation_title' => 'Attestation de grade',
+        'attestation_intro' => 'Le maître de la salle atteste que',
+        'attestation_body' => 'a obtenu le grade de',
+    ],
+
     'competitions' => [
         'title' => 'Compétitions',
         'add' => 'Nouvelle compétition',

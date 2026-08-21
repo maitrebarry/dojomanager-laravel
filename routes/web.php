@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\DiscipleController;
+use App\Http\Controllers\Admin\DiscipleGradeController;
 use App\Http\Controllers\Admin\LicenceController;
 use App\Http\Controllers\Admin\SalleController;
 use App\Http\Controllers\Admin\GradeController;
@@ -83,6 +84,14 @@ Route::middleware('auth')->group(function () {
         Route::patch('disciples/{disciple}/restore', [DiscipleController::class, 'restore'])->name('disciples.restore');
         Route::get('disciples/{disciple}/recu', [DiscipleController::class, 'receipt'])->name('disciples.receipt');
         Route::get('disciples/{disciple}/recu/pdf', [DiscipleController::class, 'receiptPdf'])->name('disciples.receipt.pdf');
+
+        // Mise à jour des grades (voie directe, sans session de passage de grade —
+        // cf. app/Http/Controllers/Admin/DiscipleGradeController.php)
+        Route::get('disciples/grades', [DiscipleGradeController::class, 'index'])->name('disciples.grades.index');
+        Route::post('disciples/grades', [DiscipleGradeController::class, 'apply'])->name('disciples.grades.apply');
+        Route::post('disciples/grades/attestations', [DiscipleGradeController::class, 'attestationsSelection'])->name('disciples.grades.attestations.selection');
+        Route::get('disciples/{disciple}/attestation-grade', [DiscipleGradeController::class, 'attestation'])->name('disciples.grades.attestation');
+
         Route::resource('disciples', DiscipleController::class);
 
         // Référentiel du club
