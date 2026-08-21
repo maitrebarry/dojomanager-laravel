@@ -71,9 +71,9 @@ class CeintureNoireController extends Controller
 
         // Maîtres / responsables de ligue / fédération : leur grade personnel n'est
         // jamais un Disciple (ils gèrent une structure, ils n'en sont pas membres) —
-        // on les inclut ici dès qu'ils détiennent un grade DAN, avec le même périmètre
-        // visibleTo() que le reste (un maître est d'office rattaché à une salle → ligue
-        // → fédération, cf. User::scopeContext()).
+        // on les inclut ici dès qu'ils détiennent un grade DAN ET sont responsables
+        // d'au moins une salle (un maître y est rattaché directement ; une ligue/
+        // fédération sans aucune salle enregistrée n'est pas encore « responsable »).
         $gestionnairesDan = User::query()
             ->visibleTo($request->user())
             ->whereIn('role', User::TENANT_ROLES)
@@ -81,6 +81,7 @@ class CeintureNoireController extends Controller
             ->with(['grade:id,nom_grade', 'salle:id,nom'])
             ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
             ->get()
+            ->filter(fn (User $u) => Salle::query()->visibleTo($u)->exists())
             ->map(fn (User $u) => (object) [
                 'origine' => 'GESTIONNAIRE',
                 'id' => $u->id,
