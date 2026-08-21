@@ -71,7 +71,8 @@ class SettingsController extends Controller
             'maitres' => \App\Models\Maitre::visibleTo($u)->orderBy('nom_complet')->get(['id', 'nom_complet']),
             'permissions' => $allPermissions,
             'permissionsByModule' => $allPermissions->groupBy('module'),
-            'assignableUsers' => $users,
+            // On ne s'assigne pas de permissions à soi-même depuis cet écran.
+            'assignableUsers' => $users->reject(fn ($usr) => $usr->id === $u->id)->values(),
             'roleOptions' => $roleOptions,
             'functionOptions' => $functionOptions,
             'ctx' => $ctx,
@@ -228,6 +229,11 @@ class SettingsController extends Controller
         ]);
 
         $user = User::findOrFail($validated['user_id']);
+
+        if (auth()->id() === $user->id) {
+            abort(403, 'Vous ne pouvez pas vous assigner des permissions à vous-même.');
+        }
+
         $currentRole = UserRole::tryFrom(auth()->user()?->role ?? '');
         $targetRole = UserRole::tryFrom($user->role);
 
