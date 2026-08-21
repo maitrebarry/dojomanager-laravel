@@ -827,6 +827,11 @@ return [
         'attestation_title' => 'Attestation de grade',
         'attestation_intro' => 'Le maître de la salle atteste que',
         'attestation_body' => 'a obtenu le grade de',
+        'candidates_title' => 'Liste des candidats à la passation de grade',
+        'print_candidates' => 'Liste des candidats',
+        'result' => 'Résultat',
+        'candidate_signature' => 'Signature',
+        'exam_date' => "Date de l'examen",
     ],
 
     'competitions' => [

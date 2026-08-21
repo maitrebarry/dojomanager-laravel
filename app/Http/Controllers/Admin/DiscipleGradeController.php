@@ -160,6 +160,48 @@ class DiscipleGradeController extends Controller
     }
 
     /**
+     * Liste des candidats à la passation de grade — un document que le maître
+     * peut produire seul (sans session « Passage de grade », qui suppose une
+     * ligue/fédération active) : à imprimer, annoter le jour de l'examen
+     * interne et conserver, indépendamment de toute validation externe.
+     */
+    public function candidatesList(Request $request)
+    {
+        $user = $request->user();
+        $sequence = $this->gradeSequence($user);
+        $nextGradeMap = $this->nextGradeMap($sequence);
+
+        $validated = $request->validate([
+            'disciple_ids' => ['required', 'array', 'min:1'],
+            'disciple_ids.*' => ['integer', 'exists:disciples,id'],
+        ], [
+            'disciple_ids.required' => __('messages.disciple_grades.no_selection'),
+        ]);
+
+        $disciples = Disciple::active()
+            ->visibleTo($user)
+            ->whereIn('id', $validated['disciple_ids'])
+            ->with(['grade', 'salle'])
+            ->orderBy('nom')->orderBy('prenom')
+            ->get()
+            ->map(fn (Disciple $d) => (object) [
+                'disciple' => $d,
+                'nextGrade' => $sequence->firstWhere('id', $nextGradeMap[$d->grade_id ?? 0] ?? null),
+            ]);
+
+        abort_if($disciples->isEmpty(), 404);
+
+        $salle = $disciples->first()->disciple->salle;
+
+        $pdf = Pdf::loadView('admin.disciples.grade_candidates_list_pdf', [
+            'rows' => $disciples,
+            'salle' => $salle,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('liste-candidats-passage-grade.pdf');
+    }
+
+    /**
      * Séquence ordonnée des grades visibles, du plus débutant au plus avancé.
      * `niveau` est un rang unique et croissant sur toute la progression d'une
      * fédération (KEUP puis DAN enchaînés sans se chevaucher — vérifié sur les

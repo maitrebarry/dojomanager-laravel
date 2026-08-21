@@ -63,6 +63,9 @@
                     <input class="form-check-input" type="checkbox" name="refresh_date" value="1" id="refreshDate">
                     <label class="form-check-label mb-0" for="refreshDate">{{ __('messages.disciple_grades.refresh_date') }}</label>
                 </div>
+                <button type="submit" class="btn btn-sm btn-outline-light" formaction="{{ route('admin.disciples.grades.candidates') }}" formtarget="_blank">
+                    <i class="fas fa-list-check me-1"></i> {{ __('messages.disciple_grades.print_candidates') }}
+                </button>
                 <button type="submit" class="btn btn-sm btn-outline-light" formaction="{{ route('admin.disciples.grades.attestations.selection') }}" formtarget="_blank">
                     <i class="fas fa-file-pdf me-1"></i> {{ __('messages.disciple_grades.print_attestations') }}
                 </button>
