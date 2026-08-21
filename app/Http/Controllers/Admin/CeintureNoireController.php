@@ -11,6 +11,7 @@ use App\Models\Grade;
 use App\Models\Ligue;
 use App\Models\Salle;
 use App\Models\User;
+use App\Support\MatriculeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -27,7 +28,7 @@ class CeintureNoireController extends Controller
         $this->middleware('role:federation,ligue'); // App.jsx : ceintures noires réservées ADMIN/LIGUE
         $this->middleware('permission:CEINTURESNOIRES_READ')->only(['index']);
         $this->middleware('permission:CEINTURESNOIRES_CREATE')->only(['create', 'store']);
-        $this->middleware('permission:CEINTURESNOIRES_UPDATE')->only(['edit', 'update']);
+        $this->middleware('permission:CEINTURESNOIRES_UPDATE')->only(['edit', 'update', 'editMaitre', 'updateMaitre']);
         $this->middleware('permission:CEINTURESNOIRES_DELETE')->only(['destroy']);
     }
 
@@ -52,6 +53,7 @@ class CeintureNoireController extends Controller
                 'grade_nom' => $d->grade?->nom_grade,
                 'salle_nom' => $d->salle?->nom,
                 'editable' => false,
+                'edit_maitre_url' => null,
             ]);
 
         $manuelles = CeintureNoireManuelle::active()
@@ -67,6 +69,7 @@ class CeintureNoireController extends Controller
                 'grade_nom' => $m->grade?->nom_grade,
                 'salle_nom' => $m->salle?->nom,
                 'editable' => true,
+                'edit_maitre_url' => null,
             ]);
 
         // Maîtres / responsables de ligue / fédération : leur grade personnel n'est
@@ -90,6 +93,10 @@ class CeintureNoireController extends Controller
                 'grade_nom' => $u->grade?->nom_grade,
                 'salle_nom' => $u->salle?->nom,
                 'editable' => false,
+                // Pas de Disciple/CeintureNoireManuelle à modifier : seules les
+                // informations de licence (naissance/adresse/matricule) du compte
+                // maître/responsable lui-même sont éditables, via un écran dédié.
+                'edit_maitre_url' => route('admin.ceintures-noires.maitres.edit', $u),
             ]);
 
         $ceinturesNoires = $disciplesDan->concat($manuelles)->concat($gestionnairesDan)->sortBy('full_name')->values();
@@ -115,6 +122,12 @@ class CeintureNoireController extends Controller
         if ($request->hasFile('photo')) {
             $data['photo_path'] = $request->file('photo')->store('ceintures-noires', 'public');
         }
+
+        // Matricule attribué automatiquement (jamais saisi à la main) : préfixe de
+        // ligue + compteur séquentiel, cf. MatriculeGenerator.
+        $data['nmle'] = MatriculeGenerator::nextForLigue(
+            !empty($data['ligue_id']) ? Ligue::find($data['ligue_id']) : null
+        );
 
         CeintureNoireManuelle::create($data);
 
@@ -164,6 +177,54 @@ class CeintureNoireController extends Controller
             ->with('success', __('messages.ceintures_noires.deleted'));
     }
 
+    /**
+     * Modifie les informations de licence (naissance/adresse/matricule) d'un maître
+     * ou responsable de ligue/fédération — jamais son nom/rôle/grade, gérés ailleurs
+     * (gestion des utilisateurs). Le matricule est attribué automatiquement, une
+     * seule fois, à la première modification.
+     */
+    public function editMaitre(User $maitre): View
+    {
+        $this->guardTenantUser($maitre);
+
+        return view('admin.ceintures-noires.edit-maitre', [
+            'maitre' => $maitre,
+            'page_title' => __('messages.ceintures_noires.edit_manager'),
+        ]);
+    }
+
+    public function updateMaitre(Request $request, User $maitre): RedirectResponse
+    {
+        $this->guardTenantUser($maitre);
+
+        $data = $request->validate([
+            'date_naissance' => ['nullable', 'date'],
+            'date_lieu_naissance' => ['nullable', 'string', 'max:255'],
+            'adresse' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if (empty($maitre->matricule)) {
+            $data['matricule'] = MatriculeGenerator::nextForLigue($maitre->ligue ?? $maitre->salle?->ligue);
+        }
+
+        $maitre->update($data);
+
+        return redirect()->route('admin.ceintures-noires.index')
+            ->with('success', __('messages.ceintures_noires.updated'));
+    }
+
+    /** 403 si le compte n'est pas un maître/responsable dans le périmètre de l'utilisateur. */
+    private function guardTenantUser(User $maitre): void
+    {
+        abort_unless(in_array($maitre->role instanceof \App\Shared\Enums\UserRole ? $maitre->role->value : (string) $maitre->role, User::TENANT_ROLES, true), 404);
+
+        abort_unless(
+            User::query()->visibleTo(request()->user())->whereKey($maitre->getKey())->exists(),
+            403,
+            __('messages.out_of_scope')
+        );
+    }
+
     private function formData(): array
     {
         $user = request()->user();
@@ -186,7 +247,6 @@ class CeintureNoireController extends Controller
             'date_lieu_naissance' => ['nullable', 'string', 'max:255'],
             'adresse' => ['nullable', 'string', 'max:255'],
             'telephone' => ['nullable', 'string', 'max:40'],
-            'nmle' => ['nullable', 'string', 'max:50'],
             'grade_id' => ['required', 'exists:grades,id'],
             'federation_id' => ['required', 'exists:federations,id'],
             'ligue_id' => ['nullable', 'exists:ligues,id'],

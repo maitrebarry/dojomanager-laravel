@@ -642,6 +642,8 @@ return [
         'title' => 'Ceintures noires',
         'add' => 'Ajouter une ceinture noire',
         'edit' => 'Modifier la ceinture noire',
+        'edit_manager' => 'Modifier les informations de licence du maître',
+        'matricule_pending' => 'Attribué à l\'enregistrement',
         'origin' => 'Origine',
         'manual' => 'Saisie manuelle',
         'disciple' => 'Disciple',

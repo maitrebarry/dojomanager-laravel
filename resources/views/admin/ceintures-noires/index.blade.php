@@ -80,6 +80,12 @@
                                         <button type="button" class="btn btn-outline-danger btn-delete" data-id="{{ $cn->id }}" data-name="{{ $cn->full_name }}" title="{{ __('messages.delete') }}"><i class="fas fa-trash"></i></button>
                                     @endif
                                 </div>
+                            @elseif($cn->edit_maitre_url)
+                                @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('CEINTURESNOIRES_UPDATE')))
+                                    <a href="{{ $cn->edit_maitre_url }}" class="btn btn-sm btn-outline-primary" title="{{ __('messages.ceintures_noires.edit_manager') }}"><i class="fas fa-edit"></i></a>
+                                @else
+                                    <span class="text-muted small">—</span>
+                                @endif
                             @else
                                 <span class="text-muted small">—</span>
                             @endif

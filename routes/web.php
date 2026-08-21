@@ -114,6 +114,8 @@ Route::middleware('auth')->group(function () {
         Route::get('mensualites/{cotisation}/recu/pdf', [MensualiteController::class, 'receiptPdf'])->name('mensualites.receipt.pdf');
 
         // Finances — Ceintures noires & cotisations annuelles
+        Route::get('ceintures-noires/maitres/{maitre}/edit', [CeintureNoireController::class, 'editMaitre'])->name('ceintures-noires.maitres.edit');
+        Route::put('ceintures-noires/maitres/{maitre}', [CeintureNoireController::class, 'updateMaitre'])->name('ceintures-noires.maitres.update');
         Route::resource('ceintures-noires', CeintureNoireController::class)->except(['show']);
         Route::post('cotisations-annuelles/membres/{membre}/payer', [CotisationAnnuelleController::class, 'pay'])->name('cotisations-annuelles.pay');
         Route::resource('cotisations-annuelles', CotisationAnnuelleController::class)->except(['edit', 'update']);

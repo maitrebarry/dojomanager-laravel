@@ -34,10 +34,12 @@
                 <label class="form-label">{{ __('messages.birth_place') }}</label>
                 <input type="text" name="date_lieu_naissance" class="form-control" value="{{ old('date_lieu_naissance', $ceintureNoire->date_lieu_naissance) }}">
             </div>
-            <div class="col-md-6">
-                <label class="form-label">{{ __('messages.disciples.matricule') }}</label>
-                <input type="text" name="nmle" class="form-control" value="{{ old('nmle', $ceintureNoire->nmle) }}">
-            </div>
+            @if(($mode ?? 'create') === 'edit')
+                <div class="col-md-6">
+                    <label class="form-label">{{ __('messages.disciples.matricule') }}</label>
+                    <input type="text" class="form-control" value="{{ $ceintureNoire->nmle }}" disabled readonly>
+                </div>
+            @endif
             <div class="col-12">
                 <label class="form-label">{{ __('messages.address') }}</label>
                 <input type="text" name="adresse" class="form-control" value="{{ old('adresse', $ceintureNoire->adresse) }}">

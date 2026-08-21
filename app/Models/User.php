@@ -60,6 +60,10 @@ class User extends Authenticatable
         'salle_id',
         'grade_id',
         'fonction',
+        'date_naissance',
+        'date_lieu_naissance',
+        'adresse',
+        'matricule',
     ];
 
     protected $hidden = [
@@ -71,6 +75,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'is_active' => 'boolean',
+        'date_naissance' => 'date',
     ];
 
     /* -------------------- Relations de périmètre -------------------- */

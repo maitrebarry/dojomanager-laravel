@@ -315,16 +315,17 @@ class LicenceController extends Controller
         $signerGrade = $signature?->master_grade ?: ($salle?->maitre_display_grade ?? '');
 
         [$prenom, $nom] = $this->splitName($u->name);
+        [$birthDate, $birthPlace] = $this->splitBirth($u->date_naissance, $u->date_lieu_naissance);
 
         return [
             'nom' => $nom,
             'prenom' => $prenom,
             'full_name' => $u->name,
             'gender' => '',
-            'birth_date' => '',
-            'birth_place' => '',
-            'adresse' => '',
-            'reference' => 'GEST-' . $u->id,
+            'birth_date' => $birthDate,
+            'birth_place' => $birthPlace,
+            'adresse' => $u->adresse ?? '',
+            'reference' => $u->matricule ?: ('GEST-' . $u->id),
             'grade' => $u->grade?->nom_grade ?? '',
             'phone' => $u->phone ?? '',
             'salle' => $salle?->nom ?? '',
