@@ -26,4 +26,17 @@ class Signature extends Model
         'master_grade',
         'signature_data',
     ];
+
+    /** Signature du maître d'une salle (même résolution que les cartes de licence). */
+    public static function forSalle(?int $salleId): ?self
+    {
+        if (!$salleId) {
+            return null;
+        }
+
+        return static::whereNotNull('signature_data')
+            ->where('salle_id', $salleId)
+            ->latest('id')
+            ->first();
+    }
 }

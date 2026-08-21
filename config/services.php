@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    /*
+    | Passerelle locale d'envoi WhatsApp automatique des reçus (disciples,
+    | mensualités) — cf. whatsapp-bridge/. Le navigateur du poste du club
+    | contacte cette adresse directement (le serveur web ne peut pas
+    | forcément atteindre le PC qui héberge la passerelle).
+    */
+    'whatsapp_bridge' => [
+        'default_host' => env('WHATSAPP_BRIDGE_HOST', '127.0.0.1:9300'),
+        'token' => env('WHATSAPP_BRIDGE_TOKEN'),
+        'default_country_code' => env('WHATSAPP_DEFAULT_COUNTRY_CODE', '223'),
+    ],
+
 ];

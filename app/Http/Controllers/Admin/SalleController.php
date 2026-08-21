@@ -29,7 +29,7 @@ class SalleController extends Controller
     {
         $salles = Salle::query()
             ->visibleTo($request->user())
-            ->with(['ligue:id,nom', 'maitre:id,nom_complet'])
+            ->with(['ligue:id,nom', 'maitre:id,nom_complet', 'maitreUser:id,salle_id,name,grade_id', 'maitreUser.grade:id,nom_grade'])
             ->withCount('disciples')
             ->when($request->filled('search'), fn ($q) => $q->where('nom', 'like', '%' . $request->query('search') . '%'))
             ->when($request->filled('ligue'), fn ($q) => $q->where('ligue_id', $request->query('ligue')))

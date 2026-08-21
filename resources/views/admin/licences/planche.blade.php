@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planche des licences</title>
     <style>
+        /* Sans ceci, les navigateurs suppriment par défaut les couleurs de fond à
+           l'impression/export PDF (économie d'encre) — ce qui fait disparaître le
+           drapeau malien (fond coloré, pas une image) et les autres aplats du visuel. */
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+
         body { margin: 0; background: #eef2f7; padding: 10mm 0; }
 
         .sheet-actions {
@@ -59,7 +64,7 @@
         .sheet-flag i:nth-child(2) { background: #fcd116; }
         .sheet-flag i:nth-child(3) { background: #ce1126; }
 
-        .sheet-title { left: 3mm; top: 11mm; color: var(--primary); font-size: 2.45mm; line-height: 1.08; font-weight: 900; }
+        .sheet-title { left: 3mm; top: 11mm; width: 62mm; color: var(--primary); font-size: 2.45mm; line-height: 1.08; font-weight: 900; overflow-wrap: break-word; }
 
         .sheet-photo {
             left: 3mm; top: 20mm; width: 18mm; height: 24mm; border: .3mm solid #1f2937;

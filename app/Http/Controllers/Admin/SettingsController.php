@@ -66,7 +66,7 @@ class SettingsController extends Controller
             'users' => $users,
             'federations' => \App\Models\Federation::visibleTo($u)->withCount(['ligues', 'grades'])->orderBy('nom')->get(),
             'ligues' => \App\Models\Ligue::visibleTo($u)->with('federation:id,nom')->withCount('salles')->orderBy('nom')->get(),
-            'salles' => \App\Models\Salle::visibleTo($u)->with(['ligue:id,nom', 'maitre:id,nom_complet'])->withCount('disciples')->orderBy('nom')->get(),
+            'salles' => \App\Models\Salle::visibleTo($u)->with(['ligue:id,nom', 'maitre:id,nom_complet', 'maitreUser:id,salle_id,name,grade_id', 'maitreUser.grade:id,nom_grade'])->withCount('disciples')->orderBy('nom')->get(),
             'grades' => \App\Models\Grade::visibleTo($u)->with('federation:id,nom')->orderBy('type_grade')->orderBy('niveau')->get(),
             'maitres' => \App\Models\Maitre::visibleTo($u)->orderBy('nom_complet')->get(['id', 'nom_complet']),
             'permissions' => $allPermissions,

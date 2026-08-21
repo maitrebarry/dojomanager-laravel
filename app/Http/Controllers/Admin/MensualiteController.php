@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\AuthorizesScope;
+use App\Http\Controllers\Concerns\GeneratesThermalPdf;
 use App\Http\Controllers\Controller;
 use App\Models\Cotisation;
 use App\Models\Disciple;
 use App\Models\Salle;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Signature;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,6 +16,7 @@ use Illuminate\View\View;
 class MensualiteController extends Controller
 {
     use AuthorizesScope;
+    use GeneratesThermalPdf;
 
     public function __construct()
     {
@@ -130,7 +132,12 @@ class MensualiteController extends Controller
         $cotisation->paiements()->create($validated);
         $cotisation->recompute();
 
-        return back()->with('success', __('messages.cotisations.payment_recorded'));
+        // La liste consomme ce flash pour envoyer automatiquement le reçu par WhatsApp
+        // en tâche de fond (cf. WhatsappBridge.sendFromUrl dans mensualites/index.blade.php),
+        // sans quitter la page ni perdre les filtres en cours.
+        return back()
+            ->with('success', __('messages.cotisations.payment_recorded'))
+            ->with('autoSendCotisation', $cotisation->id);
     }
 
     /** Paiement groupé : verse un montant à chaque cotisation sélectionnée (plafonné au reste). */
@@ -143,9 +150,10 @@ class MensualiteController extends Controller
 
         $ids = array_filter(array_map('intval', explode(',', $validated['ids'])));
         $count = 0;
+        $paidIds = [];
 
         Cotisation::query()->visibleTo($request->user())->whereIn('id', $ids)->get()
-            ->each(function (Cotisation $c) use ($validated, $request, &$count) {
+            ->each(function (Cotisation $c) use ($validated, $request, &$count, &$paidIds) {
                 $reste = (float) $c->reste_a_payer;
                 if ($c->statut === 'PAYE' || $reste <= 0) {
                     return;
@@ -159,9 +167,14 @@ class MensualiteController extends Controller
                 ]);
                 $c->recompute();
                 $count++;
+                $paidIds[] = $c->id;
             });
 
-        return back()->with('success', __('messages.cotisations.bulk_done', ['count' => $count]));
+        // La liste envoie automatiquement chaque reçu par WhatsApp en tâche de fond
+        // (cf. WhatsappBridge.sendFromUrl dans mensualites/index.blade.php).
+        return back()
+            ->with('success', __('messages.cotisations.bulk_done', ['count' => $count]))
+            ->with('autoSendCotisations', $paidIds);
     }
 
     public function destroy(Cotisation $cotisation): RedirectResponse
@@ -175,18 +188,23 @@ class MensualiteController extends Controller
     public function receipt(Cotisation $cotisation): View
     {
         $this->guardScope($cotisation);
-        $cotisation->load(['disciple.salle', 'paiements']);
+        $cotisation->load(['disciple.salle.maitre', 'disciple.salle.maitreUser.grade', 'paiements']);
 
-        return view('admin.mensualites.receipt', ['cotisation' => $cotisation]);
+        return view('admin.mensualites.receipt', [
+            'cotisation' => $cotisation,
+            'signature' => Signature::forSalle($cotisation->disciple?->salle_id),
+        ]);
     }
 
     public function receiptPdf(Cotisation $cotisation)
     {
         $this->guardScope($cotisation);
-        $cotisation->load(['disciple.salle', 'paiements']);
+        $cotisation->load(['disciple.salle.maitre', 'disciple.salle.maitreUser.grade', 'paiements']);
 
-        $pdf = Pdf::loadView('admin.mensualites.receipt_pdf', ['cotisation' => $cotisation])->setPaper('a5');
-
-        return $pdf->download('recu-cotisation-' . $cotisation->id . '.pdf');
+        return $this->downloadThermalPdf(
+            'admin.mensualites.receipt_pdf',
+            ['cotisation' => $cotisation, 'signature' => Signature::forSalle($cotisation->disciple?->salle_id)],
+            'recu-cotisation-' . $cotisation->id . '.pdf'
+        );
     }
 }

@@ -42,7 +42,7 @@ class LicenceController extends Controller
         $disciples = Disciple::query()
             ->visibleTo($request->user())
             ->whereIn('id', $ids)
-            ->with(['grade:id,nom_grade', 'salle.ligue.federation', 'salle.maitre'])
+            ->with(['grade:id,nom_grade', 'salle.ligue.federation', 'salle.maitre', 'salle.maitreUser.grade'])
             ->orderBy('nom')->orderBy('prenom')
             ->get();
 
@@ -200,12 +200,16 @@ class LicenceController extends Controller
             'ligue' => $ligue?->nom ?? '',
             'region' => $ligue?->region ?? '',
             'federation' => $federation?->nom ?: self::OFFICIAL['federation'],
-            'license_label' => $meta['badge_type'],
+            // Carte de salle (maître) : précise la salle concernée, ex. « LICENCE DE LA
+            // SALLE DOJO CENTRAL ». Ligue/fédération gardent leur libellé générique.
+            'license_label' => ($role === 'maitre' && $salle)
+                ? $meta['badge_type'] . ' DE LA SALLE ' . mb_strtoupper($salle->nom)
+                : $meta['badge_type'],
             'photo' => $this->photoData($d),
             'signature' => $signature?->signature_data,
             'signer' => $meta['signer'],
-            'signer_name' => $signature?->master_name ?: ($salle?->maitre?->nom_complet ?? ''),
-            'signer_grade' => $signature?->master_grade ?: ($salle?->maitre?->grade ?? ''),
+            'signer_name' => $signature?->master_name ?: ($salle?->maitre_display_name ?? ''),
+            'signer_grade' => $signature?->master_grade ?: ($salle?->maitre_display_grade ?? ''),
         ];
     }
 

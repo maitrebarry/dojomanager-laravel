@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\GeneratesThermalPdf;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DiscipleRequest;
 use App\Models\Disciple;
 use App\Models\Grade;
 use App\Models\Salle;
+use App\Models\Signature;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,12 +16,14 @@ use Illuminate\View\View;
 
 class DiscipleController extends Controller
 {
+    use GeneratesThermalPdf;
+
     public function __construct()
     {
         $this->middleware('auth');
         $this->middleware('admin');
         $this->middleware('role:maitre'); // App.jsx : /disciples réservé au MAITRE
-        $this->middleware('permission:DISCIPLE_READ')->only(['index', 'show']);
+        $this->middleware('permission:DISCIPLE_READ')->only(['index', 'show', 'receipt', 'receiptPdf']);
         $this->middleware('permission:DISCIPLE_CREATE')->only(['create', 'store']);
         $this->middleware('permission:DISCIPLE_UPDATE')->only(['edit', 'update', 'archive', 'restore']);
         $this->middleware('permission:DISCIPLE_DELETE')->only(['destroy']);
@@ -76,9 +80,13 @@ class DiscipleController extends Controller
             $data['photo'] = $request->file('photo')->store('disciples', 'public');
         }
 
-        Disciple::create($data);
+        $disciple = Disciple::create($data);
 
-        return redirect()->route('admin.disciples.index')
+        // Redirige directement vers le reçu d'inscription (imprimable / envoyable par
+        // WhatsApp) plutôt que la liste, pour le remettre tout de suite au disciple.
+        // ?auto_whatsapp=1 déclenche l'envoi automatique du reçu dès l'affichage de la
+        // page (cf. WhatsappBridge.autoSendIfRequested dans disciples/receipt.blade.php).
+        return redirect()->route('admin.disciples.receipt', ['disciple' => $disciple, 'auto_whatsapp' => 1])
             ->with('success', __('messages.disciples.created'));
     }
 
@@ -151,6 +159,29 @@ class DiscipleController extends Controller
         $disciple->update(['archived_at' => null]);
 
         return back()->with('success', __('messages.disciples.restored_success'));
+    }
+
+    public function receipt(Disciple $disciple): View
+    {
+        $this->authorizeScope($disciple);
+        $disciple->load('salle.maitre', 'salle.maitreUser.grade', 'grade');
+
+        return view('admin.disciples.receipt', [
+            'disciple' => $disciple,
+            'signature' => Signature::forSalle($disciple->salle_id),
+        ]);
+    }
+
+    public function receiptPdf(Disciple $disciple)
+    {
+        $this->authorizeScope($disciple);
+        $disciple->load('salle.maitre', 'salle.maitreUser.grade', 'grade');
+
+        return $this->streamThermalPdf(
+            'admin.disciples.receipt_pdf',
+            ['disciple' => $disciple, 'signature' => Signature::forSalle($disciple->salle_id)],
+            'recu-inscription-' . $disciple->id . '.pdf'
+        );
     }
 
     private function prepareData(DiscipleRequest $request): array

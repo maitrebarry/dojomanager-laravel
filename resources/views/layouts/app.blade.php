@@ -92,6 +92,45 @@
             --navbar-text: #e2e8f0;
             --sidebar-text: #e2e8f0;
             --body-text: #e2e8f0;
+            --surface-alt: #1a2332;
+        }
+
+        /* Bootstrap "bg-light"/"bg-white" sont des utilitaires figés (jamais adaptés au
+           thème) : très utilisés dans l'admin comme fond de panneau/badge secondaire, ils
+           restaient blancs même en mode sombre. On les fait suivre le thème comme le reste. */
+        html.dark-mode .bg-light,
+        html.dark-mode .bg-white,
+        html.dark-mode .table-light {
+            background-color: var(--surface-alt) !important;
+            color: var(--body-text) !important;
+        }
+        html.dark-mode .bg-light.border,
+        html.dark-mode .bg-white.border {
+            border-color: var(--card-border) !important;
+        }
+
+        /* Fenêtres Bootstrap (.modal-content) et popups SweetAlert2 : blanches par
+           défaut, ni l'une ni l'autre ne suit --card-bg nativement — très visibles
+           ("blanc partout") vu leur usage constant (confirmations, formulaires). */
+        html.dark-mode .modal-content {
+            background-color: var(--card-bg);
+            color: var(--body-text);
+            border-color: var(--card-border);
+        }
+        html.dark-mode .modal-header,
+        html.dark-mode .modal-footer {
+            border-color: var(--card-border);
+        }
+        html.dark-mode .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        html.dark-mode .swal2-popup {
+            background: var(--card-bg) !important;
+            color: var(--body-text) !important;
+        }
+        html.dark-mode .swal2-title,
+        html.dark-mode .swal2-html-container {
+            color: var(--body-text) !important;
         }
 
         * {
@@ -609,6 +648,20 @@
 
         .table tbody tr:hover {
             background-color: rgba(102, 126, 234, 0.08);
+        }
+
+        /* Bootstrap 5 colore ses tableaux via ses propres variables --bs-table-* (fond,
+           lignes zébrées, survol), indépendamment du thème "maison" ci-dessus : sans ce
+           reset, .table restait blanc en mode sombre même si le texte suivait bien. */
+        html.dark-mode .table {
+            --bs-table-bg: var(--card-bg);
+            --bs-table-color: var(--body-text);
+            --bs-table-border-color: var(--card-border);
+            --bs-table-striped-bg: rgba(255, 255, 255, .03);
+            --bs-table-striped-color: var(--body-text);
+            --bs-table-hover-bg: rgba(102, 126, 234, .12);
+            --bs-table-hover-color: var(--body-text);
+            background-color: var(--card-bg);
         }
 
         .form-control, .form-select {

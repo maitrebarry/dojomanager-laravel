@@ -164,8 +164,43 @@
 @endsection
 
 @section('js')
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>window.WHATSAPP_BRIDGE_CONFIG = @json(['host' => config('services.whatsapp_bridge.default_host'), 'token' => config('services.whatsapp_bridge.token')]);</script>
+<script src="{{ asset('js/whatsapp-bridge.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Envoi automatique en tâche de fond du reçu WhatsApp après un paiement individuel
+    // (cf. MensualiteController::pay()) — sans quitter la liste ni perdre les filtres.
+    @if(session('autoSendCotisation'))
+        WhatsappBridge.sendFromUrl(@json(route('admin.mensualites.receipt', session('autoSendCotisation'))))
+            .then(function () { window.dojoToast && window.dojoToast('success', @json(__('messages.whatsapp.sent'))); })
+            .catch(function () { window.dojoToast && window.dojoToast('warning', @json(__('messages.whatsapp.auto_failed'))); });
+    @endif
+
+    @if(session('autoSendCotisations'))
+        (function () {
+            // Envoi séquentiel avec un léger délai entre chaque reçu : on évite de
+            // bombarder la passerelle / WhatsApp de requêtes simultanées.
+            var ids = @json(session('autoSendCotisations'));
+            var urls = ids.map(function (id) { return @json(route('admin.mensualites.receipt', ['cotisation' => '__ID__'])).replace('__ID__', id); });
+            var i = 0, ok = 0, fail = 0;
+            function next() {
+                if (i >= urls.length) {
+                    if (ok || fail) {
+                        window.dojoToast && window.dojoToast(fail ? 'warning' : 'success',
+                            @json(__('messages.whatsapp.bulk_done')).replace(':ok', ok).replace(':fail', fail));
+                    }
+                    return;
+                }
+                var url = urls[i++];
+                WhatsappBridge.sendFromUrl(url).then(function () { ok++; }).catch(function () { fail++; }).finally(function () {
+                    setTimeout(next, 1500);
+                });
+            }
+            next();
+        })();
+    @endif
+
     var form = document.getElementById('filterForm');
     var t = null;
     form.querySelectorAll('.js-auto-filter').forEach(function (i) { i.addEventListener('change', function () { form.submit(); }); });

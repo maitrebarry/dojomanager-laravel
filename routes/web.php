@@ -81,6 +81,8 @@ Route::middleware('auth')->group(function () {
         // Disciples (module cœur)
         Route::patch('disciples/{disciple}/archive', [DiscipleController::class, 'archive'])->name('disciples.archive');
         Route::patch('disciples/{disciple}/restore', [DiscipleController::class, 'restore'])->name('disciples.restore');
+        Route::get('disciples/{disciple}/recu', [DiscipleController::class, 'receipt'])->name('disciples.receipt');
+        Route::get('disciples/{disciple}/recu/pdf', [DiscipleController::class, 'receiptPdf'])->name('disciples.receipt.pdf');
         Route::resource('disciples', DiscipleController::class);
 
         // Référentiel du club

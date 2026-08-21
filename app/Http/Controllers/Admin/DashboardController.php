@@ -55,7 +55,9 @@ class DashboardController extends Controller
         $ligueUsers = $this->roleUsersCount($user, 'ligue');
         $cnCount = $this->ceinturesNoiresCount($user);
         $cnRows = $this->ceinturesNoiresRows($user);
-        $m = $this->monthlySummary($user);
+        // Fédération : ne pilote que les cotisations des DAN (comme la ligue). Vue
+        // superadmin globale : aucune restriction, elle supervise tout le réseau.
+        $m = $this->monthlySummary($user, !$global);
         $sessions = $this->sessions($user);
         $competitions = Competition::orderByDesc('date_competition')->limit(6)->get();
 
@@ -70,8 +72,8 @@ class DashboardController extends Controller
             $this->card('salles', 'Salles actives', $activeSalles, $salles->count() . ' salle(s) au total', 'success'),
             $this->card('disciples', 'Disciples actifs', $disciplesTotal, 'Base sportive actuellement suivie', 'info'),
             $this->card('maitres', 'Maîtres déclarés', $maitres, $ligueUsers . ' responsable(s) de ligue', 'warning'),
-            $this->card('ceintures-noires', 'Ceintures noires', $cnCount, 'Toutes sources confondues', 'dark'),
-            $this->card('finances', 'Encaissements du mois', $this->currency($m['paidAmount']), $m['paidCount'] . ' paiement(s) soldés', 'danger'),
+            $this->card('ceintures-noires', 'Ceintures noires', $cnCount, 'Toutes sources confondues', 'secondary'),
+            $this->card('finances', 'Encaissements du mois', $this->currency($m['paidAmount']), $m['paidCount'] . ' paiement(s) soldés' . ($global ? '' : ' (disciples DAN)'), 'danger'),
         ];
 
         $tables = [
@@ -102,7 +104,9 @@ class DashboardController extends Controller
 
         $insights = [
             $activeSalles === 0 ? "Aucune salle active n'est encore déclarée." : $activeSalles . ' salle(s) actives sur ' . $salles->count() . '.',
-            $m['pendingCount'] === 0 ? 'Toutes les cotisations du mois sont soldées.' : $m['pendingCount'] . ' cotisation(s) restent en attente ce mois-ci.',
+            $m['pendingCount'] === 0
+                ? ($global ? 'Toutes les cotisations du mois sont soldées.' : 'Toutes les cotisations DAN du mois sont soldées.')
+                : $m['pendingCount'] . ' cotisation(s)' . ($global ? '' : ' DAN') . ' restent en attente ce mois-ci.',
             $sessionsOuvertes === 0 ? 'Aucune session de grade ouverte actuellement.' : $sessionsOuvertes . ' session(s) de grade sont encore à piloter.',
             $sessionsFinalisees . ' session(s) finalisée(s) sont disponibles pour consultation et export.',
         ];
@@ -120,12 +124,15 @@ class DashboardController extends Controller
 
     private function ligueDashboard($user): array
     {
-        $salles = Salle::visibleTo($user)->with('maitre:id,nom_complet')->get();
+        $salles = Salle::visibleTo($user)->with(['maitre:id,nom_complet', 'maitreUser:id,salle_id,name,grade_id', 'maitreUser.grade:id,nom_grade'])->get();
         $activeSalles = $salles->where('active', true)->count();
         $maitres = $this->roleUsersCount($user, 'maitre');
         $disciplesTotal = Disciple::active()->visibleTo($user)->count();
         $cnCount = $this->ceinturesNoiresCount($user);
-        $m = $this->monthlySummary($user);
+        // La ligue ne pilote que les cotisations des disciples DAN (ceintures noires) :
+        // le suivi des mensualités des disciples KEUP reste l'affaire du maître de
+        // chaque salle (cf. maitreDashboard, non filtré).
+        $m = $this->monthlySummary($user, true);
         $sessions = $this->sessions($user);
         $sessionsOuvertes = $sessions->where('finalisee', false)->count();
 
@@ -137,30 +144,34 @@ class DashboardController extends Controller
             $this->card('salles', 'Salles', $salles->count(), $activeSalles . ' active(s)', 'primary'),
             $this->card('maitres', 'Maîtres', $maitres, 'Encadrement opérationnel de la ligue', 'warning'),
             $this->card('disciples', 'Disciples actifs', $disciplesTotal, 'Athlètes rattachés à la ligue', 'info'),
-            $this->card('ceintures-noires', 'Ceintures noires', $cnCount, 'Disciples, responsables et ajouts manuels', 'dark'),
-            $this->card('payees', 'Cotisations payées', $m['paidCount'], $this->currency($m['paidAmount']) . ' encaissés ce mois', 'success'),
+            $this->card('ceintures-noires', 'Ceintures noires', $cnCount, 'Disciples, responsables et ajouts manuels', 'secondary'),
+            $this->card('payees', 'Cotisations DAN payées', $m['paidCount'], $this->currency($m['paidAmount']) . ' encaissés ce mois (disciples DAN)', 'success'),
             $this->card('sessions', 'Sessions de grade suivies', $sessions->count(), 'KEUP de la ligue et DAN fédéraux visibles', 'danger'),
         ];
+
+        $relance = $this->relanceTable($m['cotisations']);
+        $relance['title'] = 'Cotisations DAN du mois à relancer';
+        $relance['empty'] = 'Aucune relance de cotisation DAN pour ce mois.';
 
         $tables = [
             [
                 'title' => 'Performance des salles',
-                'columns' => ['salle' => 'Salle', 'maitre' => 'Maitre', 'disciples' => 'Disciples', 'payes' => 'Payes'],
+                'columns' => ['salle' => 'Salle', 'maitre' => 'Maitre', 'disciples' => 'Disciples', 'payes' => 'Payes DAN'],
                 'rows' => $salles->sortByDesc(fn ($s) => (int) ($disciplesBySalle[$s->id] ?? 0))->map(fn ($s) => [
                     'salle' => $s->nom,
-                    'maitre' => $s->maitre?->nom_complet ?? 'Non affecté',
+                    'maitre' => $s->maitre_display_name ?? 'Non affecté',
                     'disciples' => (string) (int) ($disciplesBySalle[$s->id] ?? 0),
                     'payes' => (string) (int) ($payesBySalle[$s->id] ?? 0),
                 ])->values()->all(),
                 'empty' => 'Aucune salle trouvée pour cette ligue.',
             ],
             $this->sessionTable($sessions, 'Passages de grades suivis'),
-            $this->relanceTable($m['cotisations']),
+            $relance,
         ];
 
         $insights = [
             $activeSalles . ' salle(s) active(s) sur ' . $salles->count() . ' dans votre ligue.',
-            $m['pendingCount'] === 0 ? 'Aucune cotisation du mois en attente.' : $m['pendingCount'] . ' cotisation(s) du mois restent à régulariser.',
+            $m['pendingCount'] === 0 ? 'Aucune cotisation DAN du mois en attente.' : $m['pendingCount'] . ' cotisation(s) DAN du mois restent à régulariser.',
             $sessionsOuvertes . ' session(s) non finalisée(s) nécessitent encore un suivi.',
             $cnCount . ' ceinture(s) noire(s) sont recensées dans votre périmètre.',
         ];
@@ -190,7 +201,7 @@ class DashboardController extends Controller
             $this->card('partielles', 'Cotisations partielles', $m['partialCount'], 'Reste à suivre avec les familles', 'warning'),
             $this->card('attente', 'Cotisations en attente', $m['pendingCount'], 'Relances prioritaires', 'danger'),
             $this->card('sessions', 'Passages à venir', $upcoming, 'Sessions visibles pour votre salle', 'info'),
-            $this->card('ceintures-noires', 'Ceintures noires', $cnCount, 'Présentes dans votre salle', 'dark'),
+            $this->card('ceintures-noires', 'Ceintures noires', $cnCount, 'Présentes dans votre salle', 'secondary'),
         ];
 
         $tables = [
@@ -269,11 +280,17 @@ class DashboardController extends Controller
             ->selectRaw('salle_id, COUNT(*) c')->groupBy('salle_id')->pluck('c', 'salle_id');
     }
 
-    private function monthlySummary($user): array
+    /**
+     * $danOnly restreint aux cotisations des disciples DAN (ceintures noires) : la
+     * ligue et la fédération ne pilotent que les DAN — le suivi des mensualités des
+     * disciples KEUP reste l'affaire du maître de chaque salle (cf. maitreDashboard).
+     */
+    private function monthlySummary($user, bool $danOnly = false): array
     {
         $cotisations = Cotisation::visibleTo($user)
             ->where('mois', now()->month)
             ->where('annee', now()->year)
+            ->when($danOnly, fn ($q) => $q->whereHas('disciple.grade', fn ($g) => $g->where('type_grade', 'DAN')))
             ->with(['disciple:id,nom,prenom,nom_complet,salle_id,grade_id', 'disciple.salle:id,nom', 'disciple.grade:id,nom_grade'])
             ->get();
 

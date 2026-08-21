@@ -48,7 +48,7 @@
                     <tr>
                         <td class="fw-semibold">{{ $salle->nom }}</td>
                         <td>{{ $salle->ligue?->nom ?? '-' }}</td>
-                        <td>{{ $salle->maitre?->nom_complet ?? '-' }}</td>
+                        <td>{{ $salle->maitre_display_name ?? '-' }}</td>
                         <td>{{ $salle->mensualite ? number_format($salle->mensualite, 0, ',', ' ') . ' FCFA' : '-' }}</td>
                         <td class="text-center">{{ $salle->disciples_count }}</td>
                         <td><span class="badge bg-{{ $salle->active ? 'success' : 'secondary' }}">{{ $salle->active ? __('messages.active') : __('messages.inactive') }}</span></td>

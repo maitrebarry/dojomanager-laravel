@@ -174,7 +174,7 @@
                         <tbody>
                         @forelse($salles as $s)
                             <tr>
-                                <td class="fw-semibold">{{ $s->nom }}</td><td>{{ $s->ligue?->nom ?? '-' }}</td><td>{{ $s->maitre?->nom_complet ?? '-' }}</td><td class="text-center">{{ $s->disciples_count }}</td>
+                                <td class="fw-semibold">{{ $s->nom }}</td><td>{{ $s->ligue?->nom ?? '-' }}</td><td>{{ $s->maitre_display_name ?? '-' }}</td><td class="text-center">{{ $s->disciples_count }}</td>
                                 <td class="text-end">
                                     @if($can('SALLE_UPDATE'))
                                         @php $plSalle = ['nom'=>$s->nom,'telephone'=>$s->telephone,'ligue_id'=>$s->ligue_id,'maitre_id'=>$s->maitre_id,'mensualite'=>$s->mensualite,'adresse'=>$s->adresse,'active'=>$s->active ? 1 : 0]; @endphp

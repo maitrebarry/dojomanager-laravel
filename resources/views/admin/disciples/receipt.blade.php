@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('messages.cotisations.receipt') }} — {{ $cotisation->disciple?->full_name }}</title>
+    <title>{{ __('messages.disciples.receipt') }} — {{ $disciple->full_name }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -49,24 +49,27 @@
 
         .t-dashed { border-top: 1.5px dashed #9aa3b2; margin: 6px 0; }
 
+        .t-avatar-wrap { display: flex; justify-content: center; margin-bottom: 8px; }
+        .t-avatar {
+            width: 58px; height: 58px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--ink);
+        }
+        .t-avatar-fallback {
+            width: 58px; height: 58px; border-radius: 50%;
+            background: var(--ink);
+            color: #fff; font-weight: 700; font-size: 20px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
         table.t-info { width: 100%; border-collapse: collapse; }
         table.t-info td { padding: 3px 0; font-size: 12.5px; vertical-align: top; }
         table.t-info td.l { color: #6b7280; white-space: nowrap; padding-right: 8px; }
         table.t-info td.v { text-align: right; font-weight: bold; color: var(--ink); }
-        table.t-info tr.total td { font-size: 14px; padding-top: 6px; }
-        table.t-info tr.total td.v { color: #15803d; }
 
-        .t-status {
-            display: inline-block; float: right; padding: 3px 10px; border-radius: 12px;
-            color: #fff; font-size: 11px; font-weight: bold;
+        .t-stamp {
+            text-align: center; margin: 6px 0 2px; font-weight: bold; font-size: 12px;
+            color: #15803d; letter-spacing: .4px;
         }
-        .t-status.paid { background: #198754; } .t-status.partial { background: #d97706; } .t-status.unpaid { background: #dc3545; }
-
-        .t-hist { margin-top: 4px; }
-        .t-hist .hist-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; color: #6b7280; margin-bottom: 2px; }
-        table.t-hist-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-        table.t-hist-table td { padding: 2px 0; }
-        table.t-hist-table td.v { text-align: right; font-weight: bold; color: var(--ink); }
 
         .t-footer { text-align: center; margin-top: 6px; padding-top: 4px; font-size: 10px; color: #6b7280; line-height: 1.5; }
         .t-footer .thanks { font-weight: bold; color: var(--ink); font-size: 11.5px; margin-bottom: 2px; }
@@ -110,64 +113,56 @@
 <body>
 
     <div class="topbar">
-        <a href="{{ route('admin.mensualites.index') }}"><i class="fas fa-arrow-left"></i> {{ __('messages.back') }}</a>
+        <a href="{{ route('admin.disciples.show', $disciple) }}"><i class="fas fa-arrow-left"></i> {{ __('messages.back') }}</a>
     </div>
 
     <div class="ticket-shell">
         <div class="ticket" id="ticketCapture"
-            data-whatsapp-phone="{{ \App\Support\WhatsAppPhone::normalize($cotisation->disciple?->telephone) }}"
-            data-whatsapp-caption="{{ __('messages.whatsapp.share_text', ['name' => $cotisation->disciple?->full_name ?? '']) }}">
+            data-whatsapp-phone="{{ \App\Support\WhatsAppPhone::normalize($disciple->telephone) }}"
+            data-whatsapp-caption="{{ __('messages.whatsapp.share_text', ['name' => $disciple->full_name]) }}">
             <div class="t-header">
-                <h1>{{ $cotisation->disciple?->salle?->nom ?? __('messages.app_name') }}</h1>
-                @if($cotisation->disciple?->salle?->adresse)
-                    <div class="sub">{{ $cotisation->disciple->salle->adresse }}</div>
+                <h1>{{ $disciple->salle?->nom ?? __('messages.app_name') }}</h1>
+                @if($disciple->salle?->adresse)
+                    <div class="sub">{{ $disciple->salle->adresse }}</div>
                 @endif
-                @if($cotisation->disciple?->salle?->telephone)
-                    <div class="sub">☎ {{ $cotisation->disciple->salle->telephone }}</div>
+                @if($disciple->salle?->telephone)
+                    <div class="sub">☎ {{ $disciple->salle->telephone }}</div>
                 @endif
             </div>
 
-            <span class="t-badge">{{ __('messages.cotisations.receipt_doc_title') }}</span>
-            <div class="t-number">{{ __('messages.cotisations.receipt') }} N° {{ str_pad($cotisation->id, 6, '0', STR_PAD_LEFT) }}</div>
+            <span class="t-badge">{{ __('messages.disciples.receipt_doc_title') }}</span>
+            <div class="t-number">{{ __('messages.disciples.receipt_number') }} : INSC-{{ str_pad($disciple->id, 6, '0', STR_PAD_LEFT) }}</div>
 
             <div class="t-dashed"></div>
 
-            <table class="t-info">
-                <tr><td class="l">{{ __('messages.full_name') }}</td><td class="v">{{ $cotisation->disciple?->full_name }}</td></tr>
-                <tr><td class="l">{{ __('messages.salle') }}</td><td class="v">{{ $cotisation->disciple?->salle?->nom ?? '—' }}</td></tr>
-                <tr><td class="l">{{ __('messages.cotisations.period') }}</td><td class="v">{{ $cotisation->moisLabel() }} {{ $cotisation->annee }}</td></tr>
-                <tr><td class="l">{{ __('messages.cotisations.amount') }}</td><td class="v">{{ number_format($cotisation->montant, 0, ',', ' ') }} FCFA</td></tr>
-                <tr><td class="l">{{ __('messages.cotisations.paid_amount') }}</td><td class="v">{{ number_format($cotisation->montant_paye, 0, ',', ' ') }} FCFA</td></tr>
-                <tr class="total"><td class="l">{{ __('messages.cotisations.remaining') }}</td><td class="v">{{ number_format($cotisation->reste_a_payer, 0, ',', ' ') }} FCFA</td></tr>
-            </table>
-
-            <div style="clear:both"></div>
-            <div style="text-align:center; margin: 8px 0 2px;">
-                <span class="t-status {{ $cotisation->statut === 'PAYE' ? 'paid' : ($cotisation->statut === 'PARTIEL' ? 'partial' : 'unpaid') }}">
-                    {{ __('messages.cotisations.' . strtolower($cotisation->statut === 'PAYE' ? 'paid' : ($cotisation->statut === 'PARTIEL' ? 'partial' : 'unpaid'))) }}
-                </span>
+            <div class="t-avatar-wrap">
+                @if($disciple->photo_url)
+                    <img src="{{ $disciple->photo_url }}" class="t-avatar" alt="">
+                @else
+                    <div class="t-avatar-fallback">{{ mb_strtoupper(mb_substr($disciple->prenom, 0, 1) . mb_substr($disciple->nom, 0, 1)) }}</div>
+                @endif
             </div>
 
-            @if($cotisation->paiements->count())
-                <div class="t-dashed"></div>
-                <div class="t-hist">
-                    <div class="hist-title">{{ __('messages.cotisations.payments_history') }}</div>
-                    <table class="t-hist-table">
-                        @foreach($cotisation->paiements as $p)
-                            <tr>
-                                <td>{{ optional($p->date_paiement)->format('d/m/Y') }} · {{ $p->mode_paiement }}</td>
-                                <td class="v">{{ number_format($p->montant, 0, ',', ' ') }} FCFA</td>
-                            </tr>
-                        @endforeach
-                    </table>
-                </div>
-            @endif
+            <table class="t-info">
+                <tr><td class="l">{{ __('messages.full_name') }}</td><td class="v">{{ $disciple->full_name }}</td></tr>
+                <tr><td class="l">{{ __('messages.disciples.matricule') }}</td><td class="v">{{ $disciple->nmle ?: '—' }}</td></tr>
+                <tr><td class="l">{{ __('messages.gender') }}</td><td class="v">{{ $disciple->sexe === 'F' ? __('messages.female') : ($disciple->sexe === 'M' ? __('messages.male') : '—') }}</td></tr>
+                <tr><td class="l">{{ __('messages.birth_date') }}</td><td class="v">{{ optional($disciple->date_naissance)->format('d/m/Y') ?? '—' }}</td></tr>
+                <tr><td class="l">{{ __('messages.grade') }}</td><td class="v">{{ $disciple->grade?->nom_grade ?? '—' }}</td></tr>
+                <tr><td class="l">{{ __('messages.salle') }}</td><td class="v">{{ $disciple->salle?->nom ?? '—' }}</td></tr>
+                <tr><td class="l">{{ __('messages.registration_date') }}</td><td class="v">{{ optional($disciple->date_inscription)->format('d/m/Y') ?? '—' }}</td></tr>
+                @if($disciple->telephone)
+                    <tr><td class="l">{{ __('messages.phone') }}</td><td class="v">{{ $disciple->telephone }}</td></tr>
+                @endif
+            </table>
 
+            <div class="t-dashed"></div>
+            <div class="t-stamp">✔ {{ __('messages.disciples.receipt_confirmed') }}</div>
             <div class="t-dashed"></div>
 
             @php
-                $signerName = $signature?->master_name ?: ($cotisation->disciple?->salle?->maitre_display_name ?? '');
-                $signerGrade = $signature?->master_grade ?: ($cotisation->disciple?->salle?->maitre_display_grade ?? '');
+                $signerName = $signature?->master_name ?: ($disciple->salle?->maitre_display_name ?? '');
+                $signerGrade = $signature?->master_grade ?: ($disciple->salle?->maitre_display_grade ?? '');
             @endphp
             <div class="t-signature">
                 <div class="sig-label">{{ __('messages.master_signature') }}</div>
@@ -185,8 +180,8 @@
             <div class="t-dashed"></div>
 
             <div class="t-footer">
-                <div class="thanks">{{ __('messages.cotisations.receipt_welcome') }}</div>
-                <div class="meta">{{ __('messages.cotisations.receipt_issued_by', ['name' => Auth::user()->name ?? '—', 'date' => now()->format('d/m/Y H:i')]) }}</div>
+                <div class="thanks">{{ __('messages.disciples.receipt_welcome', ['salle' => $disciple->salle?->nom ?? __('messages.app_name')]) }}</div>
+                <div class="meta">{{ __('messages.disciples.receipt_issued_by', ['name' => Auth::user()->name ?? '—', 'date' => now()->format('d/m/Y H:i')]) }}</div>
             </div>
         </div>
     </div>
@@ -195,7 +190,7 @@
 
     <div class="actions">
         <button type="button" class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> {{ __('messages.print') }}</button>
-        <a href="{{ route('admin.mensualites.receipt.pdf', $cotisation) }}" class="btn btn-pdf"><i class="fas fa-file-pdf"></i> {{ __('messages.download_pdf') }}</a>
+        <a href="{{ route('admin.disciples.receipt.pdf', $disciple) }}" class="btn btn-pdf"><i class="fas fa-file-pdf"></i> {{ __('messages.download_pdf') }}</a>
         <button type="button" class="btn btn-whatsapp" id="btnWhatsapp"><i class="fab fa-whatsapp"></i> {{ __('messages.whatsapp.send') }}</button>
         <button type="button" class="btn btn-gear" id="btnBridgeConfig" title="{{ __('messages.whatsapp.configure') }}"><i class="fas fa-gear"></i></button>
     </div>
@@ -219,9 +214,9 @@
 
             WhatsappBridge.attachSendButton(document.getElementById('btnWhatsapp'), ticket, {
                 labels: labels,
-                shareTitle: @json(__('messages.whatsapp.share_text', ['name' => $cotisation->disciple?->full_name ?? ''])),
-                phoneDigits: @json(\App\Support\WhatsAppPhone::normalize($cotisation->disciple?->telephone)),
-                fileName: @json('recu-cotisation-' . $cotisation->id . '.png'),
+                shareTitle: @json(__('messages.whatsapp.share_text', ['name' => $disciple->full_name])),
+                phoneDigits: @json(\App\Support\WhatsAppPhone::normalize($disciple->telephone)),
+                fileName: @json('recu-inscription-' . $disciple->id . '.png'),
             });
 
             document.getElementById('btnBridgeConfig').addEventListener('click', function () { WhatsappBridge.configure(); });

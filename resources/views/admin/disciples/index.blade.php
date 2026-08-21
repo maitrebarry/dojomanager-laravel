@@ -58,7 +58,7 @@
                         <th>{{ __('messages.grade') }}</th>
                         <th>{{ __('messages.salle') }}</th>
                         <th>{{ __('messages.status') }}</th>
-                        <th style="width: 185px; white-space: nowrap;">{{ __('messages.actions') }}</th>
+                        <th style="width: 220px; white-space: nowrap;">{{ __('messages.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,6 +80,7 @@
                             <td>
                                 <div class="d-flex align-items-center gap-1 flex-nowrap">
                                     <a href="{{ route('admin.disciples.show', $d) }}" class="btn btn-sm btn-outline-secondary" title="{{ __('messages.view') }}"><i class="fas fa-eye"></i></a>
+                                    <a href="{{ route('admin.disciples.receipt', $d) }}" target="_blank" class="btn btn-sm btn-outline-success" title="{{ __('messages.disciples.receipt') }}"><i class="fas fa-receipt"></i></a>
                                     @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('DISCIPLE_UPDATE')))
                                         <a href="{{ route('admin.disciples.edit', $d) }}" class="btn btn-sm btn-info" title="{{ __('messages.edit') }}"><i class="fas fa-pen"></i></a>
                                         @if($d->is_archived)

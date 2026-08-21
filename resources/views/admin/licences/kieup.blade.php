@@ -7,6 +7,11 @@
     <style>
         @page { size: A4 portrait; margin: 8mm; }
 
+        /* Sans ceci, les navigateurs suppriment par défaut les couleurs de fond à
+           l'impression/export PDF (économie d'encre) — ce qui viderait les aplats de
+           couleur du visuel (cadres, bandeaux). */
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+
         body { margin: 0; background: #e9edf2; color: #1f2933; font-family: DejaVu Serif, "Times New Roman", serif; }
 
         .toolbar {

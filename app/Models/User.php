@@ -82,6 +82,11 @@ class User extends Authenticatable
         return $this->belongsTo(Salle::class);
     }
 
+    public function grade(): BelongsTo
+    {
+        return $this->belongsTo(Grade::class);
+    }
+
     /* -------------------- Connexion -------------------- */
 
     public function recordLogin(): void
