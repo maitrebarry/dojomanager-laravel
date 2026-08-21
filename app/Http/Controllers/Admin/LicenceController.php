@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Disciple;
 use App\Models\Grade;
 use App\Models\Signature;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -40,23 +41,36 @@ class LicenceController extends Controller
     public function disciples(Request $request): View
     {
         $ids = $this->parseIds($request->query('ids'));
+        $userIds = $this->parseIds($request->query('user_ids'));
 
-        abort_if(empty($ids), 404, __('messages.licences.none_selected'));
+        abort_if(empty($ids) && empty($userIds), 404, __('messages.licences.none_selected'));
 
-        $disciples = Disciple::query()
+        $disciples = empty($ids) ? collect() : Disciple::query()
             ->visibleTo($request->user())
             ->whereIn('id', $ids)
             ->with(['grade:id,nom_grade,niveau', 'salle.ligue.federation', 'salle.maitre', 'salle.maitreUser.grade', 'gradeHistoriques.grade'])
-            ->orderBy('nom')->orderBy('prenom')
             ->get();
 
-        abort_if($disciples->isEmpty(), 404, __('messages.licences.none_selected'));
+        // Maîtres / responsables de ligue / fédération sélectionnés depuis l'onglet
+        // Ceintures noires (leur propre grade DAN n'est jamais un Disciple).
+        $gestionnaires = empty($userIds) ? collect() : User::query()
+            ->visibleTo($request->user())
+            ->whereIn('id', $userIds)
+            ->whereIn('role', User::TENANT_ROLES)
+            ->with(['grade:id,nom_grade,niveau', 'federation', 'ligue', 'salle.ligue.federation'])
+            ->get();
+
+        abort_if($disciples->isEmpty() && $gestionnaires->isEmpty(), 404, __('messages.licences.none_selected'));
 
         $meta = $request->user()->licenceMeta();
         $role = strtolower((string) ($request->user()->role->value ?? $request->user()->role));
         $issuerSignature = $this->currentSignature($request->user());
 
-        $cards = $disciples->map(fn (Disciple $d) => $this->buildCard($d, $role, $meta, $issuerSignature))->all();
+        $cards = $disciples->map(fn (Disciple $d) => $this->buildCard($d, $role, $meta, $issuerSignature))
+            ->concat($gestionnaires->map(fn (User $u) => $this->buildCardFromUser($u, $role, $meta, $issuerSignature)))
+            ->sortBy('nom')
+            ->values()
+            ->all();
 
         $payload = [
             'cards' => $cards,
@@ -274,18 +288,70 @@ class LicenceController extends Controller
     /** Photo en data URI (embarquée pour l'impression), sinon null. */
     private function photoData(Disciple $d): ?string
     {
-        if (empty($d->photo)) {
+        return $this->fileToDataUri($d->photo);
+    }
+
+    /** Prépare les données d'une carte (régionale/fédérale) pour un maître/responsable. */
+    private function buildCardFromUser(User $u, string $role, array $meta, ?Signature $issuerSignature = null): array
+    {
+        $salle = $u->salle;
+        $ligue = $u->ligue ?? $salle?->ligue;
+        $federation = $u->federation ?? $salle?->ligue?->federation;
+
+        $signature = $this->signatureForScope($role, $salle, $ligue, $federation) ?? $issuerSignature;
+
+        $signerName = $signature?->master_name ?: ($salle?->maitre_display_name ?? '');
+        $signerGrade = $signature?->master_grade ?: ($salle?->maitre_display_grade ?? '');
+
+        [$prenom, $nom] = $this->splitName($u->name);
+
+        return [
+            'nom' => $nom,
+            'prenom' => $prenom,
+            'full_name' => $u->name,
+            'gender' => '',
+            'birth_date' => '',
+            'birth_place' => '',
+            'adresse' => '',
+            'reference' => 'GEST-' . $u->id,
+            'grade' => $u->grade?->nom_grade ?? '',
+            'phone' => $u->phone ?? '',
+            'salle' => $salle?->nom ?? '',
+            'ligue' => $ligue?->nom ?? '',
+            'region' => $ligue?->region ?? '',
+            'federation' => $federation?->nom ?: self::OFFICIAL['federation'],
+            'license_label' => $meta['badge_type'],
+            'photo' => $this->fileToDataUri($u->avatar),
+            'signature' => $signature?->signature_data,
+            'signer' => $meta['signer'],
+            'signer_name' => $signerName,
+            'signer_grade' => $signerGrade,
+        ];
+    }
+
+    /** Sépare "Prénom Nom" en [prénom, nom] (le nom prend le reste de la chaîne). */
+    private function splitName(string $fullName): array
+    {
+        $parts = preg_split('/\s+/', trim($fullName), 2);
+
+        return [$parts[0] ?? $fullName, $parts[1] ?? ''];
+    }
+
+    /** Convertit un chemin de fichier (disque public) ou une URL/data URI en data URI, sinon null. */
+    private function fileToDataUri(?string $path): ?string
+    {
+        if (empty($path)) {
             return null;
         }
 
-        if (str_starts_with($d->photo, 'http') || str_starts_with($d->photo, 'data:')) {
-            return $d->photo;
+        if (str_starts_with($path, 'http') || str_starts_with($path, 'data:')) {
+            return $path;
         }
 
         try {
-            if (Storage::disk('public')->exists($d->photo)) {
-                $bytes = Storage::disk('public')->get($d->photo);
-                $mime = Storage::disk('public')->mimeType($d->photo) ?: 'image/jpeg';
+            if (Storage::disk('public')->exists($path)) {
+                $bytes = Storage::disk('public')->get($path);
+                $mime = Storage::disk('public')->mimeType($path) ?: 'image/jpeg';
 
                 return 'data:' . $mime . ';base64,' . base64_encode($bytes);
             }

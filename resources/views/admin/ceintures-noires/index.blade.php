@@ -49,7 +49,9 @@
                     <tr>
                         <td>
                             @if($cn->origine === 'DISCIPLE')
-                                <input type="checkbox" class="form-check-input js-licence-check" value="{{ $cn->id }}">
+                                <input type="checkbox" class="form-check-input js-licence-check" data-kind="disciple" value="{{ $cn->id }}">
+                            @elseif($cn->origine === 'GESTIONNAIRE')
+                                <input type="checkbox" class="form-check-input js-licence-check" data-kind="user" value="{{ $cn->id }}">
                             @endif
                         </td>
                         <td class="fw-semibold">{{ $cn->full_name }}</td>
@@ -102,15 +104,25 @@ document.addEventListener('DOMContentLoaded', function () {
     var printBtn = document.getElementById('btnPrintLicencesCn');
     var printCount = document.getElementById('printCountCn');
     var licencesUrl = '{{ route('admin.licences.disciples') }}';
-    function selectedIds() { return checks.filter(function (c) { return c.checked; }).map(function (c) { return c.value; }); }
-    function refresh() { var ids = selectedIds(); printCount.textContent = ids.length; printBtn.disabled = ids.length === 0; }
+    function selectedIds(kind) {
+        return checks.filter(function (c) { return c.checked && (c.dataset.kind || 'disciple') === kind; }).map(function (c) { return c.value; });
+    }
+    function refresh() {
+        var total = checks.filter(function (c) { return c.checked; }).length;
+        printCount.textContent = total;
+        printBtn.disabled = total === 0;
+    }
     checks.forEach(function (c) { c.addEventListener('change', refresh); });
     document.getElementById('btnSelectAllCn').addEventListener('click', function () { checks.forEach(function (c) { c.checked = true; }); refresh(); });
     document.getElementById('btnClearCn').addEventListener('click', function () { checks.forEach(function (c) { c.checked = false; }); refresh(); });
     printBtn.addEventListener('click', function () {
-        var ids = selectedIds();
-        if (ids.length === 0) return;
-        window.open(licencesUrl + '?ids=' + ids.join(','), '_blank');
+        var discipleIds = selectedIds('disciple');
+        var userIds = selectedIds('user');
+        if (discipleIds.length === 0 && userIds.length === 0) return;
+        var params = [];
+        if (discipleIds.length) params.push('ids=' + discipleIds.join(','));
+        if (userIds.length) params.push('user_ids=' + userIds.join(','));
+        window.open(licencesUrl + '?' + params.join('&'), '_blank');
     });
     refresh();
 });
