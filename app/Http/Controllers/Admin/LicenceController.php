@@ -20,8 +20,12 @@ use Illuminate\View\View;
  */
 class LicenceController extends Controller
 {
-    /** Valeurs officielles par défaut (reprises de CardSettings de licence_regionale_tkd). */
-    private const OFFICIAL = [
+    /**
+     * Valeurs officielles par défaut (reprises de CardSettings de licence_regionale_tkd).
+     * Public : réutilisé par d'autres documents officiels (ex. liste des candidats au
+     * passage de grade dans DiscipleGradeController).
+     */
+    public const OFFICIAL = [
         'ministry' => "Ministère de la Jeunesse et des Sports chargé de l'Instruction Civique et de la Construction Citoyenne",
         'federation' => 'Fédération Malienne de Taekwondo',
         'motto' => 'Courtoisie - Loyauté - Persévérance - Maîtrise de soi - Combativité - Discipline',

@@ -181,7 +181,7 @@ class DiscipleGradeController extends Controller
         $disciples = Disciple::active()
             ->visibleTo($user)
             ->whereIn('id', $validated['disciple_ids'])
-            ->with(['grade', 'salle'])
+            ->with(['grade', 'salle.ligue.federation'])
             ->orderBy('nom')->orderBy('prenom')
             ->get()
             ->map(fn (Disciple $d) => (object) [
@@ -192,10 +192,15 @@ class DiscipleGradeController extends Controller
         abort_if($disciples->isEmpty(), 404);
 
         $salle = $disciples->first()->disciple->salle;
+        $ligue = $salle?->ligue;
+        $federation = $ligue?->federation;
 
         $pdf = Pdf::loadView('admin.disciples.grade_candidates_list_pdf', [
             'rows' => $disciples,
             'salle' => $salle,
+            'ligue' => $ligue,
+            'federation' => $federation,
+            'official' => LicenceController::OFFICIAL,
         ])->setPaper('a4', 'landscape');
 
         return $pdf->download('liste-candidats-passage-grade.pdf');

@@ -6,7 +6,13 @@
     <style>
         @page { margin: 14mm; }
         body { font-family: DejaVu Sans, sans-serif; color: #1f2937; margin: 0; font-size: 12px; }
-        header { text-align: center; margin-bottom: 4px; }
+        header { text-align: center; margin-bottom: 10px; }
+        .official { font-size: 10px; line-height: 1.5; color: #374151; }
+        .official .ministry { text-transform: uppercase; font-weight: 700; }
+        .official .republic { text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+        .official .motto { font-style: italic; color: #6b7280; }
+        .org-names { margin: 8px 0 4px; font-size: 13px; font-weight: 800; color: #152645; text-transform: uppercase; line-height: 1.4; }
+        hr.sep { border: none; border-top: 1.5px dashed #c7cfe0; margin: 8px auto 10px; width: 60%; }
         h1 { color: #152645; font-size: 20px; margin: 0 0 2px; text-transform: uppercase; letter-spacing: .5px; }
         .sub { color: #6b7280; font-size: 12px; margin-bottom: 2px; }
         .meta { text-align: center; color: #6b7280; font-size: 11px; margin-bottom: 14px; }
@@ -24,6 +30,16 @@
 </head>
 <body>
     <header>
+        <div class="official">
+            <div class="ministry">{{ $official['ministry'] }}</div>
+            <div class="republic">République du Mali</div>
+            <div class="motto">Un Peuple – Un But – Une Foi</div>
+        </div>
+        <div class="org-names">
+            {{ $federation?->nom ?? $official['federation'] }}<br>
+            @if($ligue?->nom){{ $ligue->nom }}<br>@endif
+        </div>
+        <hr class="sep">
         <h1>{{ __('messages.disciple_grades.candidates_title') }}</h1>
         <div class="sub">{{ $salle?->nom ?? __('messages.app_name') }}</div>
     </header>
