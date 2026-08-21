@@ -86,7 +86,7 @@ return [
         'invalid_credentials' => 'Les identifiants fournis sont incorrects ou le compte n\'est pas actif.',
         'remaining_attempts' => 'Il vous reste :count tentative(s) avant blocage temporaire.',
         'too_many_attempts' => 'Trop de tentatives de connexion. Veuillez réessayer dans :seconds secondes.',
-        'account_disabled_default' => 'Votre compte a été désactivé par l\'administrateur. Contactez-le pour plus d\'informations.',
+        'account_disabled_default' => 'Une nouvelle mise à jour de l\'application est disponible, avec de nouvelles fonctionnalités. Contactez l\'administrateur pour l\'activer sur votre compte.',
         'account_created' => 'Compte créé avec succès. Veuillez attendre l\'activation par un administrateur.',
         'profile_updated' => 'Votre profil a été mis à jour avec succès.',
         'old_password_wrong' => 'L\'ancien mot de passe est incorrect.',

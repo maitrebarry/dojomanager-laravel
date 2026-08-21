@@ -47,6 +47,8 @@ class PermissionSeeder extends Seeder
                 'UTILISATEUR_READ' => 'Lire les utilisateurs',
                 'UTILISATEUR_UPDATE' => 'Mettre à jour des utilisateurs',
                 'UTILISATEUR_DELETE' => 'Supprimer des utilisateurs',
+                'UTILISATEUR_ACTIVATION_READ' => "Voir l'icône d'activation/désactivation des utilisateurs",
+                'UTILISATEUR_ACTIVATE' => 'Activer ou désactiver des utilisateurs',
             ],
             'Fédérations' => [
                 'FÉDÉRATION_CREATE' => 'Créer des fédérations',

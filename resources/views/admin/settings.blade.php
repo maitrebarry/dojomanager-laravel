@@ -61,7 +61,7 @@
                             <tbody>
                             @forelse($users as $usr)
                                 @php
-                                    $canBlock = $can('UTILISATEUR_UPDATE') && $usr->id !== $u->id && $usr->role !== 'superadmin';
+                                    $canBlock = $can('UTILISATEUR_ACTIVATION_READ') && $usr->id !== $u->id && $usr->role !== 'superadmin';
                                 @endphp
                                 <tr>
                                     <td class="fw-semibold">{{ $usr->name }}<div class="text-muted small">{{ $usr->email }}</div></td>
