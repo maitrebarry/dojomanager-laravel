@@ -61,8 +61,8 @@ class UserController extends Controller
             abort(403, 'Vous ne pouvez pas activer ou désactiver votre propre compte.');
         }
 
-        if (in_array($target->role, [UserRole::SUPERADMIN->value, UserRole::ADMIN->value], true)) {
-            abort(403, 'Les comptes Super Administrateur et Administrateur ne peuvent pas être activés ou désactivés depuis cette action.');
+        if ($target->role === UserRole::SUPERADMIN->value) {
+            abort(403, 'Les comptes Super Administrateur ne peuvent pas être activés ou désactivés depuis cette action.');
         }
     }
 
