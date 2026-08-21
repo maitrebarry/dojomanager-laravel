@@ -55,6 +55,7 @@ class User extends Authenticatable
         'status',
         'locale',
         'is_active',
+        'deactivation_reason',
         'federation_id',
         'ligue_id',
         'salle_id',

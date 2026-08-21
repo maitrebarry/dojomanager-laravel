@@ -935,6 +935,36 @@
             });
             return false;
         };
+        // Demande un texte libre (ex. motif de blocage) avant de soumettre le
+        // formulaire : le remplit dans le champ caché `opts.field`, puis envoie.
+        window.dojoPromptText = function (formEl, opts) {
+            opts = opts || {};
+            var submit = function (value) {
+                var input = formEl.querySelector('[name="' + opts.field + '"]');
+                if (input) { input.value = value || ''; }
+                dojoShowButtonSpinner(formEl.querySelector('button[type="submit"], input[type="submit"]'));
+                formEl.submit();
+            };
+            if (!window.Swal) {
+                var val = window.prompt(opts.title || '');
+                if (val !== null) { submit(val); }
+                return false;
+            }
+            Swal.fire({
+                title: opts.title || '',
+                text: opts.text || '',
+                input: 'textarea',
+                inputPlaceholder: opts.placeholder || '',
+                showCancelButton: true,
+                confirmButtonColor: opts.confirmColor || '#0f5132',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: opts.confirmText || @json(__('messages.confirm')),
+                cancelButtonText: @json(__('messages.cancel')),
+            }).then((r) => {
+                if (r.isConfirmed) { submit(r.value); }
+            });
+            return false;
+        };
 
         document.addEventListener('DOMContentLoaded', function () {
             @if(session('success')) window.dojoToast('success', @json(session('success'))); @endif

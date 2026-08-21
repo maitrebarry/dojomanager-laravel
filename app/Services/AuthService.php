@@ -61,6 +61,27 @@ class AuthService
     }
 
     /**
+     * Si le mot de passe est correct mais que le compte est désactivé, renvoie le
+     * motif à afficher sur l'écran de connexion (celui saisi par le superadmin, ou un
+     * message générique s'il n'en a pas précisé). Null sinon (identifiants invalides,
+     * ou compte actif).
+     */
+    public function blockReasonIfCredentialsValid(string $phone, string $password): ?string
+    {
+        $user = $this->userService->findByPhone($phone);
+
+        if (!$user || !Hash::check($password, $user->password)) {
+            return null;
+        }
+
+        if ($user->is_active && $user->status === UserStatus::ACTIVE->value) {
+            return null;
+        }
+
+        return $user->deactivation_reason ?: __('messages.auth.account_disabled_default');
+    }
+
+    /**
      * Se déconnecter
      */
     public function logout(): void

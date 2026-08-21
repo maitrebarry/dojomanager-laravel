@@ -12,6 +12,7 @@ use App\Shared\Enums\UserStatus;
 use App\Models\Permission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -265,12 +266,17 @@ class UserController extends Controller
     }
 
     /**
-     * Désactiver un utilisateur
+     * Désactiver un utilisateur, avec un motif optionnel affiché à sa prochaine
+     * tentative de connexion.
      */
-    public function deactivate(User $user): RedirectResponse
+    public function deactivate(Request $request, User $user): RedirectResponse
     {
         $this->authorizeActivationTarget($user);
-        $this->userService->deactivate($user);
+        $reason = $request->validate([
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ])['reason'] ?? null;
+
+        $this->userService->deactivate($user, $reason);
 
         return back()->with('success', 'L\'utilisateur a été désactivé avec succès.');
     }

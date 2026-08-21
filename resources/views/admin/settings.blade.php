@@ -56,15 +56,23 @@
                     <div class="table-responsive">
                         <table class="table table-hover table-sm align-middle mb-0">
                             <thead class="table-light"><tr>
-                                <th>{{ __('messages.name') }}</th><th>{{ __('messages.phone') }}</th><th>{{ __('messages.role') }}</th><th>{{ __('messages.parametres.scope') }}</th><th class="text-end">{{ __('messages.actions') }}</th>
+                                <th>{{ __('messages.name') }}</th><th>{{ __('messages.phone') }}</th><th>{{ __('messages.role') }}</th><th>{{ __('messages.parametres.scope') }}</th><th>{{ __('messages.status') }}</th><th class="text-end">{{ __('messages.actions') }}</th>
                             </tr></thead>
                             <tbody>
                             @forelse($users as $usr)
+                                @php
+                                    $canBlock = $can('UTILISATEUR_UPDATE') && $usr->id !== $u->id && !in_array($usr->role, ['superadmin', 'admin'], true);
+                                @endphp
                                 <tr>
                                     <td class="fw-semibold">{{ $usr->name }}<div class="text-muted small">{{ $usr->email }}</div></td>
                                     <td>{{ $usr->phone ?? '-' }}</td>
                                     <td><span class="badge bg-secondary">{{ __('messages.roles.' . $usr->role) }}</span></td>
                                     <td class="small text-muted">{{ $usr->salle?->nom ?? $usr->ligue?->nom ?? $usr->federation?->nom ?? '-' }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ $usr->is_active ? 'success' : 'secondary' }}" @if(!$usr->is_active && $usr->deactivation_reason) title="{{ $usr->deactivation_reason }}" @endif>
+                                            {{ $usr->is_active ? __('messages.active') : __('messages.inactive') }}
+                                        </span>
+                                    </td>
                                     <td class="text-end">
                                         @if($can('UTILISATEUR_UPDATE'))
                                             @php $plUser = ['name'=>$usr->name,'phone'=>$usr->phone,'email'=>$usr->email,'role'=>$usr->role,'fonction'=>$usr->fonction,'federation_id'=>$usr->federation_id,'ligue_id'=>$usr->ligue_id,'salle_id'=>$usr->salle_id,'grade_id'=>$usr->grade_id]; @endphp
@@ -73,13 +81,35 @@
                                                 data-payload='@json($plUser)'>
                                                 <i class="fas fa-edit"></i></button>
                                         @endif
+                                        @if($canBlock)
+                                            @if($usr->is_active)
+                                                <form action="{{ route('admin.users.deactivate', $usr) }}" method="POST" class="d-inline"
+                                                    onsubmit="return dojoPromptText(this, {
+                                                        field: 'reason',
+                                                        title: @json(__('messages.parametres.block_user_title', ['name' => $usr->name])),
+                                                        text: @json(__('messages.parametres.block_user_text')),
+                                                        placeholder: @json(__('messages.parametres.block_user_placeholder')),
+                                                        confirmText: @json(__('messages.parametres.block_confirm')),
+                                                        confirmColor: '#dc3545',
+                                                    });">
+                                                    @csrf @method('PATCH')
+                                                    <input type="hidden" name="reason">
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="{{ __('messages.parametres.block_user') }}"><i class="fas fa-ban"></i></button>
+                                                </form>
+                                            @else
+                                                <form action="{{ route('admin.users.activate', $usr) }}" method="POST" class="d-inline" onsubmit="return dojoConfirmAction(this, @json(__('messages.parametres.unblock_user_text')));">
+                                                    @csrf @method('PATCH')
+                                                    <button type="submit" class="btn btn-sm btn-outline-success" title="{{ __('messages.parametres.unblock_user') }}"><i class="fas fa-unlock"></i></button>
+                                                </form>
+                                            @endif
+                                        @endif
                                         @if($can('UTILISATEUR_DELETE'))
                                             <form action="{{ route('admin.users.destroy', $usr) }}" method="POST" class="d-inline" onsubmit="return dojoConfirmDelete(this);">@csrf @method('DELETE')<input type="hidden" name="back_to_settings" value="1"><button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button></form>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted py-4">{{ __('messages.parametres.no_users') }}</td></tr>
+                                <tr><td colspan="6" class="text-center text-muted py-4">{{ __('messages.parametres.no_users') }}</td></tr>
                             @endforelse
                             </tbody>
                         </table>

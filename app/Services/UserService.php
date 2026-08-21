@@ -135,17 +135,20 @@ class UserService
         return $this->update($user, [
             'is_active' => true,
             'status' => UserStatus::ACTIVE->value,
+            'deactivation_reason' => null,
         ]);
     }
 
     /**
-     * Désactiver un utilisateur
+     * Désactiver un utilisateur, avec un motif optionnel affiché à sa prochaine
+     * tentative de connexion (ex. rappel de mise à jour/abonnement payant).
      */
-    public function deactivate(User $user): bool
+    public function deactivate(User $user, ?string $reason = null): bool
     {
         return $this->update($user, [
             'is_active' => false,
             'status' => UserStatus::INACTIVE->value,
+            'deactivation_reason' => $reason,
         ]);
     }
 

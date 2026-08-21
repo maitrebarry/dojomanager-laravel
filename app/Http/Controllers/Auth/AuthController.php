@@ -64,9 +64,22 @@ class AuthController extends Controller
         if (!$this->authService->login($credentials['phone'], $credentials['password'], $remember)) {
             RateLimiter::hit($throttleKey, 180);
 
+            $blockReason = $this->authService->blockReasonIfCredentialsValid($credentials['phone'], $credentials['password']);
+            if ($blockReason) {
+                return back()
+                    ->withInput($request->only('phone'))
+                    ->with('error', $blockReason);
+            }
+
+            $remaining = max(0, 5 - RateLimiter::attempts($throttleKey));
+            $message = __('messages.auth.invalid_credentials');
+            if ($remaining > 0) {
+                $message .= ' ' . __('messages.auth.remaining_attempts', ['count' => $remaining]);
+            }
+
             return back()
                 ->withInput($request->only('phone'))
-                ->with('error', __('messages.auth.invalid_credentials'));
+                ->with('error', $message);
         }
 
         RateLimiter::clear($throttleKey);
