@@ -86,6 +86,8 @@ class SettingsController extends Controller
      */
     public function storePermission(Request $request)
     {
+        $this->authorizeSuperAdmin();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'module' => 'required|string|max:255',
@@ -134,6 +136,8 @@ class SettingsController extends Controller
      */
     public function updatePermission(Request $request, Permission $permission): RedirectResponse
     {
+        $this->authorizeSuperAdmin();
+
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -173,12 +177,19 @@ class SettingsController extends Controller
      */
     public function destroyPermission(Permission $permission): RedirectResponse
     {
+        $this->authorizeSuperAdmin();
         $this->authorizeSchoolPermission($permission);
 
         $permission->delete();
 
         return redirect()->route('admin.settings', ['tab' => 'permissions-list'])
             ->with('success', 'Permission supprimée avec succès');
+    }
+
+    /** La gestion des permissions elles-mêmes (créer/renommer/supprimer) est réservée au superadmin. */
+    private function authorizeSuperAdmin(): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Accès réservé au super-administrateur.');
     }
 
     private function preparePermissionData(array $data, ?Permission $permission = null): array

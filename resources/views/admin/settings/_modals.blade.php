@@ -98,6 +98,26 @@
     </div>
 </div>
 
+{{-- ===== PERMISSION ===== --}}
+<div class="modal fade" id="m-permission" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" class="modal-content js-modal-form">
+            @csrf <input type="hidden" name="_method" value="POST">
+            <div class="modal-header dojo-modal-header">
+                <h5 class="modal-title js-modal-title" data-create="{{ __('messages.parametres.add_permission') }}" data-edit="{{ __('messages.parametres.edit_permission') }}">{{ __('messages.parametres.add_permission') }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2">
+                    <div class="col-12"><label class="form-label">{{ __('messages.parametres.permission_name') }} <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" required></div>
+                    <div class="col-12"><label class="form-label">{{ __('messages.parametres.permission_module') }} <span class="text-danger">*</span></label><input type="text" name="module" class="form-control" required></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('messages.cancel') }}</button><button type="submit" class="btn btn-primary">{{ __('messages.save') }}</button></div>
+        </form>
+    </div>
+</div>
+
 {{-- ===== UTILISATEUR ===== --}}
 <div class="modal fade" id="m-user" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">

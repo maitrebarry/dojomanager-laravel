@@ -12,9 +12,13 @@
         ['key' => 'ligues', 'label' => __('messages.ligues.title'), 'icon' => 'fa-sitemap', 'perm' => 'LIGUE_READ'],
         ['key' => 'salles', 'label' => __('messages.salles.title'), 'icon' => 'fa-dumbbell', 'perm' => 'SALLE_READ'],
         ['key' => 'grades', 'label' => __('messages.grades.title'), 'icon' => 'fa-medal', 'perm' => 'GRADES_READ'],
-        ['key' => 'permissions', 'label' => __('messages.parametres.tab_permissions'), 'icon' => 'fa-key', 'perm' => 'PERMISSION_READ'],
+        // Gestion des permissions elles-mêmes (créer/renommer/supprimer) : réservée au
+        // superadmin, contrairement à "Assigner Permission" qui reste ouverte à toute
+        // personne ayant PERMISSION_READ.
+        ['key' => 'permissions-list', 'label' => __('messages.parametres.tab_permissions_list'), 'icon' => 'fa-key', 'superadmin_only' => true],
+        ['key' => 'permissions-assign', 'label' => __('messages.parametres.tab_permissions'), 'icon' => 'fa-user-lock', 'perm' => 'PERMISSION_READ'],
     ];
-    $visibleTabs = array_values(array_filter($tabs, fn ($t) => $can($t['perm'])));
+    $visibleTabs = array_values(array_filter($tabs, fn ($t) => !empty($t['superadmin_only']) ? ($u && $u->isSuperAdmin()) : $can($t['perm'])));
     $activeTab = request('tab', $visibleTabs[0]['key'] ?? 'utilisateurs');
 @endphp
 
@@ -259,6 +263,58 @@
             </div>
             @endif
 
+            {{-- PERMISSIONS (CRUD) : distinct de l'onglet "Assigner Permission" ci-dessous,
+                 qui attribue des permissions existantes à un utilisateur. Celui-ci gère
+                 les permissions elles-mêmes (créer/modifier/supprimer) — réservé au
+                 superadmin (cf. filtrage de $visibleTabs plus haut). --}}
+            @if($u && $u->isSuperAdmin())
+            <div class="tab-pane fade {{ $activeTab === 'permissions-list' ? 'show active' : '' }}" id="tab-permissions-list" role="tabpanel">
+                <div class="card border-0 shadow-sm"><div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="fas fa-key me-2"></i> {{ __('messages.parametres.tab_permissions_list') }}</h6>
+                        <button type="button" class="btn btn-sm text-white js-open" style="background-color: var(--navbar-bg);"
+                                data-modal="#m-permission" data-mode="create" data-action="{{ route('admin.permissions.store') }}">
+                            <i class="fas fa-plus me-1"></i> {{ __('messages.parametres.add_permission') }}
+                        </button>
+                    </div>
+                    @forelse($permissionsByModule as $module => $modulePermissions)
+                        <div class="mb-4">
+                            <h6 class="text-uppercase small fw-bold text-muted border-bottom pb-2 mb-2">{{ $module }}</h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm align-middle mb-0">
+                                    <thead class="table-light"><tr>
+                                        <th>{{ __('messages.parametres.permission_name') }}</th><th>{{ __('messages.parametres.permission_slug') }}</th><th class="text-end">{{ __('messages.actions') }}</th>
+                                    </tr></thead>
+                                    <tbody>
+                                    @foreach($modulePermissions as $p)
+                                        <tr>
+                                            <td class="fw-semibold">{{ $p->name }}</td>
+                                            <td><code class="small">{{ $p->slug }}</code></td>
+                                            <td class="text-end">
+                                                @php $plPerm = ['name' => $p->name, 'module' => $p->module]; @endphp
+                                                <button type="button" class="btn btn-sm btn-outline-primary js-open"
+                                                    data-modal="#m-permission" data-mode="edit" data-action="{{ route('admin.permissions.update', $p) }}"
+                                                    data-payload='@json($plPerm)'>
+                                                    <i class="fas fa-edit"></i></button>
+                                                <form action="{{ route('admin.permissions.destroy', $p) }}" method="POST" class="d-inline"
+                                                    onsubmit="return dojoConfirmDelete(this, @json(__('messages.parametres.delete_permission_question')));">
+                                                    @csrf @method('DELETE')
+                                                    <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-center text-muted py-4 mb-0">{{ __('messages.parametres.no_permissions') }}</p>
+                    @endforelse
+                </div></div>
+            </div>
+            @endif
+
             {{-- ASSIGNER PERMISSION (patron KalanNet) --}}
             @if($can('PERMISSION_READ'))
             @php
@@ -267,7 +323,7 @@
                 $totalPerms = $permissions->count();
                 $canAssign = $can('PERMISSION_ASSIGN') || $can('PERMISSION_MANAGE');
             @endphp
-            <div class="tab-pane fade {{ $activeTab === 'permissions' ? 'show active' : '' }}" id="tab-permissions" role="tabpanel">
+            <div class="tab-pane fade {{ $activeTab === 'permissions-assign' ? 'show active' : '' }}" id="tab-permissions-assign" role="tabpanel">
                 {{-- Sélecteur d'utilisateur (recharge la page) --}}
                 <div class="card border-0 shadow-sm mb-3"><div class="card-body">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
@@ -277,7 +333,7 @@
                         @endif
                     </div>
                     <form method="GET" action="{{ route('admin.settings') }}" id="permSelectForm" class="row g-2 align-items-end">
-                        <input type="hidden" name="tab" value="permissions">
+                        <input type="hidden" name="tab" value="permissions-assign">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">{{ __('messages.parametres.assign_to') }}</label>
                             <input type="text" id="userFilter" class="form-control mb-2" placeholder="{{ __('messages.parametres.filter_users') }}">
