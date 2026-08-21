@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CeintureNoireManuelle;
 use App\Models\Disciple;
 use App\Models\Grade;
 use App\Models\Signature;
@@ -42,8 +43,9 @@ class LicenceController extends Controller
     {
         $ids = $this->parseIds($request->query('ids'));
         $userIds = $this->parseIds($request->query('user_ids'));
+        $manuelleIds = $this->parseIds($request->query('manuelle_ids'));
 
-        abort_if(empty($ids) && empty($userIds), 404, __('messages.licences.none_selected'));
+        abort_if(empty($ids) && empty($userIds) && empty($manuelleIds), 404, __('messages.licences.none_selected'));
 
         $disciples = empty($ids) ? collect() : Disciple::query()
             ->visibleTo($request->user())
@@ -60,7 +62,14 @@ class LicenceController extends Controller
             ->with(['grade:id,nom_grade,niveau', 'federation', 'ligue', 'salle.ligue.federation'])
             ->get();
 
-        abort_if($disciples->isEmpty() && $gestionnaires->isEmpty(), 404, __('messages.licences.none_selected'));
+        // Ceintures noires saisies manuellement (ni Disciple ni compte Utilisateur).
+        $manuelles = empty($manuelleIds) ? collect() : CeintureNoireManuelle::query()
+            ->visibleTo($request->user())
+            ->whereIn('id', $manuelleIds)
+            ->with(['grade:id,nom_grade,niveau', 'federation', 'ligue', 'salle.ligue.federation'])
+            ->get();
+
+        abort_if($disciples->isEmpty() && $gestionnaires->isEmpty() && $manuelles->isEmpty(), 404, __('messages.licences.none_selected'));
 
         $meta = $request->user()->licenceMeta();
         $role = strtolower((string) ($request->user()->role->value ?? $request->user()->role));
@@ -68,6 +77,7 @@ class LicenceController extends Controller
 
         $cards = $disciples->map(fn (Disciple $d) => $this->buildCard($d, $role, $meta, $issuerSignature))
             ->concat($gestionnaires->map(fn (User $u) => $this->buildCardFromUser($u, $role, $meta, $issuerSignature)))
+            ->concat($manuelles->map(fn (CeintureNoireManuelle $m) => $this->buildCardFromManuelle($m, $role, $meta, $issuerSignature)))
             ->sortBy('nom')
             ->values()
             ->all();
@@ -322,6 +332,42 @@ class LicenceController extends Controller
             'federation' => $federation?->nom ?: self::OFFICIAL['federation'],
             'license_label' => $meta['badge_type'],
             'photo' => $this->fileToDataUri($u->avatar),
+            'signature' => $signature?->signature_data,
+            'signer' => $meta['signer'],
+            'signer_name' => $signerName,
+            'signer_grade' => $signerGrade,
+        ];
+    }
+
+    /** Prépare les données d'une carte pour une ceinture noire saisie manuellement. */
+    private function buildCardFromManuelle(CeintureNoireManuelle $m, string $role, array $meta, ?Signature $issuerSignature = null): array
+    {
+        $salle = $m->salle;
+        $ligue = $m->ligue ?? $salle?->ligue;
+        $federation = $m->federation ?? $salle?->ligue?->federation;
+
+        $signature = $this->signatureForScope($role, $salle, $ligue, $federation) ?? $issuerSignature;
+
+        $signerName = $signature?->master_name ?: ($salle?->maitre_display_name ?? '');
+        $signerGrade = $signature?->master_grade ?: ($salle?->maitre_display_grade ?? '');
+
+        return [
+            'nom' => $m->nom,
+            'prenom' => $m->prenom,
+            'full_name' => $m->full_name,
+            'gender' => $m->sexe === 'F' ? 'Féminin' : ($m->sexe === 'M' ? 'Masculin' : ''),
+            'birth_date' => '',
+            'birth_place' => '',
+            'adresse' => '',
+            'reference' => 'MAN-' . $m->id,
+            'grade' => $m->grade?->nom_grade ?? '',
+            'phone' => '',
+            'salle' => $salle?->nom ?? '',
+            'ligue' => $ligue?->nom ?? '',
+            'region' => $ligue?->region ?? '',
+            'federation' => $federation?->nom ?: self::OFFICIAL['federation'],
+            'license_label' => $meta['badge_type'],
+            'photo' => $this->fileToDataUri($m->photo_path),
             'signature' => $signature?->signature_data,
             'signer' => $meta['signer'],
             'signer_name' => $signerName,

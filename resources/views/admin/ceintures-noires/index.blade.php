@@ -48,10 +48,11 @@
                 @forelse($ceinturesNoires as $cn)
                     <tr>
                         <td>
-                            @if($cn->origine === 'DISCIPLE')
-                                <input type="checkbox" class="form-check-input js-licence-check" data-kind="disciple" value="{{ $cn->id }}">
-                            @elseif($cn->origine === 'GESTIONNAIRE')
-                                <input type="checkbox" class="form-check-input js-licence-check" data-kind="user" value="{{ $cn->id }}">
+                            @php
+                                $checkKind = ['DISCIPLE' => 'disciple', 'GESTIONNAIRE' => 'user', 'MANUELLE' => 'manuelle'][$cn->origine] ?? null;
+                            @endphp
+                            @if($checkKind)
+                                <input type="checkbox" class="form-check-input js-licence-check" data-kind="{{ $checkKind }}" value="{{ $cn->id }}">
                             @endif
                         </td>
                         <td class="fw-semibold">{{ $cn->full_name }}</td>
@@ -118,10 +119,12 @@ document.addEventListener('DOMContentLoaded', function () {
     printBtn.addEventListener('click', function () {
         var discipleIds = selectedIds('disciple');
         var userIds = selectedIds('user');
-        if (discipleIds.length === 0 && userIds.length === 0) return;
+        var manuelleIds = selectedIds('manuelle');
+        if (discipleIds.length === 0 && userIds.length === 0 && manuelleIds.length === 0) return;
         var params = [];
         if (discipleIds.length) params.push('ids=' + discipleIds.join(','));
         if (userIds.length) params.push('user_ids=' + userIds.join(','));
+        if (manuelleIds.length) params.push('manuelle_ids=' + manuelleIds.join(','));
         window.open(licencesUrl + '?' + params.join('&'), '_blank');
     });
     refresh();
