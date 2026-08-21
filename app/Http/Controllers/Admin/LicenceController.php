@@ -205,7 +205,7 @@ class LicenceController extends Controller
         $ligue = $salle?->ligue;
         $federation = $ligue?->federation;
 
-        [$birthDate, $birthPlace] = $this->splitBirth($d);
+        [$birthDate, $birthPlace] = $this->splitBirth($d->date_naissance, $d->date_lieu_naissance);
 
         // Signature à apposer selon le type de licence :
         //   planche (salle)     → signature du maître de la salle
@@ -274,25 +274,26 @@ class LicenceController extends Controller
         })->all();
     }
 
-    /** Sépare date/lieu de naissance ("12/01/2000 à Bamako"). */
-    private function splitBirth(Disciple $d): array
+    /**
+     * Sépare date/lieu de naissance, utilisable pour Disciple ou CeintureNoireManuelle.
+     * Cas normal : date_naissance est une vraie date, dateLieuNaissance ne contient que
+     * le lieu. Compat rétro : anciennes données où ce champ texte combinait les deux
+     * ("12/01/2000 à Bamako"), utilisé si date_naissance est vide.
+     */
+    private function splitBirth(?\Illuminate\Support\Carbon $dateNaissance, ?string $dateLieuNaissance): array
     {
-        $date = $d->date_naissance ? $d->date_naissance->format('d/m/Y') : '';
-        $place = '';
+        $date = $dateNaissance ? $dateNaissance->format('d/m/Y') : '';
 
-        if (!empty($d->date_lieu_naissance)) {
-            $parts = preg_split('/\s+à\s+/iu', (string) $d->date_lieu_naissance, 2);
-            if (count($parts) === 2) {
-                $place = trim($parts[1]);
-                if ($date === '') {
-                    $date = trim($parts[0]);
-                }
-            } elseif ($date === '') {
-                $date = trim($d->date_lieu_naissance);
-            }
+        if (empty($dateLieuNaissance)) {
+            return [$date, ''];
         }
 
-        return [$date, $place];
+        $parts = preg_split('/\s+à\s+/iu', $dateLieuNaissance, 2);
+        if (count($parts) === 2) {
+            return [$date !== '' ? $date : trim($parts[0]), trim($parts[1])];
+        }
+
+        return $date !== '' ? [$date, trim($dateLieuNaissance)] : [trim($dateLieuNaissance), ''];
     }
 
     /** Photo en data URI (embarquée pour l'impression), sinon null. */
@@ -351,17 +352,19 @@ class LicenceController extends Controller
         $signerName = $signature?->master_name ?: ($salle?->maitre_display_name ?? '');
         $signerGrade = $signature?->master_grade ?: ($salle?->maitre_display_grade ?? '');
 
+        [$birthDate, $birthPlace] = $this->splitBirth($m->date_naissance, $m->date_lieu_naissance);
+
         return [
             'nom' => $m->nom,
             'prenom' => $m->prenom,
             'full_name' => $m->full_name,
             'gender' => $m->sexe === 'F' ? 'Féminin' : ($m->sexe === 'M' ? 'Masculin' : ''),
-            'birth_date' => '',
-            'birth_place' => '',
-            'adresse' => '',
-            'reference' => 'MAN-' . $m->id,
+            'birth_date' => $birthDate,
+            'birth_place' => $birthPlace,
+            'adresse' => $m->adresse ?? '',
+            'reference' => $m->nmle ?: ('MAN-' . $m->id),
             'grade' => $m->grade?->nom_grade ?? '',
-            'phone' => '',
+            'phone' => $m->telephone ?? '',
             'salle' => $salle?->nom ?? '',
             'ligue' => $ligue?->nom ?? '',
             'region' => $ligue?->region ?? '',

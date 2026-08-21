@@ -25,6 +25,11 @@ class CeintureNoireManuelle extends Model
         'nom',
         'prenom',
         'sexe',
+        'date_naissance',
+        'date_lieu_naissance',
+        'adresse',
+        'telephone',
+        'nmle',
         'photo_path',
         'grade_id',
         'federation_id',
@@ -35,6 +40,7 @@ class CeintureNoireManuelle extends Model
     ];
 
     protected $casts = [
+        'date_naissance' => 'date',
         'date_obtention_grade' => 'date',
         'archived_at' => 'datetime',
     ];

@@ -23,6 +23,26 @@
                 </select>
             </div>
             <div class="col-md-4">
+                <label class="form-label">{{ __('messages.birth_date') }}</label>
+                <input type="date" name="date_naissance" class="form-control" value="{{ old('date_naissance', optional($ceintureNoire->date_naissance)->format('Y-m-d')) }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ __('messages.phone') }}</label>
+                <input type="text" name="telephone" class="form-control" value="{{ old('telephone', $ceintureNoire->telephone) }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ __('messages.birth_place') }}</label>
+                <input type="text" name="date_lieu_naissance" class="form-control" value="{{ old('date_lieu_naissance', $ceintureNoire->date_lieu_naissance) }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ __('messages.disciples.matricule') }}</label>
+                <input type="text" name="nmle" class="form-control" value="{{ old('nmle', $ceintureNoire->nmle) }}">
+            </div>
+            <div class="col-12">
+                <label class="form-label">{{ __('messages.address') }}</label>
+                <input type="text" name="adresse" class="form-control" value="{{ old('adresse', $ceintureNoire->adresse) }}">
+            </div>
+            <div class="col-md-4">
                 <label class="form-label">{{ __('messages.grade') }} (DAN) <span class="text-danger">*</span></label>
                 <select name="grade_id" class="form-select" required>
                     <option value="">-</option>
