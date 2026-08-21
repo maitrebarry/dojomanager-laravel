@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\GradePassageTariffController;
 use App\Http\Controllers\Admin\GradePassageSessionController;
 use App\Http\Controllers\Admin\CompetitionController;
 use App\Http\Controllers\Admin\SignatureController;
+use App\Http\Controllers\Admin\DocumentationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
@@ -147,6 +148,10 @@ Route::middleware('auth')->group(function () {
 
         // Paramètres
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+
+        // Documentation utilisateur : accessible à tous, sans permission dédiée.
+        Route::get('/documentation', [DocumentationController::class, 'index'])->name('documentation');
+        Route::get('/documentation/pdf', [DocumentationController::class, 'pdf'])->name('documentation.pdf');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
         // Permissions

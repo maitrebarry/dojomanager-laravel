@@ -64,6 +64,13 @@
                 </a>
             @endif
 
+            {{-- Manuel d'utilisation : visible par tous les utilisateurs connectés, sans restriction de permission. --}}
+            @auth
+                <a class="nav-link {{ request()->routeIs('admin.documentation*') ? 'active' : '' }}" href="{{ route('admin.documentation') }}">
+                    <i class="fas fa-book"></i> <span class="nav-text">{{ __('messages.documentation.title') }}</span>
+                </a>
+            @endauth
+
         </nav>
     </div>
 </aside>

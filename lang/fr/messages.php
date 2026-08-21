@@ -397,6 +397,10 @@ return [
         'administration' => 'Administration',
     ],
 
+    'documentation' => [
+        'title' => 'Documentation',
+    ],
+
     'parametres' => [
         'tab_users' => 'Utilisateurs',
         'tab_permissions' => 'Assigner Permission',
