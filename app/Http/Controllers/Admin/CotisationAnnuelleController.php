@@ -7,6 +7,7 @@ use App\Models\CeintureNoireManuelle;
 use App\Models\CotisationAnnuelle;
 use App\Models\CotisationAnnuelleCeintureNoire;
 use App\Models\Disciple;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -125,7 +126,8 @@ class CotisationAnnuelleController extends Controller
     }
 
     /**
-     * Fige la liste des ceintures noires (disciples DAN + saisies manuelles) pour la campagne.
+     * Fige la liste des ceintures noires (disciples DAN + saisies manuelles + maîtres/
+     * responsables de ligue/fédération au grade DAN) pour la campagne.
      */
     private function snapshotMembers(CotisationAnnuelle $cotisation, ?\App\Models\User $user = null): void
     {
@@ -177,6 +179,42 @@ class CotisationAnnuelleController extends Controller
                     'ligue_nom' => $m->ligue?->nom,
                     'salle_id' => $m->salle?->id,
                     'salle_nom' => $m->salle?->nom,
+                    'montant_du' => $montant,
+                    'montant_paye' => 0,
+                    'reste_a_payer' => $montant,
+                    'statut' => 'IMPAYE',
+                ]);
+            });
+
+        // Un maître (ou un responsable de ligue/fédération) est lui-même une ceinture
+        // noire de sa structure : son grade DAN n'est jamais un Disciple. Il n'a pas
+        // toujours de salle (cas ligue/fédération) : salle_id/salle_nom restent alors null.
+        User::query()
+            ->visibleTo($user)
+            ->whereIn('role', User::TENANT_ROLES)
+            ->whereHas('grade', fn ($q) => $q->where('type_grade', 'DAN'))
+            ->with(['grade', 'federation', 'ligue', 'salle.ligue.federation'])
+            ->get()
+            ->each(function (User $u) use ($cotisation, $montant) {
+                $federation = $u->federation ?? $u->salle?->ligue?->federation;
+                $ligue = $u->ligue ?? $u->salle?->ligue;
+                $parts = preg_split('/\s+/', trim($u->name), 2);
+
+                CotisationAnnuelleCeintureNoire::create([
+                    'cotisation_annuelle_id' => $cotisation->id,
+                    'origine' => 'GESTIONNAIRE',
+                    'source_id' => $u->id,
+                    'nom' => $parts[1] ?? ($parts[0] ?? $u->name),
+                    'prenom' => isset($parts[1]) ? $parts[0] : '',
+                    'sexe' => null,
+                    'user_role' => $u->role instanceof \App\Shared\Enums\UserRole ? $u->role->value : (string) $u->role,
+                    'grade_nom' => $u->grade?->nom_grade,
+                    'federation_id' => $federation?->id,
+                    'federation_nom' => $federation?->nom,
+                    'ligue_id' => $ligue?->id,
+                    'ligue_nom' => $ligue?->nom,
+                    'salle_id' => $u->salle?->id,
+                    'salle_nom' => $u->salle?->nom,
                     'montant_du' => $montant,
                     'montant_paye' => 0,
                     'reste_a_payer' => $montant,
