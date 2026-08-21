@@ -323,7 +323,7 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('login') }}">
+                        <form method="POST" action="{{ route('login') }}" id="loginForm">
                             @csrf
 
                             <div class="mb-3">
@@ -399,6 +399,13 @@
                 icon.classList.toggle('fa-eye', !isHidden);
                 icon.classList.toggle('fa-eye-slash', isHidden);
             });
+        });
+
+        document.getElementById('loginForm')?.addEventListener('submit', function () {
+            var btn = this.querySelector('button[type="submit"]');
+            if (!btn || btn.disabled) return;
+            btn.disabled = true;
+            btn.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>');
         });
     </script>
 </body>

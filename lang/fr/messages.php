@@ -84,6 +84,7 @@ return [
         'show_password' => 'Afficher le mot de passe',
         'hide_password' => 'Masquer le mot de passe',
         'invalid_credentials' => 'Les identifiants fournis sont incorrects ou le compte n\'est pas actif.',
+        'too_many_attempts' => 'Trop de tentatives de connexion. Veuillez réessayer dans :seconds secondes.',
         'account_created' => 'Compte créé avec succès. Veuillez attendre l\'activation par un administrateur.',
         'profile_updated' => 'Votre profil a été mis à jour avec succès.',
         'old_password_wrong' => 'L\'ancien mot de passe est incorrect.',

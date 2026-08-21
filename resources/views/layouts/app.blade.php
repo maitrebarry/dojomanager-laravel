@@ -879,6 +879,27 @@
                 showConfirmButton: false, timer: 3200, timerProgressBar: true,
             });
         };
+
+        // Spinner générique sur les boutons d'action : évite les double-clics et donne un
+        // retour visuel pendant qu'une requête est en cours. Couvre la quasi-totalité des
+        // formulaires de l'admin ; pas de restauration nécessaire car ces soumissions
+        // rechargent/redirigent la page. Le formulaire AJAX /admin/users gère déjà son
+        // propre spinner plus bas et est exclu ici pour ne pas le doubler.
+        function dojoShowButtonSpinner(btn) {
+            if (!btn || btn.dataset.dojoSpinning === '1') return;
+            btn.dataset.dojoSpinning = '1';
+            btn.disabled = true;
+            btn.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>');
+        }
+
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form || form.tagName !== 'FORM' || form.dataset.noSpinner === '1') return;
+            if ((form.getAttribute('action') || '').includes('/admin/users')) return;
+
+            dojoShowButtonSpinner(e.submitter || form.querySelector('button[type="submit"], input[type="submit"]'));
+        });
+
         window.dojoConfirmDelete = function (formEl, message) {
             if (!window.Swal) { return confirm(message || 'Confirmer ?'); }
             Swal.fire({
@@ -888,7 +909,12 @@
                 confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
                 confirmButtonText: @json(__('messages.yes_delete')),
                 cancelButtonText: @json(__('messages.cancel')),
-            }).then((r) => { if (r.isConfirmed) formEl.submit(); });
+            }).then((r) => {
+                if (r.isConfirmed) {
+                    dojoShowButtonSpinner(formEl.querySelector('button[type="submit"], input[type="submit"]'));
+                    formEl.submit();
+                }
+            });
             return false;
         };
         document.addEventListener('DOMContentLoaded', function () {

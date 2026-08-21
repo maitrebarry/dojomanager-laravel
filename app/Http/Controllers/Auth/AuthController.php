@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -34,18 +35,41 @@ class AuthController extends Controller
     }
 
     /**
+     * Clé de limitation des tentatives : par numéro de téléphone ET par IP, pour qu'un
+     * essai raté sur un compte ne bloque pas les autres utilisateurs de la même IP (ex.
+     * plusieurs postes au club) tout en empêchant le brute-force sur un seul compte.
+     */
+    private function throttleKey(Request $request): string
+    {
+        return 'login:' . strtolower(trim((string) $request->input('phone', ''))) . '|' . $request->ip();
+    }
+
+    /**
      * Traiter la connexion
      */
     public function login(LoginRequest $request): RedirectResponse
     {
         $credentials = $request->validated();
         $remember = $request->boolean('remember');
+        $throttleKey = $this->throttleKey($request);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back()
+                ->withInput($request->only('phone'))
+                ->with('error', __('messages.auth.too_many_attempts', ['seconds' => $seconds]));
+        }
 
         if (!$this->authService->login($credentials['phone'], $credentials['password'], $remember)) {
+            RateLimiter::hit($throttleKey, 180);
+
             return back()
                 ->withInput($request->only('phone'))
                 ->with('error', __('messages.auth.invalid_credentials'));
         }
+
+        RateLimiter::clear($throttleKey);
 
         $locale = $request->session()->get('locale');
         if ($locale && array_key_exists($locale, config('app.supported_locales', []))) {
