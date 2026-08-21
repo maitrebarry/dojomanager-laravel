@@ -152,7 +152,7 @@ enum UserRole: string
     {
         $adminFunctions = ['PRESIDENT', 'SEGAL', 'DTN', 'TRESORIER'];
         $adminDelegate = ['SEGAL', 'DTN', 'TRESORIER'];
-        $ligueFunctions = ['SEGAL_LIGUE', 'DTN_LIGUE', 'TRESORIER_LIGUE'];
+        $ligueFunctions = ['PRESIDENT_LIGUE', 'SEGAL_LIGUE', 'DTN_LIGUE', 'TRESORIER_LIGUE'];
 
         if (!$user) {
             return [];
