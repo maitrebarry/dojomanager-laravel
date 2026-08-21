@@ -1,8 +1,8 @@
 <nav class="navbar navbar-expand-md sticky-top" id="navbar">
     <div class="container-fluid">
-        <a class="navbar-brand" href="{{ route('admin.dashboard') }}">
-            <i class="fas fa-id-card"></i>
-            <span style="color: var(--navbar-text); font-weight: 700;">{{ __('messages.app_name') }}</span>
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('admin.dashboard') }}">
+            <span aria-hidden="true">🥋</span>
+            <span class="brand-tricolor">{{ __('messages.app_name') }}</span>
         </a>
         
         <button class="navbar-toggler" type="button" id="sidebarToggle">
@@ -103,6 +103,17 @@
 </nav>
 
 <style>
+    .brand-tricolor {
+        font-weight: 900;
+        letter-spacing: .4px;
+        background: linear-gradient(90deg, #14b53a 0%, #14b53a 33%, #fcd116 33%, #fcd116 66%, #ce1126 66%, #ce1126 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 1px 1px 0 rgba(0,0,0,.35), 2px 2px 0 rgba(0,0,0,.25), 3px 3px 4px rgba(0,0,0,.2);
+    }
+
     html.dark-mode #navbar {
         background-color: #0d0d0d !important;
         border-bottom: 1px solid #222;

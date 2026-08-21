@@ -99,31 +99,34 @@
             background: var(--login-primary);
             color: #fff;
             padding: 30px 34px;
+            text-align: center;
         }
 
         .brand-mark {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             background: rgba(255,255,255,0.12);
             border: 1px solid rgba(255,255,255,0.22);
             margin-bottom: 14px;
-            font-size: 22px;
+            font-size: 30px;
+            line-height: 1;
         }
 
         .login-header h1 {
-            font-size: 28px;
+            font-size: 30px;
             margin: 0;
-            font-weight: 700;
-            letter-spacing: 0;
-        }
-
-        .login-header p {
-            margin: 8px 0 0;
-            opacity: 0.78;
+            font-weight: 900;
+            letter-spacing: .5px;
+            background: linear-gradient(90deg, #14b53a 0%, #14b53a 33%, #fcd116 33%, #fcd116 66%, #ce1126 66%, #ce1126 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 1px 1px 0 rgba(0,0,0,.3), 2px 2px 0 rgba(0,0,0,.22), 3px 3px 5px rgba(0,0,0,.2);
         }
 
         .login-body {
@@ -289,11 +292,8 @@
             <main class="login-container">
                 <div class="card login-card">
                     <div class="login-header">
-                        <div class="brand-mark">
-                            <i class="fas fa-id-card"></i>
-                        </div>
+                        <div class="brand-mark">🥋</div>
                         <h1>{{ __('messages.app_name') }}</h1>
-                        <p>{{ __('messages.auth.login_subtitle') }}</p>
                     </div>
 
                     <div class="login-body">
