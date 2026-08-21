@@ -67,7 +67,7 @@
 @endphp
 <div class="row g-3 mb-2">
     @forelse($cards ?? [] as $card)
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-lg-4">
             <div class="card dash-stat-card bg-{{ $card['tone'] }} bg-gradient border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center">
                     <div>
