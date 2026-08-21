@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="900" y2="1400" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1c2f52"/>
+      <stop offset="0.55" stop-color="#152645"/>
+      <stop offset="1" stop-color="#0b1120"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4060a0" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#4060a0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d4af6a"/>
+      <stop offset="1" stop-color="#8a6a2f"/>
+    </linearGradient>
+    <pattern id="tatami" width="150" height="150" patternUnits="userSpaceOnUse">
+      <rect width="150" height="150" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="18" y="18" width="114" height="114" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1.5"/>
+    </pattern>
+  </defs>
+
+  <!-- fond -->
+  <rect width="900" height="1400" fill="url(#bg)"/>
+  <rect width="900" height="1400" fill="url(#tatami)"/>
+  <circle cx="640" cy="260" r="480" fill="url(#glow)"/>
+
+  <!-- losange tatami en arrière-plan de l'emblème -->
+  <rect x="450" y="380" width="380" height="380" fill="#ffffff" fill-opacity="0.035" stroke="#ffffff" stroke-opacity="0.09" stroke-width="2" transform="rotate(45 450 570)"/>
+
+  <!-- emblème : anneau + étoile-boussole (générique, sans lien avec une discipline précise) -->
+  <circle cx="450" cy="570" r="168" fill="none" stroke="url(#ring)" stroke-width="3" stroke-opacity="0.85"/>
+  <circle cx="450" cy="570" r="150" fill="#ffffff" fill-opacity="0.04"/>
+  <circle cx="450" cy="570" r="150" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5"/>
+
+  <polygon points="450,480 464.5,534.9 513.6,506.4 485.1,555.5 540,570 485.1,584.5 513.6,633.6 464.5,605.1 450,660 435.5,605.1 386.4,633.6 414.9,584.5 360,570 414.9,555.5 386.4,506.4 435.5,534.9"
+           fill="#ffffff" fill-opacity="0.92"/>
+  <circle cx="450" cy="570" r="22" fill="#152645"/>
+  <circle cx="450" cy="570" r="22" fill="none" stroke="url(#ring)" stroke-width="2.5"/>
+
+  <!-- bandeau des grades (ceintures), symbole universel commun à la plupart des arts martiaux
+       — resserré près de l'emblème (bande verticale ~380-820 sur 1400) pour rester visible
+       même quand le panneau est recadré en "cover" sur un écran large/peu haut -->
+  <g transform="translate(190 770)">
+    <rect x="0"   y="0" width="55" height="26" rx="6" fill="#f8fafc"/>
+    <rect x="65"  y="0" width="55" height="26" rx="6" fill="#facc15"/>
+    <rect x="130" y="0" width="55" height="26" rx="6" fill="#fb923c"/>
+    <rect x="195" y="0" width="55" height="26" rx="6" fill="#22c55e"/>
+    <rect x="260" y="0" width="55" height="26" rx="6" fill="#3b82f6"/>
+    <rect x="325" y="0" width="55" height="26" rx="6" fill="#a855f7"/>
+    <rect x="390" y="0" width="55" height="26" rx="6" fill="#92400e"/>
+    <rect x="455" y="0" width="55" height="26" rx="6" fill="#111827" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.5"/>
+  </g>
+
+  <text x="450" y="840" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff" fill-opacity="0.9" letter-spacing="3">TOUTES DISCIPLINES</text>
+  <text x="450" y="872" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-size="15" fill="#ffffff" fill-opacity="0.55" letter-spacing="2">KARATE · JUDO · TAEKWONDO · KUNG-FU · BOXE · ET AUTRES</text>
+</svg>
