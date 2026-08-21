@@ -61,8 +61,6 @@
                     <div class="col-md-6"><label class="form-label">{{ __('messages.phone') }}</label><input type="text" name="telephone" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.salles.ligue') }} <span class="text-danger">*</span></label>
                         <select name="ligue_id" class="form-select" required><option value="">-</option>@foreach($ligues as $l)<option value="{{ $l->id }}">{{ $l->nom }}</option>@endforeach</select></div>
-                    <div class="col-md-6"><label class="form-label">{{ __('messages.salles.maitre') }}</label>
-                        <select name="maitre_id" class="form-select"><option value="">{{ __('messages.salles.no_maitre') }}</option>@foreach($maitres as $m)<option value="{{ $m->id }}">{{ $m->nom_complet }}</option>@endforeach</select></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.salles.monthly_fee') }}</label><input type="number" step="0.01" min="0" name="mensualite" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.address') }}</label><input type="text" name="adresse" class="form-control"></div>
                     <div class="col-12"><div class="form-check form-switch mt-2"><input type="hidden" name="active" value="0"><input class="form-check-input" type="checkbox" name="active" value="1"><label class="form-check-label">{{ __('messages.active') }}</label></div></div>
