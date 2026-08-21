@@ -128,8 +128,10 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <input type="hidden" name="name">
                 <div class="row g-2">
-                    <div class="col-md-6"><label class="form-label">{{ __('messages.name') }} <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" required></div>
+                    <div class="col-md-6"><label class="form-label">{{ __('messages.first_name') }} <span class="text-danger">*</span></label><input type="text" name="prenom" class="form-control" required></div>
+                    <div class="col-md-6"><label class="form-label">{{ __('messages.last_name') }} <span class="text-danger">*</span></label><input type="text" name="nom" class="form-control" required></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.phone') }}</label><input type="text" name="phone" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.email') }}</label><input type="email" name="email" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.role') }} <span class="text-danger">*</span></label>

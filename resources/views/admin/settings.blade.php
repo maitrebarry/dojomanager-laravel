@@ -7,11 +7,11 @@
     $u = Auth::user();
     $can = fn (string $perm) => $u && $u->hasPermission($perm);
     $tabs = [
-        ['key' => 'utilisateurs', 'label' => __('messages.parametres.tab_users'), 'icon' => 'fa-user', 'perm' => 'UTILISATEUR_READ'],
         ['key' => 'federations', 'label' => __('messages.federations.title'), 'icon' => 'fa-flag', 'perm' => 'FÉDÉRATION_READ'],
         ['key' => 'ligues', 'label' => __('messages.ligues.title'), 'icon' => 'fa-sitemap', 'perm' => 'LIGUE_READ'],
-        ['key' => 'salles', 'label' => __('messages.salles.title'), 'icon' => 'fa-dumbbell', 'perm' => 'SALLE_READ'],
         ['key' => 'grades', 'label' => __('messages.grades.title'), 'icon' => 'fa-medal', 'perm' => 'GRADES_READ'],
+        ['key' => 'salles', 'label' => __('messages.salles.title'), 'icon' => 'fa-dumbbell', 'perm' => 'SALLE_READ'],
+        ['key' => 'utilisateurs', 'label' => __('messages.parametres.tab_users'), 'icon' => 'fa-user', 'perm' => 'UTILISATEUR_READ'],
         // Gestion des permissions elles-mêmes (créer/renommer/supprimer) : réservée au
         // superadmin, contrairement à "Assigner Permission" qui reste ouverte à toute
         // personne ayant PERMISSION_READ.
@@ -499,10 +499,29 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (el) el.value = payload[k];
                     }
                 });
+                // Éclate le nom complet stocké en prénom/nom pour l'édition (premier mot = prénom).
+                var nameParts = String(payload.name || '').trim().split(/\s+/).filter(Boolean);
+                var prenomEl = form.querySelector('[name="prenom"]');
+                var nomEl = form.querySelector('[name="nom"]');
+                if (prenomEl) prenomEl.value = nameParts.shift() || '';
+                if (nomEl) nomEl.value = nameParts.join(' ');
             }
             (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
         });
     });
+
+    // Recompose prénom + nom en un seul champ "name" avant l'envoi du formulaire.
+    var mUserForm = document.querySelector('#m-user .js-modal-form');
+    if (mUserForm) {
+        mUserForm.addEventListener('submit', function () {
+            var prenomEl = this.querySelector('[name="prenom"]');
+            var nomEl = this.querySelector('[name="nom"]');
+            var nameEl = this.querySelector('[name="name"]');
+            if (prenomEl && nomEl && nameEl) {
+                nameEl.value = (prenomEl.value.trim() + ' ' + nomEl.value.trim()).trim();
+            }
+        });
+    }
 
     /* ---------- Onglet Assigner Permission (patron KalanNet) ---------- */
     function norm(v) { return String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
