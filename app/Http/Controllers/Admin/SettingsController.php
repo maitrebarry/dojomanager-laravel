@@ -50,6 +50,14 @@ class SettingsController extends Controller
 
         $allPermissions = Permission::where('is_active', true)->orderBy('order')->orderBy('module')->get();
 
+        // Assigner Permission : le superadmin doit pouvoir assigner une permission à
+        // n'importe quel utilisateur, y compris hors du périmètre fédération/ligue/
+        // salle et hors des rôles federation/ligue/maitre (ex. un autre admin). Les
+        // autres rôles restent sur la liste déjà scopée ($users) ci-dessus.
+        $assignableUsers = $u->isSuperAdmin()
+            ? \App\Models\User::with('permissions')->orderBy('name')->get()
+            : $users;
+
         // Rôles que l'utilisateur courant peut créer (hiérarchie fidèle à Parametres.jsx).
         $assignableRoles = \App\Shared\Enums\UserRole::assignableBy($u);
         $roleOptions = collect($assignableRoles)
@@ -72,7 +80,7 @@ class SettingsController extends Controller
             'permissions' => $allPermissions,
             'permissionsByModule' => $allPermissions->groupBy('module'),
             // On ne s'assigne pas de permissions à soi-même depuis cet écran.
-            'assignableUsers' => $users->reject(fn ($usr) => $usr->id === $u->id)->values(),
+            'assignableUsers' => $assignableUsers->reject(fn ($usr) => $usr->id === $u->id)->values(),
             'roleOptions' => $roleOptions,
             'functionOptions' => $functionOptions,
             'ctx' => $ctx,
