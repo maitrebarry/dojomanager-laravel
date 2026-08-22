@@ -377,8 +377,17 @@
                             </div>
                         </div></div>
 
+                        @php
+                            // Ces permissions (icône de blocage + blocage/déblocage + suppression
+                            // d'utilisateur) restent réservées au superadmin : invisibles pour
+                            // tout le monde d'autre dans cet écran, pas seulement non assignables.
+                            $userManagementOnlySlugs = ['UTILISATEUR_DELETE', 'UTILISATEUR_ACTIVATION_READ', 'UTILISATEUR_ACTIVATE'];
+                            $visiblePermissionsByModule = $u->isSuperAdmin()
+                                ? $permissionsByModule
+                                : $permissionsByModule->map(fn ($perms) => $perms->reject(fn ($p) => in_array($p->slug, $userManagementOnlySlugs, true)))->filter(fn ($perms) => $perms->isNotEmpty());
+                        @endphp
                         <div class="row g-3">
-                            @foreach($permissionsByModule as $module => $perms)
+                            @foreach($visiblePermissionsByModule as $module => $perms)
                                 <div class="col-12">
                                     <div class="card border-0 shadow-sm perm-module-card">
                                         <div class="card-header bg-white d-flex justify-content-between align-items-center">
