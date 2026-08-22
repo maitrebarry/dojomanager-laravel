@@ -9,6 +9,7 @@ use App\Models\Disciple;
 use App\Models\Grade;
 use App\Models\Salle;
 use App\Models\Signature;
+use App\Support\ImageOrientation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -78,6 +79,7 @@ class DiscipleController extends Controller
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('disciples', 'public');
+            ImageOrientation::fix(Storage::disk('public')->path($data['photo']));
         }
 
         $disciple = Disciple::create($data);
@@ -123,6 +125,7 @@ class DiscipleController extends Controller
                 Storage::disk('public')->delete($disciple->photo);
             }
             $data['photo'] = $request->file('photo')->store('disciples', 'public');
+            ImageOrientation::fix(Storage::disk('public')->path($data['photo']));
         }
 
         $disciple->update($data);
