@@ -143,6 +143,14 @@ class DiscipleGradeController extends Controller
         $sequence = $this->gradeSequence(request()->user());
         $dates = $disciple->gradeHistoriques->pluck('date_obtention', 'grade_id');
 
+        // Le premier grade de la séquence (9ème KEUP) correspond à l'entrée du
+        // disciple au dojo : pré-remplir avec sa date d'inscription tant qu'aucune
+        // date précise n'a été saisie pour ce grade.
+        $firstGrade = $sequence->first();
+        if ($firstGrade && !$dates->has($firstGrade->id) && $disciple->date_inscription) {
+            $dates = $dates->put($firstGrade->id, $disciple->date_inscription);
+        }
+
         return view('admin.disciples.grade-history', [
             'disciple' => $disciple,
             'grades' => $sequence,
