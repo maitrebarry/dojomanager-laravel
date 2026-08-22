@@ -67,9 +67,9 @@
         .sheet-title { left: 3mm; top: 11mm; width: 62mm; color: var(--primary); font-size: 2.45mm; line-height: 1.08; font-weight: 900; overflow-wrap: break-word; }
 
         .sheet-photo {
-            left: 3mm; top: 20mm; width: 18mm; height: 24mm; border: .3mm solid #1f2937;
+            left: 3mm; top: 22.5mm; width: 15mm; height: 19mm; border: .3mm solid #1f2937;
             border-radius: 1.4mm; overflow: hidden; background: #e5e7eb; text-align: center;
-            line-height: 24mm; color: #6b7280; font-size: 5mm; font-weight: 900;
+            line-height: 19mm; color: #6b7280; font-size: 4mm; font-weight: 900;
         }
         .sheet-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
