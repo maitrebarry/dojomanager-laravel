@@ -336,11 +336,19 @@
                         <input type="hidden" name="tab" value="permissions-assign">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">{{ __('messages.parametres.assign_to') }}</label>
+                            @if($u->isSuperAdmin())
+                                <select id="permFederationFilter" class="form-select form-select-sm mb-2">
+                                    <option value="">{{ __('messages.parametres.all_federations') }}</option>
+                                    @foreach($federations as $f)
+                                        <option value="{{ $f->id }}">{{ $f->nom }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                             <input type="text" id="userFilter" class="form-control mb-2" placeholder="{{ __('messages.parametres.filter_users') }}">
                             <select name="user_id" id="permUserSelect" class="form-select" required>
                                 <option value="">{{ __('messages.choose_user') }}</option>
                                 @foreach($assignableUsers as $usr)
-                                    <option value="{{ $usr->id }}" {{ (string) request('user_id') === (string) $usr->id ? 'selected' : '' }}>{{ $usr->name }} — {{ __('messages.roles.' . $usr->role) }}</option>
+                                    <option value="{{ $usr->id }}" data-federation="{{ $usr->federation_id }}" {{ (string) request('user_id') === (string) $usr->id ? 'selected' : '' }}>{{ $usr->name }} — {{ __('messages.roles.' . $usr->role) }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -534,15 +542,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     var userFilter = document.getElementById('userFilter');
-    if (userFilter && permUserSelect) {
-        userFilter.addEventListener('input', function () {
-            var term = norm(this.value);
-            Array.from(permUserSelect.options).forEach(function (opt, i) {
-                if (i === 0) return;
-                opt.hidden = term !== '' && norm(opt.textContent).indexOf(term) === -1;
-            });
+    var permFederationFilter = document.getElementById('permFederationFilter');
+    function applyUserFilters() {
+        if (!permUserSelect) return;
+        var term = userFilter ? norm(userFilter.value) : '';
+        var fedId = permFederationFilter ? permFederationFilter.value : '';
+        Array.from(permUserSelect.options).forEach(function (opt, i) {
+            if (i === 0) return;
+            var matchesText = term === '' || norm(opt.textContent).indexOf(term) !== -1;
+            var matchesFed = fedId === '' || opt.dataset.federation === fedId;
+            opt.hidden = !matchesText || !matchesFed;
         });
     }
+    if (userFilter) userFilter.addEventListener('input', applyUserFilters);
+    if (permFederationFilter) permFederationFilter.addEventListener('change', applyUserFilters);
 
     var permBoxes = Array.from(document.querySelectorAll('.perm-checkbox'));
     var moduleToggles = Array.from(document.querySelectorAll('.perm-module-toggle'));

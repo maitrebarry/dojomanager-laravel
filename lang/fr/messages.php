@@ -431,6 +431,7 @@ return [
         'no_users' => 'Aucun utilisateur.',
         'no_access' => 'Vous n\'avez accès à aucun paramètre.',
         'assign_to' => 'Attribuer des permissions à',
+        'all_federations' => 'Toutes les fédérations',
         'block_user' => 'Bloquer l\'accès',
         'block_user_title' => 'Bloquer l\'accès de :name ?',
         'block_user_text' => 'Vous pouvez saisir un motif : il sera affiché à cet utilisateur à sa prochaine tentative de connexion (ex. fin de période d\'essai, mise à jour payante requise…).',
