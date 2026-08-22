@@ -253,10 +253,7 @@ class SettingsController extends Controller
             abort(403, 'Vous ne pouvez pas vous assigner des permissions à vous-même.');
         }
 
-        $currentRole = UserRole::tryFrom(auth()->user()?->role ?? '');
-        $targetRole = UserRole::tryFrom($user->role);
-
-        if (!$currentRole || !$targetRole || (!$currentRole->canManage($targetRole) && $currentRole !== UserRole::SUPERADMIN && $currentRole !== UserRole::PRESIDENT)) {
+        if (!$this->canAssignPermissionsTo(auth()->user(), $user)) {
             abort(403, 'Accès refusé.');
         }
 
@@ -277,6 +274,47 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings', ['tab' => 'permissions-assign'])
             ->with('success', __('messages.settings_page.permissions_updated'));
+    }
+
+    /**
+     * Qui peut assigner des permissions à qui :
+     *   - superadmin                             → tout le monde ;
+     *   - fédération ou ligue (n'importe qui)     → un maître de son périmètre ;
+     *   - fédération, fonction PRESIDENT          → un autre membre de sa fédération
+     *                                                (SEGAL/DTN…) ou une ligue de sa
+     *                                                fédération ;
+     *   - ligue, fonction PRESIDENT_LIGUE         → un autre membre de sa ligue
+     *                                                (SEGAL_LIGUE/DTN_LIGUE…).
+     * Le périmètre est toujours vérifié via visibleTo() (le même que celui qui
+     * construit la liste déroulante), jamais seulement le rôle.
+     */
+    private function canAssignPermissionsTo(User $actor, User $target): bool
+    {
+        if ($actor->isSuperAdmin()) {
+            return true;
+        }
+
+        if (!User::visibleTo($actor)->whereKey($target->getKey())->exists()) {
+            return false;
+        }
+
+        $actorRole = $actor->role instanceof UserRole ? $actor->role->value : (string) $actor->role;
+        $targetRole = $target->role instanceof UserRole ? $target->role->value : (string) $target->role;
+        $actorFonction = strtoupper((string) ($actor->fonction ?? ''));
+
+        if ($targetRole === 'maitre' && in_array($actorRole, ['federation', 'ligue'], true)) {
+            return true;
+        }
+
+        if ($actorRole === 'federation' && $actorFonction === 'PRESIDENT' && in_array($targetRole, ['federation', 'ligue'], true)) {
+            return true;
+        }
+
+        if ($actorRole === 'ligue' && $actorFonction === 'PRESIDENT_LIGUE' && $targetRole === 'ligue') {
+            return true;
+        }
+
+        return false;
     }
 
     /**

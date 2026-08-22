@@ -136,7 +136,10 @@ class UserController extends Controller
                 ], 201);
             }
 
-            return $this->redirectAfterMutation($request)
+            // Un utilisateur fraîchement créé n'a par défaut que les permissions du
+            // rôle (cf. UserService::DEFAULT_ROLE_PERMISSIONS) : on atterrit
+            // directement sur Assigner Permission, avec cet utilisateur pré-sélectionné.
+            return redirect()->route('admin.settings', ['tab' => 'permissions-assign', 'user_id' => $user->id])
                 ->with('success', __('messages.users.created'));
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->wantsJson() || $request->ajax()) {

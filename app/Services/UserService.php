@@ -16,6 +16,29 @@ use Illuminate\Validation\ValidationException;
 class UserService
 {
     /**
+     * Permissions accordées automatiquement à la création, selon le rôle. Complète
+     * grantDefaultAdminPermissions() (héritée d'un autre projet, pour les rôles
+     * admin/president qui n'existent pas dans DojoManager) avec les rôles réels de
+     * cette application.
+     */
+    private const DEFAULT_ROLE_PERMISSIONS = [
+        'maitre' => [
+            'DASHBOARD_VIEW',
+            'DISCIPLE_CREATE', 'DISCIPLE_READ', 'DISCIPLE_UPDATE', 'DISCIPLE_DELETE',
+            'PASSAGEGRADES_READ',
+            'COMPETITION_MANAGE', 'COMBAT_MANAGE',
+            'UTILISATEUR_READ', 'UTILISATEUR_UPDATE',
+            'FÉDÉRATION_READ',
+            'LIGUE_READ',
+            'SALLE_READ', 'SALLE_UPDATE',
+            'MAITRE_READ', 'MAITRE_UPDATE',
+            'GRADES_READ',
+            'PARAMETRES_READ', 'PARAMETRES_MANAGE',
+            'COVID_ANALYTICS',
+        ],
+    ];
+
+    /**
      * Créer un nouvel utilisateur
      */
     public function create(array $data): User
@@ -31,6 +54,7 @@ class UserService
         $data = $this->syncActiveFlagWithStatus($data);
         $user = User::create($data);
         $this->grantDefaultAdminPermissions($user);
+        $this->grantDefaultRolePermissions($user);
 
         ActivityLog::log(
             action: 'create_user',
@@ -334,6 +358,33 @@ class UserService
                 ],
             ])
             ->all();
+
+        $user->permissions()->syncWithoutDetaching($syncData);
+    }
+
+    /** Accorde les permissions par défaut du rôle réel de l'utilisateur (cf. DEFAULT_ROLE_PERMISSIONS). */
+    private function grantDefaultRolePermissions(User $user): void
+    {
+        $role = $user->role instanceof UserRole ? $user->role->value : (string) $user->role;
+        $slugs = self::DEFAULT_ROLE_PERMISSIONS[$role] ?? null;
+
+        if (empty($slugs)) {
+            return;
+        }
+
+        $permissionIds = Permission::where('is_active', true)->whereIn('slug', $slugs)->pluck('id');
+
+        if ($permissionIds->isEmpty()) {
+            return;
+        }
+
+        $syncData = $permissionIds->mapWithKeys(fn ($permissionId) => [
+            $permissionId => [
+                'granted_by' => auth()->id(),
+                'reason' => "Permissions par défaut du rôle {$role}",
+                'granted_at' => now(),
+            ],
+        ])->all();
 
         $user->permissions()->syncWithoutDetaching($syncData);
     }
