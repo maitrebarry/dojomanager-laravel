@@ -73,7 +73,7 @@
         }
         .sheet-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-        .sheet-name { left: 23mm; top: 20mm; width: 58mm; color: var(--primary); font-size: 2mm; line-height: 1.05; font-weight: 900; }
+        .sheet-name { left: 23mm; top: 22.5mm; width: 58mm; color: var(--primary); font-size: 2mm; line-height: 1.05; font-weight: 900; }
 
         .sheet-fields { left: 23mm; top: 26mm; width: 58mm; }
         .sheet-fields div {
