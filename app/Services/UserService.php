@@ -39,6 +39,24 @@ class UserService
     ];
 
     /**
+     * Fédération et ligue : toutes les permissions existantes SAUF celles listées ici
+     * (au lieu d'une liste positive comme pour le maître) — calculé dynamiquement pour
+     * suivre automatiquement les nouvelles permissions créées via l'écran Permissions.
+     */
+    private const DEFAULT_EXCLUDED_PERMISSIONS = [
+        'federation' => [
+            'UTILISATEUR_DELETE', 'UTILISATEUR_ACTIVATION_READ', 'UTILISATEUR_ACTIVATE',
+        ],
+        'ligue' => [
+            'UTILISATEUR_DELETE', 'UTILISATEUR_ACTIVATION_READ', 'UTILISATEUR_ACTIVATE',
+            // Une ligue ne crée/modifie/supprime pas de fédération, ni d'autre ligue
+            // que la sienne : seules FÉDÉRATION_READ et LIGUE_READ/UPDATE restent.
+            'FÉDÉRATION_CREATE', 'FÉDÉRATION_UPDATE', 'FÉDÉRATION_DELETE',
+            'LIGUE_CREATE', 'LIGUE_DELETE',
+        ],
+    ];
+
+    /**
      * Créer un nouvel utilisateur
      */
     public function create(array $data): User
@@ -362,17 +380,26 @@ class UserService
         $user->permissions()->syncWithoutDetaching($syncData);
     }
 
-    /** Accorde les permissions par défaut du rôle réel de l'utilisateur (cf. DEFAULT_ROLE_PERMISSIONS). */
+    /**
+     * Accorde les permissions par défaut du rôle réel de l'utilisateur : liste positive
+     * pour le maître (DEFAULT_ROLE_PERMISSIONS), ou "tout sauf" pour fédération/ligue
+     * (DEFAULT_EXCLUDED_PERMISSIONS).
+     */
     private function grantDefaultRolePermissions(User $user): void
     {
         $role = $user->role instanceof UserRole ? $user->role->value : (string) $user->role;
-        $slugs = self::DEFAULT_ROLE_PERMISSIONS[$role] ?? null;
 
-        if (empty($slugs)) {
+        if (isset(self::DEFAULT_ROLE_PERMISSIONS[$role])) {
+            $permissionIds = Permission::where('is_active', true)
+                ->whereIn('slug', self::DEFAULT_ROLE_PERMISSIONS[$role])
+                ->pluck('id');
+        } elseif (isset(self::DEFAULT_EXCLUDED_PERMISSIONS[$role])) {
+            $permissionIds = Permission::where('is_active', true)
+                ->whereNotIn('slug', self::DEFAULT_EXCLUDED_PERMISSIONS[$role])
+                ->pluck('id');
+        } else {
             return;
         }
-
-        $permissionIds = Permission::where('is_active', true)->whereIn('slug', $slugs)->pluck('id');
 
         if ($permissionIds->isEmpty()) {
             return;
