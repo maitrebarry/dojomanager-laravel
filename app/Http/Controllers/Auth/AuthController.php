@@ -8,6 +8,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\ProfileRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Services\AuthService;
+use App\Support\ImageOrientation;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
@@ -215,6 +216,7 @@ class AuthController extends Controller
             }
             $filename = 'avatar_' . time() . '_' . uniqid() . '.' . $request->file('avatar')->getClientOriginalExtension();
             $data['avatar'] = $request->file('avatar')->storeAs('users/avatars', $filename, 'public');
+            ImageOrientation::fix(Storage::disk('public')->path($data['avatar']));
         }
 
         $user->update($data);

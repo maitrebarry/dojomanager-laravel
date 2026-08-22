@@ -11,6 +11,7 @@ use App\Models\Grade;
 use App\Models\Ligue;
 use App\Models\Salle;
 use App\Models\User;
+use App\Support\ImageOrientation;
 use App\Support\MatriculeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -121,6 +122,7 @@ class CeintureNoireController extends Controller
 
         if ($request->hasFile('photo')) {
             $data['photo_path'] = $request->file('photo')->store('ceintures-noires', 'public');
+            ImageOrientation::fix(Storage::disk('public')->path($data['photo_path']));
         }
 
         // Matricule attribué automatiquement (jamais saisi à la main) : préfixe de
@@ -155,6 +157,7 @@ class CeintureNoireController extends Controller
                 Storage::disk('public')->delete($ceintures_noire->photo_path);
             }
             $data['photo_path'] = $request->file('photo')->store('ceintures-noires', 'public');
+            ImageOrientation::fix(Storage::disk('public')->path($data['photo_path']));
         }
 
         $ceintures_noire->update($data);

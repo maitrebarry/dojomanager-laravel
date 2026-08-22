@@ -7,6 +7,7 @@ use App\Models\Permission;
 use App\Models\User;
 use App\Services\PermissionService;
 use App\Support\CardSettings;
+use App\Support\ImageOrientation;
 use App\Shared\Enums\UserRole;
 use App\Shared\Enums\UserStatus;
 use Illuminate\Http\RedirectResponse;
@@ -362,6 +363,7 @@ class SettingsController extends Controller
 
             if ($request->hasFile('signature')) {
                 $settings['signature_path'] = CardSettings::storeFile($request->file('signature'), 'card-settings/signatures');
+                ImageOrientation::fix(Storage::disk('public')->path($settings['signature_path']));
             }
 
             if ($request->filled('signature_data')) {
@@ -376,6 +378,7 @@ class SettingsController extends Controller
             if ($request->hasFile('stamp')) {
                 $this->deleteCardSettingFile($currentSettings['stamp_path'] ?? null);
                 $settings['stamp_path'] = CardSettings::storeFile($request->file('stamp'), 'card-settings/stamps');
+                ImageOrientation::fix(Storage::disk('public')->path($settings['stamp_path']));
             }
         } elseif ($section === 'card-models') {
             $validated = $request->validate([
@@ -409,6 +412,7 @@ class SettingsController extends Controller
             if ($request->hasFile('background_image')) {
                 $this->deleteCardSettingFile($currentSettings['card']['background_image_path'] ?? null);
                 $settings['card']['background_image_path'] = CardSettings::storeFile($request->file('background_image'), 'card-settings/backgrounds');
+                ImageOrientation::fix(Storage::disk('public')->path($settings['card']['background_image_path']));
             }
 
             if ($request->boolean('remove_decorative_image')) {
@@ -419,6 +423,7 @@ class SettingsController extends Controller
             if ($request->hasFile('decorative_image')) {
                 $this->deleteCardSettingFile($currentSettings['card']['decorative_image_path'] ?? null);
                 $settings['card']['decorative_image_path'] = CardSettings::storeFile($request->file('decorative_image'), 'card-settings/decorations');
+                ImageOrientation::fix(Storage::disk('public')->path($settings['card']['decorative_image_path']));
             }
         } else {
             abort(422, 'Module de paramètres invalide.');

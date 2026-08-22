@@ -18,7 +18,10 @@ class ImageOrientation
             return;
         }
 
-        if (!in_array(strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION)), ['jpg', 'jpeg'], true)) {
+        // On identifie le format par sa signature binaire (exif_imagetype), pas par
+        // l'extension du chemin : les fichiers temporaires d'upload (getRealPath())
+        // n'ont pas d'extension alors qu'il s'agit bien d'un JPEG.
+        if (@exif_imagetype($absolutePath) !== IMAGETYPE_JPEG) {
             return;
         }
 

@@ -8,8 +8,10 @@ use App\Models\Federation;
 use App\Models\Ligue;
 use App\Models\Salle;
 use App\Models\Signature;
+use App\Support\ImageOrientation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SignatureController extends Controller
@@ -103,6 +105,7 @@ class SignatureController extends Controller
 
         if ($request->hasFile('signature')) {
             $file = $request->file('signature');
+            ImageOrientation::fix($file->getRealPath());
             $data['signature_data'] = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
         } elseif ($signature) {
             $data['signature_data'] = $signature->signature_data;
