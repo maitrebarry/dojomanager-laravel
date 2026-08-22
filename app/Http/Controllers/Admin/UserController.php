@@ -68,6 +68,30 @@ class UserController extends Controller
     }
 
     /**
+     * Options du menu déroulant "Rôle" pour le formulaire de modification.
+     * UserRole::assignableBy() peut être vide ou ne pas inclure le rôle du viewer
+     * lui-même (ex. maître : aucun rôle assignable ; fédération sans fonction
+     * PRESIDENT : ne peut pas s'auto-attribuer "fédération") — ce qui viderait le
+     * menu déroulant en modification, y compris pour modifier sa propre fiche.
+     * On y garde toujours le rôle actuel du viewer.
+     */
+    private function roleOptionsForEditing(?User $viewer): array
+    {
+        $options = collect(UserRole::assignableBy($viewer))
+            ->mapWithKeys(fn (UserRole $role) => [$role->value => $role->label()])
+            ->toArray();
+
+        if ($viewer) {
+            $ownRole = UserRole::tryFrom($viewer->role instanceof UserRole ? $viewer->role->value : (string) $viewer->role);
+            if ($ownRole && !isset($options[$ownRole->value])) {
+                $options[$ownRole->value] = $ownRole->label();
+            }
+        }
+
+        return $options;
+    }
+
+    /**
      * Afficher la liste des utilisateurs
      */
     public function index(): View
@@ -176,7 +200,7 @@ class UserController extends Controller
         $this->authorizeTarget($user);
         return view('admin.users.edit', [
             'user' => $user,
-            'roles' => collect(UserRole::assignableBy(auth()->user()))->mapWithKeys(fn($role) => [$role->value => $role->label()])->toArray(),
+            'roles' => $this->roleOptionsForEditing(auth()->user()),
             'statuses' => collect(UserStatus::cases())->mapWithKeys(fn($status) => [$status->value => $status->label()])->toArray(),
             'page_title' => __('messages.users.edit_named', ['name' => $user->name]),
             'active_menu' => 'users',

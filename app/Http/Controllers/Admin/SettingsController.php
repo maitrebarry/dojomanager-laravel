@@ -64,6 +64,15 @@ class SettingsController extends Controller
             ->mapWithKeys(fn (\App\Shared\Enums\UserRole $r) => [$r->value => $r->label()])
             ->toArray();
 
+        // assignableBy() peut être vide (ex. un maître ne crée/n'assigne aucun rôle),
+        // ce qui viderait le menu déroulant "Rôle" du formulaire de modification —
+        // y compris pour modifier sa propre fiche. On y garde toujours son propre
+        // rôle, même sans pouvoir en attribuer d'autres.
+        $ownRole = \App\Shared\Enums\UserRole::tryFrom($u->role instanceof \App\Shared\Enums\UserRole ? $u->role->value : (string) $u->role);
+        if ($ownRole && !isset($roleOptions[$ownRole->value])) {
+            $roleOptions[$ownRole->value] = $ownRole->label();
+        }
+
         // Options de fonction par rôle cible (président fédération/ligue, délégués…), pour le JS du modal.
         $functionOptions = collect($assignableRoles)
             ->mapWithKeys(fn (\App\Shared\Enums\UserRole $r) => [$r->value => \App\Shared\Enums\UserRole::functionOptions($u, $r->value)])
