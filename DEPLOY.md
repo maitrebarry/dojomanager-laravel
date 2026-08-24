@@ -64,10 +64,15 @@ php artisan view:cache
    soit exporter le schéma (`php artisan schema:dump` ou un export SQL depuis une base
    locale) et l'importer via phpMyAdmin (fourni par LWS).
 6. **`php artisan storage:link` crée un lien symbolique** — la fonction PHP
-   `symlink()` est parfois désactivée sur les plans mutualisés bas de gamme. Si le lien
-   ne se crée pas : soit demander son activation au support LWS, soit remplacer par une
-   copie physique du dossier `storage/app/public` vers `public/storage` à chaque
-   déploiement (moins propre mais fonctionnel sans `symlink()`).
+   `symlink()` est parfois désactivée sur les plans mutualisés bas de gamme (LWS : le
+   lien renvoie 403, FollowSymLinks bloqué). Si le lien ne se crée pas : demander son
+   activation au support LWS, ou simplement créer une fois `public/storage` comme
+   **dossier physique normal** (`mkdir public/storage`, ou le remplir avec les fichiers
+   déjà présents dans `storage/app/public` s'il y en a). Le disque `public` de Laravel
+   écrit directement dans `public/storage` (voir `config/filesystems.php`) : une fois ce
+   dossier créé, **aucune resynchronisation n'est jamais nécessaire** — chaque nouvel
+   upload y atterrit directement, contrairement à un lien symbolique cassé qui obligerait
+   à recopier après chaque déploiement.
 
 ## 4. Valeurs `.env` à adapter en production
 
@@ -141,6 +146,8 @@ prévenir si ce cas d'usage (téléphone à distance du poste) est important pou
 
 ## 7. Photos des disciples et autres fichiers uploadés
 
-Les photos sont stockées via `Storage::disk('public')`, donc dans
-`storage/app/public/` et servies via le lien `public/storage` (section 3, point 6).
-Vérifier après déploiement qu'une photo uploadée depuis l'admin s'affiche bien.
+Les photos sont stockées via `Storage::disk('public')`, dont le dossier racine est
+`public/storage` directement (pas `storage/app/public` + lien symbolique) — voir
+`config/filesystems.php` et section 3, point 6. Vérifier après déploiement qu'une photo
+uploadée depuis l'admin s'affiche bien (pas seulement dans les PDF, qui lisent le
+fichier directement sur le disque et ne révèlent donc pas ce genre de problème).

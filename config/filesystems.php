@@ -40,7 +40,12 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            // public_path('storage') plutôt que storage_path('app/public') : les fichiers
+            // sont écrits directement dans le webroot, sans dépendre du lien symbolique
+            // public/storage (bloqué — 403 FollowSymLinks — sur certains mutualisés comme
+            // LWS). En local, public/storage reste un lien symbolique classique créé par
+            // storage:link, donc rien ne change en développement.
+            'root' => public_path('storage'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
