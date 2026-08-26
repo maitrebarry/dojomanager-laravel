@@ -25,7 +25,6 @@ class DiscipleRequest extends FormRequest
             'grade_id' => ['nullable', 'exists:grades,id'],
             'date_obtention_grade' => ['nullable', 'date'],
             'telephone' => ['nullable', 'string', 'max:40'],
-            'nmle' => ['nullable', 'string', 'max:50'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ];
     }

@@ -10,6 +10,7 @@ use App\Models\Grade;
 use App\Models\Salle;
 use App\Models\Signature;
 use App\Support\ImageOrientation;
+use App\Support\MatriculeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -76,6 +77,7 @@ class DiscipleController extends Controller
     public function store(DiscipleRequest $request): RedirectResponse
     {
         $data = $this->prepareData($request);
+        $data['nmle'] = MatriculeGenerator::nextForLigue(Salle::find($data['salle_id'])?->ligue);
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('disciples', 'public');
@@ -119,6 +121,12 @@ class DiscipleController extends Controller
     {
         $this->authorizeScope($disciple);
         $data = $this->prepareData($request);
+
+        // Matricule attribué une seule fois : les disciples déjà inscrits avant
+        // l'automatisation en reçoivent un dès la première modification.
+        if (empty($disciple->nmle)) {
+            $data['nmle'] = MatriculeGenerator::nextForLigue(Salle::find($data['salle_id'])?->ligue);
+        }
 
         if ($request->hasFile('photo')) {
             if ($disciple->photo && Storage::disk('public')->exists($disciple->photo)) {

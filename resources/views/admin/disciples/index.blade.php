@@ -58,6 +58,7 @@
                     <tr>
                         <th style="width: 34px;"></th>
                         <th style="width: 48px;">N°</th>
+                        <th>{{ __('messages.disciples.matricule') }}</th>
                         <th>{{ __('messages.full_name') }}</th>
                         <th>{{ __('messages.disciples.age') }}</th>
                         <th>{{ __('messages.grade') }}</th>
@@ -73,6 +74,7 @@
                                 <input type="checkbox" class="form-check-input js-badge-check" value="{{ $d->id }}" {{ $d->is_archived ? 'disabled' : '' }}>
                             </td>
                             <td>{{ $index + 1 }}</td>
+                            <td>{{ $d->nmle ?: '-' }}</td>
                             <td class="fw-semibold">{{ $d->full_name }}</td>
                             <td>{{ $d->age !== null ? $d->age . ' ' . __('messages.disciples.years') : '-' }}</td>
                             <td>{{ $d->grade?->nom_grade ?? '-' }}</td>
@@ -110,7 +112,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="text-center text-muted py-4">{{ __('messages.disciples.not_found') }}</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted py-4">{{ __('messages.disciples.not_found') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

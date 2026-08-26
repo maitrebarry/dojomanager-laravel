@@ -3,15 +3,18 @@
 namespace App\Support;
 
 use App\Models\CeintureNoireManuelle;
+use App\Models\Disciple;
 use App\Models\Ligue;
 use App\Models\User;
 use Illuminate\Support\Str;
 
 /**
- * Génère le matricule (numéro d'ordre) d'une ceinture noire : préfixe dérivé
- * de la ligue ("SEGOU" → SEG-0001) suivi d'un compteur séquentiel propre à
- * cette ligue, partagé entre les saisies manuelles (CeintureNoireManuelle)
- * et les comptes maître/responsable (User) pour éviter toute collision.
+ * Génère le matricule (numéro d'ordre) d'une personne : préfixe dérivé de la
+ * ligue ("SEGOU" → SEG-0001) suivi d'un compteur séquentiel propre à cette
+ * ligue, partagé entre les disciples, les saisies manuelles de ceintures
+ * noires (CeintureNoireManuelle) et les comptes maître/responsable (User) —
+ * un seul et même compteur pour toute la ligue, pour qu'une même personne ne
+ * se retrouve jamais avec deux matricules différents selon l'écran utilisé.
  */
 class MatriculeGenerator
 {
@@ -32,6 +35,7 @@ class MatriculeGenerator
         $sequences = [];
 
         foreach ([
+            Disciple::query()->where('nmle', 'like', $prefix . '-%')->pluck('nmle'),
             CeintureNoireManuelle::query()->where('nmle', 'like', $prefix . '-%')->pluck('nmle'),
             User::query()->where('matricule', 'like', $prefix . '-%')->pluck('matricule'),
         ] as $values) {
