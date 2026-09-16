@@ -23,7 +23,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:users',
+            'email' => 'nullable|email',
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
         ];
@@ -34,7 +34,6 @@ class RegisterRequest extends FormRequest
         return [
             'name.required' => 'Le nom est obligatoire.',
             'email.email' => 'L\'adresse email doit être valide.',
-            'email.unique' => 'Cette adresse email est déjà utilisée.',
             'password.required' => 'Le mot de passe est obligatoire.',
             'password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
             'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',

@@ -32,53 +32,61 @@ class AuthService
     }
 
     /**
-     * Se connecter avec téléphone et mot de passe
+     * Se connecter avec téléphone et mot de passe. Le téléphone n'étant plus unique
+     * (plusieurs comptes peuvent le partager, ex. foyer commun), on ne retient que les
+     * comptes dont CE mot de passe est valide : s'il en reste plusieurs, on renvoie
+     * 'choose' pour que le contrôleur propose un choix de compte, sans se connecter.
+     *
+     * Renvoie un tableau ['status' => 'ok'|'choose'|'blocked'|'fail', ...].
      */
-    public function login(string $phone, string $password, bool $remember = false): bool
+    public function login(string $phone, string $password, bool $remember = false): array
     {
-        $user = $this->userService->findByPhone($phone);
+        $candidates = $this->userService->findAllByPhone($phone)
+            ->filter(fn (User $u) => Hash::check($password, $u->password))
+            ->values();
 
+        if ($candidates->isEmpty()) {
+            Log::warning('AuthService: login failed - no matching credentials', ['phone' => $phone]);
+            return ['status' => 'fail'];
+        }
+
+        if ($candidates->count() > 1) {
+            return ['status' => 'choose', 'candidates' => $candidates];
+        }
+
+        return $this->finalizeLogin($candidates->first(), $remember);
+    }
+
+    /**
+     * Termine la connexion après un choix de compte : $userId doit obligatoirement
+     * figurer parmi $allowedIds (les comptes déjà validés par login() pour cette même
+     * tentative), jamais un identifiant arbitraire fourni par le client.
+     */
+    public function finalizeChosenLogin(int $userId, array $allowedIds, bool $remember): array
+    {
+        if (!in_array($userId, $allowedIds, true)) {
+            return ['status' => 'fail'];
+        }
+
+        $user = $this->userService->find($userId);
         if (!$user) {
-            Log::warning('AuthService: login failed - user not found', ['phone' => $phone]);
-            return false;
+            return ['status' => 'fail'];
         }
 
-        $hashOk = Hash::check($password, $user->password);
-        if (!$hashOk) {
-            Log::warning('AuthService: login failed - invalid password', ['phone' => $phone]);
-            return false;
-        }
+        return $this->finalizeLogin($user, $remember);
+    }
 
+    private function finalizeLogin(User $user, bool $remember): array
+    {
         if (!$user->is_active || $user->status !== UserStatus::ACTIVE->value) {
-            Log::warning('AuthService: login failed - inactive or wrong status', ['phone' => $phone, 'is_active' => $user->is_active, 'status' => $user->status]);
-            return false;
+            Log::warning('AuthService: login failed - inactive or wrong status', ['user_id' => $user->id, 'status' => $user->status]);
+            return ['status' => 'blocked', 'reason' => $user->deactivation_reason ?: __('messages.auth.account_disabled_default')];
         }
 
         auth()->login($user, $remember);
         $user->recordLogin();
 
-        return true;
-    }
-
-    /**
-     * Si le mot de passe est correct mais que le compte est désactivé, renvoie le
-     * motif à afficher sur l'écran de connexion (celui saisi par le superadmin, ou un
-     * message générique s'il n'en a pas précisé). Null sinon (identifiants invalides,
-     * ou compte actif).
-     */
-    public function blockReasonIfCredentialsValid(string $phone, string $password): ?string
-    {
-        $user = $this->userService->findByPhone($phone);
-
-        if (!$user || !Hash::check($password, $user->password)) {
-            return null;
-        }
-
-        if ($user->is_active && $user->status === UserStatus::ACTIVE->value) {
-            return null;
-        }
-
-        return $user->deactivation_reason ?: __('messages.auth.account_disabled_default');
+        return ['status' => 'ok'];
     }
 
     /**

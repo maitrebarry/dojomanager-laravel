@@ -44,7 +44,6 @@ class UserRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('user')?->id ?? $this->input('user_id');
         $isUpdate = $this->isMethod('PUT') || $this->input('_method') === 'PUT';
 
         // Rôles assignables selon le créateur (hiérarchie multi-tenant DojoManager) + rôles du template.
@@ -53,20 +52,13 @@ class UserRequest extends FormRequest
             array_map(fn (UserRole $role) => $role->value, UserRole::assignableBy($this->user()))
         )));
 
+        // Email et téléphone peuvent être partagés entre plusieurs comptes (ex. même
+        // numéro de foyer) : la connexion propose alors un choix de compte, cf.
+        // AuthController::chooseAccount.
         $rules = [
             'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'nullable',
-                'email',
-                'max:255',
-                Rule::unique('users')->ignore($userId),
-            ],
-            'phone' => [
-                'nullable',
-                'string',
-                'max:20',
-                Rule::unique('users', 'phone')->ignore($userId),
-            ],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'role' => ['required', 'string', Rule::in($assignableRoles)],
             'status' => ['required', 'string', Rule::in(array_map(fn($s) => $s->value, UserStatus::cases()))],
             // Périmètre multi-tenant
@@ -94,8 +86,6 @@ class UserRequest extends FormRequest
         return [
             'name.required' => 'Le nom est obligatoire.',
             'email.email' => 'Veuillez entrer une adresse email valide.',
-            'email.unique' => 'Cet email est déjà utilisé.',
-            'phone.unique' => 'Ce numéro de téléphone est déjà utilisé.',
             'password.required' => 'Le mot de passe est obligatoire.',
             'password.min' => 'Le mot de passe doit contenir au moins 4 caractères.',
             'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',

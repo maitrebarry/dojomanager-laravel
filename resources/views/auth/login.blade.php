@@ -323,6 +323,21 @@
                             </div>
                         @endif
 
+                        @if(session('auth_choice_candidates'))
+                            <p class="mb-3">{{ __('messages.auth.choose_account_hint') }}</p>
+                            <div class="d-grid gap-2 mb-3">
+                                @foreach(session('auth_choice_candidates') as $candidate)
+                                    <form method="POST" action="{{ route('login.choose-account') }}">
+                                        @csrf
+                                        <input type="hidden" name="user_id" value="{{ $candidate['id'] }}">
+                                        <button type="submit" class="btn btn-outline-secondary w-100 text-start">
+                                            <i class="fas fa-user me-2"></i>{{ $candidate['label'] }}
+                                        </button>
+                                    </form>
+                                @endforeach
+                            </div>
+                            <a class="login-link" href="{{ route('login') }}">{{ __('messages.auth.choose_account_cancel') }}</a>
+                        @else
                         <form method="POST" action="{{ route('login') }}" id="loginForm">
                             @csrf
 
@@ -379,6 +394,7 @@
                                 <i class="fas fa-right-to-bracket"></i> {{ __('messages.auth.login') }}
                             </button>
                         </form>
+                        @endif
                     </div>
                 </div>
             </main>

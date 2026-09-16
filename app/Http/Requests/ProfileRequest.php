@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ProfileRequest extends FormRequest
 {
@@ -16,11 +15,7 @@ class ProfileRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('users')->ignore($this->user()?->id),
-            ],
+            'email' => ['required', 'email'],
             'phone' => ['nullable', 'string', 'max:20'],
             'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ];
@@ -32,7 +27,6 @@ class ProfileRequest extends FormRequest
             'name.required' => 'Le nom est obligatoire.',
             'email.required' => 'L\'email est obligatoire.',
             'email.email' => 'Veuillez entrer une adresse email valide.',
-            'email.unique' => 'Cet email est déjà utilisé.',
             'avatar.image' => 'Le fichier doit être une image.',
             'avatar.mimes' => 'Formats autorisés : JPEG, PNG, JPG, WEBP.',
             'avatar.max' => 'La taille maximale est de 2Mo.',

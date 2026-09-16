@@ -87,6 +87,8 @@ return [
         'remaining_attempts' => 'Il vous reste :count tentative(s) avant blocage temporaire.',
         'too_many_attempts' => 'Trop de tentatives de connexion. Veuillez réessayer dans :seconds secondes.',
         'account_disabled_default' => 'Une nouvelle mise à jour de l\'application est disponible, avec de nouvelles fonctionnalités. Contactez l\'administrateur pour l\'activer sur votre compte.',
+        'choose_account_hint' => 'Plusieurs comptes utilisent ce numéro et ce mot de passe. Choisissez celui avec lequel vous connecter :',
+        'choose_account_cancel' => 'Ce n\'est pas moi, recommencer',
         'account_created' => 'Compte créé avec succès. Veuillez attendre l\'activation par un administrateur.',
         'profile_updated' => 'Votre profil a été mis à jour avec succès.',
         'old_password_wrong' => 'L\'ancien mot de passe est incorrect.',

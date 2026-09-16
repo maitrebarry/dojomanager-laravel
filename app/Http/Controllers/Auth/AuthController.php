@@ -7,6 +7,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\ProfileRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Models\User;
 use App\Services\AuthService;
 use App\Support\ImageOrientation;
 use Illuminate\Http\Request;
@@ -54,6 +55,10 @@ class AuthController extends Controller
         $remember = $request->boolean('remember');
         $throttleKey = $this->throttleKey($request);
 
+        // Une nouvelle tentative de connexion invalide tout choix de compte resté en
+        // attente (téléphone partagé par plusieurs comptes, cf. chooseAccount()).
+        $request->session()->forget(['auth_choice_candidates', 'auth_choice_remember']);
+
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
 
@@ -62,15 +67,31 @@ class AuthController extends Controller
                 ->with('error', __('messages.auth.too_many_attempts', ['seconds' => $seconds]));
         }
 
-        if (!$this->authService->login($credentials['phone'], $credentials['password'], $remember)) {
+        $result = $this->authService->login($credentials['phone'], $credentials['password'], $remember);
+
+        if ($result['status'] === 'choose') {
+            // Mot de passe valide pour plusieurs comptes : pas un échec, on ne pénalise
+            // pas le rate limiter, on demande simplement lequel utiliser.
+            RateLimiter::clear($throttleKey);
+            $request->session()->put('auth_choice_candidates', $result['candidates']->map(fn ($u) => [
+                'id' => $u->id,
+                'label' => $this->candidateLabel($u),
+            ])->all());
+            $request->session()->put('auth_choice_remember', $remember);
+
+            return redirect()->route('login');
+        }
+
+        if ($result['status'] === 'blocked') {
             RateLimiter::hit($throttleKey, 180);
 
-            $blockReason = $this->authService->blockReasonIfCredentialsValid($credentials['phone'], $credentials['password']);
-            if ($blockReason) {
-                return back()
-                    ->withInput($request->only('phone'))
-                    ->with('error', $blockReason);
-            }
+            return back()
+                ->withInput($request->only('phone'))
+                ->with('error', $result['reason']);
+        }
+
+        if ($result['status'] !== 'ok') {
+            RateLimiter::hit($throttleKey, 180);
 
             $remaining = max(0, 5 - RateLimiter::attempts($throttleKey));
             $message = __('messages.auth.invalid_credentials');
@@ -91,6 +112,39 @@ class AuthController extends Controller
         }
 
         return redirect()->route('dashboard');
+    }
+
+    /**
+     * Finalise la connexion après un choix de compte (téléphone partagé par plusieurs
+     * comptes). $user_id doit obligatoirement figurer parmi les comptes déjà validés
+     * (mot de passe correct) pour cette tentative, stockés en session par login().
+     */
+    public function chooseAccount(Request $request): RedirectResponse
+    {
+        $candidates = collect($request->session()->get('auth_choice_candidates', []));
+        $remember = (bool) $request->session()->get('auth_choice_remember', false);
+        $userId = (int) $request->input('user_id');
+
+        $request->session()->forget(['auth_choice_candidates', 'auth_choice_remember']);
+
+        $result = $this->authService->finalizeChosenLogin($userId, $candidates->pluck('id')->all(), $remember);
+
+        if ($result['status'] !== 'ok') {
+            return redirect()->route('login')->with('error', $result['reason'] ?? __('messages.auth.invalid_credentials'));
+        }
+
+        return redirect()->route('dashboard');
+    }
+
+    /** Libellé d'un compte candidat sur l'écran de choix (nom, rôle, et périmètre pour les distinguer). */
+    private function candidateLabel(User $user): string
+    {
+        $role = $user->role instanceof \App\Shared\Enums\UserRole ? $user->role : \App\Shared\Enums\UserRole::tryFrom((string) $user->role);
+        $scope = $user->salle?->nom ?? $user->ligue?->nom ?? $user->federation?->nom;
+
+        $label = $user->name . ' — ' . ($role?->label() ?? (string) $user->role);
+
+        return $scope ? $label . ' (' . $scope . ')' : $label;
     }
 
     /**

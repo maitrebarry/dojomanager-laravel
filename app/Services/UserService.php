@@ -230,6 +230,15 @@ class UserService
     }
 
     /**
+     * Tous les comptes partageant ce numéro de téléphone (email/téléphone ne sont plus
+     * uniques : plusieurs comptes peuvent partager le même numéro, ex. foyer commun).
+     */
+    public function findAllByPhone(string $phone): \Illuminate\Support\Collection
+    {
+        return User::where('phone', $phone)->get();
+    }
+
+    /**
      * Trouver un utilisateur par ID
      */
     public function find(int $id): ?User
