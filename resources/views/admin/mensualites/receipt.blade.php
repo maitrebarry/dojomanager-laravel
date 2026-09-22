@@ -221,7 +221,7 @@
                 labels: labels,
                 shareTitle: @json(__('messages.whatsapp.share_text', ['name' => $cotisation->disciple?->full_name ?? ''])),
                 phoneDigits: @json(\App\Support\WhatsAppPhone::normalize($cotisation->disciple?->telephone)),
-                fileName: @json('recu-cotisation-' . $cotisation->id . '.png'),
+                fileName: @json('recu-mensualite-' . \Illuminate\Support\Str::slug(($cotisation->disciple?->full_name ?? 'disciple') . '-' . $cotisation->moisLabel() . '-' . $cotisation->annee) . '.png'),
             });
 
             document.getElementById('btnBridgeConfig').addEventListener('click', function () { WhatsappBridge.configure(); });

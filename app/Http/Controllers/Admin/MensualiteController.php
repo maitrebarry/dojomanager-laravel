@@ -259,7 +259,7 @@ class MensualiteController extends Controller
         return $this->downloadThermalPdf(
             'admin.mensualites.receipt_pdf',
             ['cotisation' => $cotisation, 'signature' => Signature::forSalle($cotisation->disciple?->salle_id)],
-            'recu-cotisation-' . $filename . '.pdf'
+            'recu-mensualite-' . $filename . '.pdf'
         );
     }
 }
