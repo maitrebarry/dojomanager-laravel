@@ -64,7 +64,7 @@ return [
         'sent' => 'Reçu envoyé par WhatsApp',
         'auto_failed' => 'Envoi WhatsApp automatique impossible (passerelle injoignable)',
         'bulk_downloaded_title' => 'Reçus téléchargés',
-        'bulk_downloaded_help' => 'Chaque reçu a été téléchargé automatiquement. Cliquez sur « Envoyer » pour ouvrir WhatsApp, puis joignez le fichier téléchargé à la conversation.',
+        'bulk_downloaded_help' => 'Chaque reçu a été téléchargé automatiquement. Cliquez sur « Envoyer » pour le partager par WhatsApp — si votre navigateur ne le permet pas directement, il ne reste qu\'à joindre le fichier déjà téléchargé.',
         'no_phone' => 'Pas de téléphone',
         'configure' => 'Configurer la passerelle WhatsApp',
         'share_text' => 'Reçu — :name',

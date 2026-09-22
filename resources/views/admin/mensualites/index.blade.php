@@ -81,7 +81,13 @@
                 <div class="d-flex justify-content-between align-items-center border rounded p-2">
                     <span>{{ $item['label'] }}</span>
                     @if($item['phone'])
-                        <a href="https://wa.me/{{ $item['phone'] }}?text={{ urlencode($item['caption']) }}" target="_blank" class="btn btn-sm btn-success"><i class="fab fa-whatsapp me-1"></i>{{ __('messages.whatsapp.send') }}</a>
+                        <button type="button" class="btn btn-sm btn-success js-wa-share"
+                            data-url="{{ $item['download_url'] }}"
+                            data-filename="{{ $item['filename'] }}"
+                            data-phone="{{ $item['phone'] }}"
+                            data-caption="{{ $item['caption'] }}">
+                            <i class="fab fa-whatsapp me-1"></i>{{ __('messages.whatsapp.send') }}
+                        </button>
                     @else
                         <span class="badge bg-secondary">{{ __('messages.whatsapp.no_phone') }}</span>
                     @endif
@@ -253,6 +259,26 @@ document.addEventListener('DOMContentLoaded', function () {
             next();
         })();
     @endif
+
+    // Bouton « Envoyer par WhatsApp » du panneau de reçus téléchargés : tente le
+    // partage natif (fichier déjà joint, WhatsApp proposé dans la feuille de partage)
+    // et retombe sur wa.me (texte pré-rempli, fichier déjà téléchargé à joindre à la
+    // main) si le navigateur ne supporte pas le partage de fichiers.
+    document.querySelectorAll('.js-wa-share').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            WhatsappBridge.shareFileUrl(btn.dataset.url, {
+                fileName: btn.dataset.filename,
+                phoneDigits: btn.dataset.phone,
+                shareTitle: btn.dataset.caption,
+            }).finally(function () {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            });
+        });
+    });
 
     var form = document.getElementById('filterForm');
     var t = null;

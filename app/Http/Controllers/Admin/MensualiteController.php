@@ -183,6 +183,7 @@ class MensualiteController extends Controller
                     'phone' => WhatsAppPhone::normalize($c->disciple?->telephone),
                     'caption' => __('messages.whatsapp.share_text', ['name' => $c->disciple?->full_name ?? '']) . ' — ' . $c->moisLabel() . ' ' . $c->annee,
                     'download_url' => route('admin.mensualites.receipt.pdf', $c),
+                    'filename' => $this->mensualiteFilename($c),
                 ];
             });
 
@@ -260,17 +261,22 @@ class MensualiteController extends Controller
         $this->guardScope($cotisation);
         $cotisation->load(['disciple.salle.maitre', 'disciple.salle.maitreUser.grade', 'paiements']);
 
-        // Nommé par disciple + mois/année (pas par id) : un paiement multi-mois génère
-        // plusieurs reçus téléchargés à la suite, il faut pouvoir les distinguer par leur
-        // nom de fichier sans avoir à ouvrir chacun d'eux.
-        $filename = Str::slug(
-            ($cotisation->disciple?->full_name ?? 'disciple') . '-' . $cotisation->moisLabel() . '-' . $cotisation->annee
-        );
-
         return $this->downloadThermalPdf(
             'admin.mensualites.receipt_pdf',
             ['cotisation' => $cotisation, 'signature' => Signature::forSalle($cotisation->disciple?->salle_id)],
-            'recu-mensualite-' . $filename . '.pdf'
+            $this->mensualiteFilename($cotisation)
         );
+    }
+
+    /**
+     * Nom de fichier par disciple + mois/année (pas par id) : un paiement multi-mois
+     * génère plusieurs reçus téléchargés/partagés à la suite, il faut pouvoir les
+     * distinguer sans avoir à ouvrir chacun d'eux.
+     */
+    private function mensualiteFilename(Cotisation $cotisation): string
+    {
+        return 'recu-mensualite-' . Str::slug(
+            ($cotisation->disciple?->full_name ?? 'disciple') . '-' . $cotisation->moisLabel() . '-' . $cotisation->annee
+        ) . '.pdf';
     }
 }

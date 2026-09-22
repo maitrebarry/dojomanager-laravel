@@ -190,12 +190,51 @@
         });
     }
 
+    /**
+     * Partage un fichier déjà généré côté serveur (ex : PDF d'un reçu) via l'API de
+     * partage native du navigateur, quand elle est disponible : sur mobile (et certains
+     * navigateurs desktop), l'utilisateur choisit WhatsApp dans la feuille de partage
+     * système avec le fichier déjà joint — aucune manipulation de fichier téléchargé.
+     * Un lien wa.me ne peut PAS joindre de fichier (limite de WhatsApp, pas de ce code) :
+     * c'est le seul moyen d'obtenir un envoi de fichier en un clic. Repli sur wa.me
+     * (texte pré-rempli, fichier déjà téléchargé à joindre à la main) si l'API de
+     * partage n'existe pas, refuse le fichier, ou si l'utilisateur annule.
+     */
+    function shareFileUrl(fileUrl, opts) {
+        opts = opts || {};
+
+        function fallbackToWaMe() {
+            var waUrl = 'https://wa.me/' + (opts.phoneDigits || '') + '?text=' + encodeURIComponent(opts.shareTitle || '');
+            window.open(waUrl, '_blank');
+        }
+
+        return fetch(fileUrl, { credentials: 'same-origin' })
+            .then(function (res) { return res.blob(); })
+            .then(function (blob) {
+                var file = new File([blob], opts.fileName || 'recu.pdf', { type: blob.type || 'application/pdf' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    return navigator.share({ files: [file], title: opts.shareTitle, text: opts.shareTitle })
+                        .catch(function (err) {
+                            // AbortError : l'utilisateur a annulé la feuille de partage lui-même,
+                            // ce n'est pas un échec à rattraper par un repli automatique.
+                            if (err && err.name === 'AbortError') return;
+                            fallbackToWaMe();
+                        });
+                }
+
+                fallbackToWaMe();
+            })
+            .catch(fallbackToWaMe);
+    }
+
     window.WhatsappBridge = {
         getHost: getHost,
         setHost: setHost,
         configure: configure,
         captureAndSend: captureAndSend,
         sendFromUrl: sendFromUrl,
+        shareFileUrl: shareFileUrl,
         attachSendButton: attachSendButton,
         autoSendIfRequested: autoSendIfRequested,
     };
