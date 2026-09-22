@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class MensualiteController extends Controller
@@ -248,10 +249,17 @@ class MensualiteController extends Controller
         $this->guardScope($cotisation);
         $cotisation->load(['disciple.salle.maitre', 'disciple.salle.maitreUser.grade', 'paiements']);
 
+        // Nommé par disciple + mois/année (pas par id) : un paiement multi-mois génère
+        // plusieurs reçus téléchargés à la suite, il faut pouvoir les distinguer par leur
+        // nom de fichier sans avoir à ouvrir chacun d'eux.
+        $filename = Str::slug(
+            ($cotisation->disciple?->full_name ?? 'disciple') . '-' . $cotisation->moisLabel() . '-' . $cotisation->annee
+        );
+
         return $this->downloadThermalPdf(
             'admin.mensualites.receipt_pdf',
             ['cotisation' => $cotisation, 'signature' => Signature::forSalle($cotisation->disciple?->salle_id)],
-            'recu-cotisation-' . $cotisation->id . '.pdf'
+            'recu-cotisation-' . $filename . '.pdf'
         );
     }
 }
