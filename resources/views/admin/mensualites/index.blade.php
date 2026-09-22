@@ -96,8 +96,11 @@
                         <td><span class="badge bg-{{ $c->statutColor() }}">{{ $c->statut === 'PAYE' ? __('messages.cotisations.paid') : ($c->statut === 'PARTIEL' ? __('messages.cotisations.partial') : __('messages.cotisations.unpaid')) }}</span></td>
                         <td style="white-space: nowrap;">
                             <div class="d-flex align-items-center gap-1 flex-nowrap">
-                                @if($payable && Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('COTISATION_MANAGE') || Auth::user()->isTenantAdmin()))
-                                    <button type="button" class="btn btn-sm btn-primary btn-pay" data-id="{{ $c->id }}" data-name="{{ $c->disciple?->full_name }}" data-reste="{{ $reste }}"><i class="fas fa-hand-holding-dollar me-1"></i>{{ __('messages.cotisations.pay') }}</button>
+                                @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('COTISATION_MANAGE') || Auth::user()->isTenantAdmin()))
+                                    @if($payable)
+                                        <button type="button" class="btn btn-sm btn-primary btn-pay" data-id="{{ $c->id }}" data-name="{{ $c->disciple?->full_name }}" data-reste="{{ $reste }}"><i class="fas fa-hand-holding-dollar me-1"></i>{{ __('messages.cotisations.pay') }}</button>
+                                    @endif
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-multi-pay" data-id="{{ $c->disciple?->id }}" data-name="{{ $c->disciple?->full_name }}" title="{{ __('messages.cotisations.multi_pay_button') }}"><i class="fas fa-layer-group"></i></button>
                                 @endif
                                 <a href="{{ route('admin.mensualites.receipt', $c) }}" target="_blank" class="btn btn-sm btn-outline-success {{ $c->paiements->count() ? '' : 'disabled' }}"><i class="fas fa-receipt me-1"></i>{{ __('messages.cotisations.receipt') }}</a>
                             </div>
@@ -161,6 +164,31 @@
         </form>
     </div>
 </div>
+
+{{-- Modale paiement multi-mois (plusieurs mensualités d'un même disciple en une fois) --}}
+<div class="modal fade" id="multiPayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('admin.mensualites.bulk-pay') }}" id="multiPayForm" class="modal-content">
+            @csrf
+            <input type="hidden" name="ids" id="multiPayIds">
+            <div class="modal-header" style="background-color: var(--navbar-bg); color: var(--navbar-text);">
+                <h5 class="modal-title"><i class="fas fa-layer-group me-2"></i> <span id="multiPayTitle">{{ __('messages.cotisations.multi_pay_title') }}</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">{{ __('messages.cotisations.multi_pay_amount') }} <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" min="0.01" name="montant" id="multiPayMontant" class="form-control" required>
+                </div>
+                <div id="multiPayList" class="border rounded p-2" style="max-height: 260px; overflow-y: auto;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('messages.cancel') }}</button>
+                <button type="submit" class="btn btn-success" id="multiPaySubmit">{{ __('messages.cotisations.multi_pay_submit') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @section('js')
@@ -217,6 +245,55 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('payForm').action = payBase + '/' + this.dataset.id + '/payer';
             payModal.show();
         });
+    });
+
+    // Paiement multi-mois : charge les mensualités impayées d'un disciple (tous mois
+    // confondus, générant au passage les mois manquants) puis réutilise le paiement
+    // groupé existant (mensualites.bulk-pay) pour les régler en une fois.
+    var multiPayModal = new bootstrap.Modal(document.getElementById('multiPayModal'));
+    var multiPayBase = "{{ url('admin/mensualites/disciples') }}";
+    document.querySelectorAll('.btn-multi-pay').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var discipleId = this.dataset.id;
+            var list = document.getElementById('multiPayList');
+            var submitBtn = document.getElementById('multiPaySubmit');
+            document.getElementById('multiPayTitle').textContent = this.dataset.name || @json(__('messages.cotisations.multi_pay_title'));
+            list.innerHTML = '<div class="text-muted small">' + @json(__('messages.cotisations.multi_pay_loading')) + '</div>';
+            submitBtn.disabled = true;
+            multiPayModal.show();
+
+            fetch(multiPayBase + '/' + discipleId + '/impayes', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { if (!r.ok) throw new Error('http_error'); return r.json(); })
+                .then(function (data) {
+                    document.getElementById('multiPayMontant').value = data.montant_defaut || '';
+                    list.innerHTML = '';
+                    if (!data.cotisations.length) {
+                        list.innerHTML = '<div class="text-muted small">' + @json(__('messages.cotisations.multi_pay_none')) + '</div>';
+                        return;
+                    }
+                    data.cotisations.forEach(function (c) {
+                        var div = document.createElement('div');
+                        div.className = 'form-check d-flex justify-content-between align-items-center py-1';
+                        div.innerHTML = '<span><input class="form-check-input js-multi-pay-check me-2" type="checkbox" value="' + c.id + '" id="mp-' + c.id + '" checked>' +
+                            '<label class="form-check-label" for="mp-' + c.id + '">' + c.label + '</label></span>' +
+                            '<span class="text-danger fw-semibold">' + new Intl.NumberFormat('fr-FR').format(c.reste) + ' FCFA</span>';
+                        list.appendChild(div);
+                    });
+                    submitBtn.disabled = false;
+                })
+                .catch(function () {
+                    list.innerHTML = '<div class="text-danger small">' + @json(__('messages.cotisations.multi_pay_error')) + '</div>';
+                });
+        });
+    });
+    document.getElementById('multiPayForm').addEventListener('submit', function (e) {
+        var ids = Array.from(document.querySelectorAll('.js-multi-pay-check:checked')).map(function (c) { return c.value; });
+        if (!ids.length) {
+            e.preventDefault();
+            window.dojoToast && window.dojoToast('warning', @json(__('messages.cotisations.bulk_none')));
+            return;
+        }
+        document.getElementById('multiPayIds').value = ids.join(',');
     });
 
     // Sélection + paiement groupé

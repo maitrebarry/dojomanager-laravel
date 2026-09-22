@@ -110,6 +110,7 @@ Route::middleware('auth')->group(function () {
         Route::get('mensualites', [MensualiteController::class, 'index'])->name('mensualites.index');
         Route::post('mensualites/generer', [MensualiteController::class, 'generate'])->name('mensualites.generate');
         Route::post('mensualites/paiement-groupe', [MensualiteController::class, 'bulkPay'])->name('mensualites.bulk-pay');
+        Route::get('mensualites/disciples/{disciple}/impayes', [MensualiteController::class, 'disciplePending'])->name('mensualites.disciple-pending');
         Route::post('mensualites/{cotisation}/payer', [MensualiteController::class, 'pay'])->name('mensualites.pay');
         Route::delete('mensualites/{cotisation}', [MensualiteController::class, 'destroy'])->name('mensualites.destroy');
         Route::get('mensualites/{cotisation}/recu', [MensualiteController::class, 'receipt'])->name('mensualites.receipt');

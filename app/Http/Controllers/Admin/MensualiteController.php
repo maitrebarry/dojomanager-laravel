@@ -9,6 +9,8 @@ use App\Models\Cotisation;
 use App\Models\Disciple;
 use App\Models\Salle;
 use App\Models\Signature;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -175,6 +177,51 @@ class MensualiteController extends Controller
         return back()
             ->with('success', __('messages.cotisations.bulk_done', ['count' => $count]))
             ->with('autoSendCotisations', $paidIds);
+    }
+
+    /**
+     * Mensualités impayées/partielles d'un disciple, tous mois confondus — pour un
+     * paiement groupé sur plusieurs mois d'un coup. Génère au passage les mois
+     * manquants (jusqu'à 24 mois en arrière, jamais avant l'inscription) : un mois
+     * jamais visité dans le filtre principal n'a encore aucune ligne Cotisation.
+     */
+    public function disciplePending(Disciple $disciple): JsonResponse
+    {
+        $this->guardScope($disciple);
+        $disciple->loadMissing('salle:id,mensualite');
+
+        $montant = (float) ($disciple->salle->mensualite ?? 0);
+        $end = now()->startOfMonth();
+        $start = $disciple->date_inscription
+            ? Carbon::parse($disciple->date_inscription)->startOfMonth()
+            : $end->copy();
+        $earliest = $end->copy()->subMonths(24);
+        if ($start->lt($earliest)) {
+            $start = $earliest;
+        }
+
+        for ($d = $start->copy(); $d->lte($end); $d->addMonth()) {
+            Cotisation::firstOrCreate(
+                ['disciple_id' => $disciple->id, 'mois' => $d->month, 'annee' => $d->year],
+                ['montant' => $montant, 'montant_paye' => 0, 'reste_a_payer' => $montant, 'statut' => 'IMPAYE']
+            );
+        }
+
+        $cotisations = Cotisation::where('disciple_id', $disciple->id)
+            ->where('statut', '!=', 'PAYE')
+            ->orderBy('annee')->orderBy('mois')
+            ->get();
+
+        return response()->json([
+            'disciple' => $disciple->full_name,
+            'montant_defaut' => $montant,
+            'cotisations' => $cotisations->map(fn (Cotisation $c) => [
+                'id' => $c->id,
+                'label' => $c->moisLabel() . ' ' . $c->annee,
+                'montant' => (float) $c->montant,
+                'reste' => (float) $c->reste_a_payer,
+            ])->values(),
+        ]);
     }
 
     public function destroy(Cotisation $cotisation): RedirectResponse

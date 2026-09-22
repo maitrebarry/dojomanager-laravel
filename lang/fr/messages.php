@@ -660,6 +660,13 @@ return [
         'generated' => ':count mensualité(s) générée(s).',
         'payment_recorded' => 'Paiement enregistré avec succès.',
         'deleted' => 'Mensualité supprimée.',
+        'multi_pay_button' => 'Payer plusieurs mensualités',
+        'multi_pay_title' => 'Payer plusieurs mensualités',
+        'multi_pay_amount' => 'Montant par mensualité sélectionnée',
+        'multi_pay_loading' => 'Chargement des mensualités…',
+        'multi_pay_error' => 'Impossible de charger les mensualités de ce disciple.',
+        'multi_pay_none' => 'Aucune mensualité impayée pour ce disciple.',
+        'multi_pay_submit' => 'Payer les mensualités sélectionnées',
     ],
 
     'ceintures_noires' => [
