@@ -68,6 +68,30 @@
 </div>
 @endif
 
+{{-- Reçus téléchargés après un paiement groupé : un bouton par reçu pour l'envoyer
+     manuellement par WhatsApp (l'envoi automatique via la passerelle n'est pas fiable
+     pour plusieurs reçus d'affilée). --}}
+@if(session('autoSendCotisations'))
+<div class="card border-success shadow-sm mb-3">
+    <div class="card-body">
+        <h6 class="mb-1"><i class="fas fa-download me-2"></i>{{ __('messages.whatsapp.bulk_downloaded_title') }}</h6>
+        <p class="text-muted small mb-3">{{ __('messages.whatsapp.bulk_downloaded_help') }}</p>
+        <div class="d-flex flex-column gap-2">
+            @foreach(session('autoSendCotisations') as $item)
+                <div class="d-flex justify-content-between align-items-center border rounded p-2">
+                    <span>{{ $item['label'] }}</span>
+                    @if($item['phone'])
+                        <a href="https://wa.me/{{ $item['phone'] }}?text={{ urlencode($item['caption']) }}" target="_blank" class="btn btn-sm btn-success"><i class="fab fa-whatsapp me-1"></i>{{ __('messages.whatsapp.send') }}</a>
+                    @else
+                        <span class="badge bg-secondary">{{ __('messages.whatsapp.no_phone') }}</span>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
+
 <div class="card card-navbar shadow-sm">
     <div class="table-responsive">
         <table class="table table-striped table-hover align-middle mb-0">
@@ -206,33 +230,25 @@ document.addEventListener('DOMContentLoaded', function () {
     @endif
 
     @if(session('autoSendCotisations'))
+        // L'envoi automatique via la passerelle (sendFromUrl) s'est révélé peu fiable
+        // pour un envoi groupé. On télécharge donc chaque reçu automatiquement (délai
+        // entre chaque téléchargement pour éviter que le navigateur bloque une rafale
+        // de fichiers) et on laisse un bouton « Envoyer par WhatsApp » par reçu dans le
+        // panneau ci-dessus la liste : un clic ouvre WhatsApp, il ne reste qu'à joindre
+        // le fichier déjà téléchargé à la conversation.
         (function () {
-            // Envoi séquentiel, avec un délai variable (2 à 4s) entre chaque reçu : un
-            // paiement multi-mois peut désormais déclencher beaucoup d'envois d'un coup
-            // vers le même destinataire (cf. "Payer plusieurs mensualités"), et un rythme
-            // trop régulier/rapide ressemble davantage à un usage automatisé aux yeux de
-            // WhatsApp (cf. whatsapp-bridge/README.md) qu'un envoi manuel un par un.
-            var ids = @json(session('autoSendCotisations'));
-            var urls = ids.map(function (id) { return @json(route('admin.mensualites.receipt', ['cotisation' => '__ID__'])).replace('__ID__', id); });
-            var i = 0, ok = 0, fail = 0;
-
-            if (urls.length > 1) {
-                window.dojoToast && window.dojoToast('info', @json(__('messages.whatsapp.bulk_progress')).replace(':count', urls.length));
-            }
-
+            var items = @json(session('autoSendCotisations'));
+            var i = 0;
             function next() {
-                if (i >= urls.length) {
-                    if (ok || fail) {
-                        window.dojoToast && window.dojoToast(fail ? 'warning' : 'success',
-                            @json(__('messages.whatsapp.bulk_done')).replace(':ok', ok).replace(':fail', fail));
-                    }
-                    return;
-                }
-                var url = urls[i++];
-                WhatsappBridge.sendFromUrl(url).then(function () { ok++; }).catch(function () { fail++; }).finally(function () {
-                    var delay = 2000 + Math.floor(Math.random() * 2000);
-                    setTimeout(next, delay);
-                });
+                if (i >= items.length) return;
+                var item = items[i++];
+                var a = document.createElement('a');
+                a.href = item.download_url;
+                a.setAttribute('download', '');
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(next, 700);
             }
             next();
         })();

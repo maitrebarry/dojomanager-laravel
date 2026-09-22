@@ -9,6 +9,7 @@ use App\Models\Cotisation;
 use App\Models\Disciple;
 use App\Models\Salle;
 use App\Models\Signature;
+use App\Support\WhatsAppPhone;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -153,10 +154,12 @@ class MensualiteController extends Controller
 
         $ids = array_filter(array_map('intval', explode(',', $validated['ids'])));
         $count = 0;
-        $paidIds = [];
+        $paid = [];
 
-        Cotisation::query()->visibleTo($request->user())->whereIn('id', $ids)->get()
-            ->each(function (Cotisation $c) use ($validated, $request, &$count, &$paidIds) {
+        Cotisation::query()->visibleTo($request->user())->whereIn('id', $ids)
+            ->with('disciple:id,nom,prenom,nom_complet,telephone')
+            ->get()
+            ->each(function (Cotisation $c) use ($validated, &$count, &$paid) {
                 $reste = (float) $c->reste_a_payer;
                 if ($c->statut === 'PAYE' || $reste <= 0) {
                     return;
@@ -170,14 +173,22 @@ class MensualiteController extends Controller
                 ]);
                 $c->recompute();
                 $count++;
-                $paidIds[] = $c->id;
+
+                // Le passage par la passerelle WhatsApp (sendFromUrl) s'est révélé peu
+                // fiable pour un envoi groupé. On propose donc un flux manuel mais fiable :
+                // téléchargement automatique du PDF + un bouton par reçu pour l'envoyer.
+                $paid[] = [
+                    'id' => $c->id,
+                    'label' => ($c->disciple?->full_name ?? '?') . ' — ' . $c->moisLabel() . ' ' . $c->annee,
+                    'phone' => WhatsAppPhone::normalize($c->disciple?->telephone),
+                    'caption' => __('messages.whatsapp.share_text', ['name' => $c->disciple?->full_name ?? '']) . ' — ' . $c->moisLabel() . ' ' . $c->annee,
+                    'download_url' => route('admin.mensualites.receipt.pdf', $c),
+                ];
             });
 
-        // La liste envoie automatiquement chaque reçu par WhatsApp en tâche de fond
-        // (cf. WhatsappBridge.sendFromUrl dans mensualites/index.blade.php).
         return back()
             ->with('success', __('messages.cotisations.bulk_done', ['count' => $count]))
-            ->with('autoSendCotisations', $paidIds);
+            ->with('autoSendCotisations', $paid);
     }
 
     /**
