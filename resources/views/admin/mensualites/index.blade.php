@@ -207,11 +207,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     @if(session('autoSendCotisations'))
         (function () {
-            // Envoi séquentiel avec un léger délai entre chaque reçu : on évite de
-            // bombarder la passerelle / WhatsApp de requêtes simultanées.
+            // Envoi séquentiel, avec un délai variable (2 à 4s) entre chaque reçu : un
+            // paiement multi-mois peut désormais déclencher beaucoup d'envois d'un coup
+            // vers le même destinataire (cf. "Payer plusieurs mensualités"), et un rythme
+            // trop régulier/rapide ressemble davantage à un usage automatisé aux yeux de
+            // WhatsApp (cf. whatsapp-bridge/README.md) qu'un envoi manuel un par un.
             var ids = @json(session('autoSendCotisations'));
             var urls = ids.map(function (id) { return @json(route('admin.mensualites.receipt', ['cotisation' => '__ID__'])).replace('__ID__', id); });
             var i = 0, ok = 0, fail = 0;
+
+            if (urls.length > 1) {
+                window.dojoToast && window.dojoToast('info', @json(__('messages.whatsapp.bulk_progress')).replace(':count', urls.length));
+            }
+
             function next() {
                 if (i >= urls.length) {
                     if (ok || fail) {
@@ -222,7 +230,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 var url = urls[i++];
                 WhatsappBridge.sendFromUrl(url).then(function () { ok++; }).catch(function () { fail++; }).finally(function () {
-                    setTimeout(next, 1500);
+                    var delay = 2000 + Math.floor(Math.random() * 2000);
+                    setTimeout(next, delay);
                 });
             }
             next();

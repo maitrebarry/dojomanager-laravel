@@ -64,6 +64,7 @@ return [
         'sent' => 'Reçu envoyé par WhatsApp',
         'auto_failed' => 'Envoi WhatsApp automatique impossible (passerelle injoignable)',
         'bulk_done' => 'Reçus WhatsApp : :ok envoyé(s), :fail échec(s)',
+        'bulk_progress' => 'Envoi de :count reçu(s) par WhatsApp en cours…',
         'configure' => 'Configurer la passerelle WhatsApp',
         'share_text' => 'Reçu — :name',
         'share_error' => 'Impossible de générer l\'image du reçu.',
