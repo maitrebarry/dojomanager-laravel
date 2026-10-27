@@ -38,8 +38,24 @@
 
         .page-title { height: 8mm; line-height: 8mm; color: #6b7280; font-size: 3mm; font-weight: 800; text-align: center; }
 
-        .cards-grid { width: 100%; border-collapse: separate; border-spacing: 4mm 4mm; table-layout: fixed; }
+        .cards-grid { width: 184mm; margin: 0 auto; border-collapse: separate; border-spacing: 4mm 4mm; table-layout: fixed; }
         .cards-grid td { width: 86mm; height: 54mm; padding: 0; vertical-align: top; }
+
+        /* Traits de coupe : repères aux 4 coins de chaque carte, dans l'espace entre
+           les cartes, alignés sur le bord de coupe (identiques au recto et au verso). */
+        .card-slot { position: relative; width: 86mm; height: 54mm; }
+        .crop { position: absolute; width: 0; height: 0; }
+        .crop::before, .crop::after { content: ""; position: absolute; background: #111827; }
+        .crop::before { top: -.075mm; width: 3mm; height: .15mm; }
+        .crop::after { left: -.075mm; width: .15mm; height: 3mm; }
+        .crop.tl { left: 0; top: 0; }
+        .crop.tr { left: 100%; top: 0; }
+        .crop.bl { left: 0; top: 100%; }
+        .crop.br { left: 100%; top: 100%; }
+        .crop.tl::before, .crop.bl::before { right: .8mm; }
+        .crop.tr::before, .crop.br::before { left: .8mm; }
+        .crop.tl::after, .crop.tr::after { bottom: .8mm; }
+        .crop.bl::after, .crop.br::after { top: .8mm; }
 
         .sheet-card {
             width: 86mm; height: 54mm; position: relative; overflow: hidden;
@@ -100,7 +116,7 @@
             border: .22mm solid rgba(31, 41, 55, .82); padding: .25mm .45mm; line-height: 1.02; vertical-align: middle;
         }
         .sheet-grade-table th { text-align: center; font-size: 1.42mm; font-weight: 900; }
-        .sheet-grade-table td { height: 2.85mm; font-size: 1.68mm; font-weight: 800; }
+        .sheet-grade-table td { height: 2.3mm; font-size: 1.68mm; font-weight: 800; }
         .sheet-grade-table th:nth-child(1), .sheet-grade-table td:nth-child(1) { width: 24%; }
         .sheet-grade-table th:nth-child(2), .sheet-grade-table td:nth-child(2) { width: 25%; }
         .sheet-grade-table th:nth-child(3), .sheet-grade-table td:nth-child(3) { width: 51%; }
@@ -139,7 +155,7 @@
                     @foreach($chunk->chunk(2) as $row)
                         <tr>
                             @foreach($row as $c)
-                                <td>
+                                <td><div class="card-slot"><i class="crop tl"></i><i class="crop tr"></i><i class="crop bl"></i><i class="crop br"></i>
                                     <div class="sheet-card sheet-card-front">
                                         <div class="sheet-ministry">{{ mb_strtoupper($official['ministry']) }}</div>
                                         <div class="sheet-republic">
@@ -168,7 +184,7 @@
                                             <div><strong>Tél.</strong><span>{{ $c['phone'] ?: '-' }}</span></div>
                                         </div>
                                     </div>
-                                </td>
+                                </div></td>
                             @endforeach
                             @for($i = $row->count(); $i < 2; $i++)<td></td>@endfor
                         </tr>
@@ -179,11 +195,14 @@
             {{-- VERSO --}}
             <section class="print-page">
                 <div class="page-title">VERSO - Planche {{ $chunkIndex + 1 }}</div>
+                {{-- Colonnes inversées : une fois la feuille retournée (bord long), la carte
+                     de gauche du recto se trouve à droite au verso. --}}
                 <table class="cards-grid">
                     @foreach($chunk->chunk(2) as $row)
                         <tr>
-                            @foreach($row as $c)
-                                <td>
+                            @for($i = $row->count(); $i < 2; $i++)<td></td>@endfor
+                            @foreach($row->reverse() as $c)
+                                <td><div class="card-slot"><i class="crop tl"></i><i class="crop tr"></i><i class="crop bl"></i><i class="crop br"></i>
                                     <div class="sheet-card sheet-card-back">
                                         <div class="sheet-grade-title">GRADES</div>
                                         <div class="sheet-grade-table-wrap">
@@ -220,9 +239,8 @@
                                             <span>{{ mb_strtoupper($c['signer']) }}</span>
                                         </div>
                                     </div>
-                                </td>
+                                </div></td>
                             @endforeach
-                            @for($i = $row->count(); $i < 2; $i++)<td></td>@endfor
                         </tr>
                     @endforeach
                 </table>
