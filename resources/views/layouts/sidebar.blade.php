@@ -37,6 +37,12 @@
                 </a>
             @endif
 
+            @if($menu('COMPETITION_MANAGE', ['federation', 'ligue']))
+                <a class="nav-link {{ request()->routeIs('admin.competitions.*') ? 'active' : '' }}" href="{{ route('admin.competitions.index') }}">
+                    <i class="fas fa-trophy"></i> <span class="nav-text">{{ __('messages.competitions.title') }}</span>
+                </a>
+            @endif
+
             @if($menu('PASSAGEGRADES_READ'))
                 <a class="nav-link {{ request()->routeIs('admin.grade-passages.*') || request()->routeIs('admin.grade-passage-tariffs.*') ? 'active' : '' }}" href="{{ route('admin.grade-passages.soumission') }}">
                     <i class="fas fa-award"></i> <span class="nav-text">{{ __('messages.grade_passages.title') }}</span>

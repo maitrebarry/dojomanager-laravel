@@ -16,7 +16,9 @@ use App\Http\Controllers\Admin\CeintureNoireController;
 use App\Http\Controllers\Admin\CotisationAnnuelleController;
 use App\Http\Controllers\Admin\GradePassageTariffController;
 use App\Http\Controllers\Admin\GradePassageSessionController;
+use App\Http\Controllers\Admin\CompetitionAthleteController;
 use App\Http\Controllers\Admin\CompetitionController;
+use App\Http\Controllers\Admin\CompetitionDrawController;
 use App\Http\Controllers\Admin\SignatureController;
 use App\Http\Controllers\Admin\DocumentationController;
 use App\Http\Controllers\Auth\AuthController;
@@ -140,9 +142,32 @@ Route::middleware('auth')->group(function () {
         Route::post('grade-passages/{grade_passage}/finaliser', [GradePassageSessionController::class, 'finalize'])->name('grade-passages.finalize');
         Route::resource('grade-passages', GradePassageSessionController::class);
 
-        // Compétitions & combats
-        Route::post('competitions/{competition}/combats', [CompetitionController::class, 'addCombat'])->name('competitions.combats.add');
+        // Compétitions : athlètes (saisie, import, liste à remplir), catégories et tirage
         Route::delete('competitions/{competition}/combats/{combat}', [CompetitionController::class, 'removeCombat'])->name('competitions.combats.remove');
+        Route::scopeBindings()->prefix('competitions/{competition}')->name('competitions.')->group(function () {
+            Route::put('athletes/{athlete}', [CompetitionAthleteController::class, 'update'])->name('athletes.update');
+            Route::delete('athletes/{athlete}', [CompetitionAthleteController::class, 'destroy'])->name('athletes.destroy');
+            Route::post('athletes-ranger', [CompetitionAthleteController::class, 'assign'])->name('athletes.assign');
+            Route::post('pesee', [CompetitionAthleteController::class, 'weighIn'])->name('athletes.weigh');
+            Route::post('import', [CompetitionAthleteController::class, 'import'])->name('athletes.import');
+            Route::get('import/apercu', [CompetitionAthleteController::class, 'preview'])->name('athletes.preview');
+            Route::post('import/confirmer', [CompetitionAthleteController::class, 'confirm'])->name('athletes.confirm');
+            Route::post('import/annuler', [CompetitionAthleteController::class, 'cancelImport'])->name('athletes.cancel-import');
+            Route::get('modele-liste.xlsx', [CompetitionAthleteController::class, 'template'])->name('athletes.template');
+            Route::get('liste.pdf', [CompetitionAthleteController::class, 'listPdf'])->name('athletes.pdf');
+
+            Route::post('categories/standard', [CompetitionDrawController::class, 'presets'])->name('categories.presets');
+            Route::post('categories', [CompetitionDrawController::class, 'storeCategory'])->name('categories.store');
+            Route::delete('categories/{category}', [CompetitionDrawController::class, 'destroyCategory'])->name('categories.destroy');
+
+            Route::post('tirage', [CompetitionDrawController::class, 'drawAll'])->name('draw.all');
+            Route::post('categories/{category}/tirage', [CompetitionDrawController::class, 'draw'])->name('draw');
+            Route::post('categories/{category}/tirage/valider', [CompetitionDrawController::class, 'validateDraw'])->name('draw.validate');
+            Route::post('categories/{category}/tirage/deverrouiller', [CompetitionDrawController::class, 'unlock'])->name('draw.unlock');
+            Route::delete('categories/{category}/tirage', [CompetitionDrawController::class, 'cancel'])->name('draw.cancel');
+            Route::get('tirage.pdf', [CompetitionDrawController::class, 'bracketsPdf'])->name('draw.pdf');
+            Route::get('combats.pdf', [CompetitionDrawController::class, 'fightsPdf'])->name('fights.pdf');
+        });
         Route::resource('competitions', CompetitionController::class);
 
         // Signatures officielles

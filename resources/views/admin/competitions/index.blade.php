@@ -30,7 +30,8 @@
                     <th>{{ __('messages.competitions.date') }}</th>
                     <th>{{ __('messages.competitions.place') }}</th>
                     <th>{{ __('messages.competitions.type') }}</th>
-                    <th class="text-center">{{ __('messages.competitions.fights') }}</th>
+                    <th class="text-center">{{ __('messages.competitions.athletes') }}</th>
+                    <th class="text-center">{{ __('messages.competitions.categories') }}</th>
                     <th style="width: 140px;" class="text-end">{{ __('messages.actions') }}</th>
                 </tr>
             </thead>
@@ -41,7 +42,8 @@
                         <td>{{ optional($c->date_competition)->format('d/m/Y') ?? '-' }}</td>
                         <td>{{ $c->lieu ?? '-' }}</td>
                         <td>{{ $c->type ?? '-' }}</td>
-                        <td class="text-center">{{ $c->combats_count }}</td>
+                        <td class="text-center">{{ $c->athletes_count }}</td>
+                        <td class="text-center">{{ $c->categories_count }}</td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm" role="group">
                                 <a href="{{ route('admin.competitions.show', $c) }}" class="btn btn-outline-primary" title="{{ __('messages.view') }}"><i class="fas fa-eye"></i></a>
@@ -55,7 +57,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center py-5 text-muted">{{ __('messages.competitions.empty') }}</td></tr>
+                    <tr><td colspan="7" class="text-center py-5 text-muted">{{ __('messages.competitions.empty') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
