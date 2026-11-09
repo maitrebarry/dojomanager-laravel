@@ -165,6 +165,8 @@ Route::middleware('auth')->group(function () {
             Route::post('categories/{category}/tirage/valider', [CompetitionDrawController::class, 'validateDraw'])->name('draw.validate');
             Route::post('categories/{category}/tirage/deverrouiller', [CompetitionDrawController::class, 'unlock'])->name('draw.unlock');
             Route::delete('categories/{category}/tirage', [CompetitionDrawController::class, 'cancel'])->name('draw.cancel');
+            Route::post('combats/{combat}/resultat', [CompetitionDrawController::class, 'result'])->name('fights.result');
+            Route::delete('combats/{combat}/resultat', [CompetitionDrawController::class, 'clearResult'])->name('fights.clear');
             Route::get('tirage.pdf', [CompetitionDrawController::class, 'bracketsPdf'])->name('draw.pdf');
             Route::get('combats.pdf', [CompetitionDrawController::class, 'fightsPdf'])->name('fights.pdf');
         });

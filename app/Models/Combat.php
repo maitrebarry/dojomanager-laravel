@@ -24,6 +24,7 @@ class Combat extends Model
         'athlete2_id',
         'vainqueur_athlete_id',
         'exempt',
+        'score',
     ];
 
     protected $casts = [
@@ -70,5 +71,20 @@ class Combat extends Model
     public function vainqueurAthlete(): BelongsTo
     {
         return $this->belongsTo(CompetitionAthlete::class, 'vainqueur_athlete_id');
+    }
+
+    /** Combat prêt à être disputé : deux combattants connus, pas encore de vainqueur. */
+    public function isReady(): bool
+    {
+        return !$this->exempt && $this->athlete1_id && $this->athlete2_id && !$this->vainqueur_athlete_id;
+    }
+
+    public function loserId(): ?int
+    {
+        if (!$this->vainqueur_athlete_id || $this->exempt) {
+            return null;
+        }
+
+        return $this->vainqueur_athlete_id === $this->athlete1_id ? $this->athlete2_id : $this->athlete1_id;
     }
 }

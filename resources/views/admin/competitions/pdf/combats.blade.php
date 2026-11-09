@@ -52,7 +52,7 @@
                             @else<span class="muted">Vainqueur du n° {{ $feeder($fight, 1)?->numero }}</span>@endif
                         </td>
                         <td>{{ $fight->vainqueurAthlete?->fullName() }}</td>
-                        <td></td>
+                        <td class="center">{{ $fight->score }}</td>
                     </tr>
                 @endforeach
             </tbody>

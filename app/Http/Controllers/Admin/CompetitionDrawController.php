@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Concerns\AuthorizesScope;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Combat;
 use App\Models\Competition;
 use App\Models\CompetitionCategory;
 use App\Services\Competition\CategoryAssigner;
@@ -134,6 +135,30 @@ class CompetitionDrawController extends Controller
         $this->log('cancel_draw', $category, 'Tirage supprimé');
 
         return $this->backToDraw($competition, $category, __('messages.competitions.draw_deleted'));
+    }
+
+    /* -------------------- Résultats -------------------- */
+
+    /** Vainqueur d'un combat (bleu ou rouge) et score facultatif ; il passe au combat suivant. */
+    public function result(Request $request, Competition $competition, Combat $combat): RedirectResponse
+    {
+        $this->guardScope($competition);
+        $data = $request->validate([
+            'vainqueur' => ['required', Rule::in(['bleu', 'rouge'])],
+            'score' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        $this->draws->recordResult($combat, $data['vainqueur'] === 'bleu' ? $combat->athlete1_id : $combat->athlete2_id, $data['score'] ?? null);
+
+        return $this->backToDraw($competition, $combat->category, __('messages.competitions.result_saved', ['numero' => $combat->numero]));
+    }
+
+    public function clearResult(Competition $competition, Combat $combat): RedirectResponse
+    {
+        $this->guardScope($competition);
+        $this->draws->clearResult($combat);
+
+        return $this->backToDraw($competition, $combat->category, __('messages.competitions.result_cleared', ['numero' => $combat->numero]));
     }
 
     /** Tableaux de tirage en PDF : une catégorie (?category=id) ou toutes celles tirées. */

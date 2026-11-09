@@ -79,6 +79,79 @@ class DrawService
         return false;
     }
 
+    /**
+     * Enregistre le vainqueur d'un combat et le place dans le combat suivant (tour + 1,
+     * place p/2 : en bleu s'il venait du combat du haut, en rouge sinon).
+     */
+    public function recordResult(Combat $combat, int $winnerId, ?string $score): void
+    {
+        $category = $combat->category;
+        abort_unless($category->tirage_valide, 422, __('messages.competitions.results_need_validation'));
+        abort_if($combat->exempt || !$combat->athlete1_id || !$combat->athlete2_id, 422, __('messages.competitions.fight_not_ready'));
+        abort_unless(in_array($winnerId, [$combat->athlete1_id, $combat->athlete2_id], true), 422);
+
+        $next = $this->nextCombat($combat);
+        abort_if($next?->vainqueur_athlete_id && $combat->vainqueur_athlete_id !== $winnerId, 422, __('messages.competitions.next_fight_played'));
+
+        DB::transaction(function () use ($combat, $winnerId, $score, $next) {
+            $combat->update(['vainqueur_athlete_id' => $winnerId, 'score' => $score !== null && trim($score) !== '' ? trim($score) : null]);
+            $next?->update([$combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id' => $winnerId]);
+        });
+    }
+
+    /** Annule le résultat d'un combat, tant que le combat suivant n'est pas joué. */
+    public function clearResult(Combat $combat): void
+    {
+        abort_if($combat->exempt, 422);
+        $next = $this->nextCombat($combat);
+        abort_if($next?->vainqueur_athlete_id, 422, __('messages.competitions.next_fight_played'));
+
+        DB::transaction(function () use ($combat, $next) {
+            $combat->update(['vainqueur_athlete_id' => null, 'score' => null]);
+            $next?->update([$combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id' => null]);
+        });
+    }
+
+    public function nextCombat(Combat $combat): ?Combat
+    {
+        return Combat::where('category_id', $combat->category_id)
+            ->where('round', $combat->round + 1)
+            ->where('position', intdiv($combat->position, 2))
+            ->first();
+    }
+
+    /**
+     * Podium d'une catégorie : or et argent à la finale, bronze aux perdants des
+     * demi-finales (deux bronzes, pas de match pour la 3e place). Un athlète seul est
+     * vainqueur sans combat.
+     *
+     * @return array{gold: ?CompetitionAthlete, silver: ?CompetitionAthlete, bronze: array<int, CompetitionAthlete>, complete: bool}
+     */
+    public function podium(CompetitionCategory $category): array
+    {
+        $athletes = $category->athletes->keyBy('id');
+        if ($athletes->count() === 1) {
+            return ['gold' => $athletes->first(), 'silver' => null, 'bronze' => [], 'complete' => true];
+        }
+
+        $combats = $category->combats;
+        $rounds = (int) $combats->max('round');
+        $final = $combats->first(fn ($c) => $c->round === $rounds);
+        if (!$final?->vainqueur_athlete_id) {
+            return ['gold' => null, 'silver' => null, 'bronze' => [], 'complete' => false];
+        }
+
+        $bronze = $combats->filter(fn ($c) => $c->round === $rounds - 1 && $c->loserId())
+            ->map(fn ($c) => $athletes[$c->loserId()] ?? null)->filter()->values()->all();
+
+        return [
+            'gold' => $athletes[$final->vainqueur_athlete_id] ?? null,
+            'silver' => $athletes[$final->loserId()] ?? null,
+            'bronze' => $bronze,
+            'complete' => true,
+        ];
+    }
+
     /** Un tirage validé n'est déverrouillable que tant qu'aucun résultat n'est saisi. */
     public function hasResults(CompetitionCategory $category): bool
     {

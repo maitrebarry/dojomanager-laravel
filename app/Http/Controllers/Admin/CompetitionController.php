@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Combat;
 use App\Models\Competition;
 use App\Models\CompetitionCategory;
+use App\Services\Competition\DrawService;
 use App\Support\WeightCategories;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -75,12 +76,19 @@ class CompetitionController extends Controller
             'categories' => fn ($q) => $q->withCount('athletes'),
             'categories.combats.athlete1',
             'categories.combats.athlete2',
+            'categories.combats.vainqueurAthlete',
+            'categories.athletes',
             'athletes' => fn ($q) => $q->orderBy('nom')->orderBy('prenom'),
         ]);
+
+        $draws = app(DrawService::class);
+        $podiums = $competition->categories->mapWithKeys(fn ($c) => [$c->id => $draws->podium($c)]);
 
         return view('admin.competitions.show', [
             'competition' => $competition,
             'tab' => $tab,
+            'podiums' => $podiums,
+            'medals' => self::medals($podiums),
             'categoryLabels' => self::categoryLabels($competition),
             'groups' => self::groups($competition),
             'presets' => WeightCategories::PRESETS,
@@ -148,6 +156,37 @@ class CompetitionController extends Controller
             });
 
         return $labels;
+    }
+
+    /**
+     * Médailles par club sur les catégories terminées, classées or > argent > bronze.
+     *
+     * @return array<string, array{gold: int, silver: int, bronze: int}>
+     */
+    public static function medals($podiums): array
+    {
+        $table = [];
+        $add = function ($athlete, string $medal) use (&$table) {
+            if (!$athlete) {
+                return;
+            }
+            $club = $athlete->club ?: __('messages.competitions.no_club');
+            $table[$club] ??= ['gold' => 0, 'silver' => 0, 'bronze' => 0];
+            $table[$club][$medal]++;
+        };
+        foreach ($podiums as $podium) {
+            if (!$podium['complete']) {
+                continue;
+            }
+            $add($podium['gold'], 'gold');
+            $add($podium['silver'], 'silver');
+            foreach ($podium['bronze'] as $athlete) {
+                $add($athlete, 'bronze');
+            }
+        }
+        uasort($table, fn ($a, $b) => [$b['gold'], $b['silver'], $b['bronze']] <=> [$a['gold'], $a['silver'], $a['bronze']]);
+
+        return $table;
     }
 
     /** Groupes (groupe + sexe) existants : clé « Seniors|M » => « Seniors garçons ». */

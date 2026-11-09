@@ -13,6 +13,37 @@
     @endif
 </div>
 
+@if($medals)
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white fw-semibold"><i class="fas fa-medal me-1 text-warning"></i> {{ __('messages.competitions.medals') }}</div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ __('messages.competitions.club') }}</th>
+                        <th class="text-center">🥇 {{ __('messages.competitions.gold') }}</th>
+                        <th class="text-center">🥈 {{ __('messages.competitions.silver') }}</th>
+                        <th class="text-center">🥉 {{ __('messages.competitions.bronze') }}</th>
+                        <th class="text-center">{{ __('messages.competitions.total') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($medals as $club => $m)
+                        <tr>
+                            <td class="fw-semibold">{{ $club }}</td>
+                            <td class="text-center">{{ $m['gold'] }}</td>
+                            <td class="text-center">{{ $m['silver'] }}</td>
+                            <td class="text-center">{{ $m['bronze'] }}</td>
+                            <td class="text-center fw-bold">{{ $m['gold'] + $m['silver'] + $m['bronze'] }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white small text-muted">{{ __('messages.competitions.medals_help') }}</div>
+    </div>
+@endif
+
 @forelse($categories->filter(fn ($c) => $c->athletes_count > 0) as $c)
     <div class="card border-0 shadow-sm mb-3" id="categorie-{{ $c->id }}">
         <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
@@ -36,7 +67,8 @@
                         <button class="btn btn-sm btn-outline-danger" title="{{ __('messages.competitions.draw_delete') }}"><i class="fas fa-trash"></i></button>
                     </form>
                 @endif
-                @if($c->tirage_valide)
+                {{-- Plus de déverrouillage une fois des résultats saisis. --}}
+                @if($c->tirage_valide && !$c->combats->contains(fn ($f) => !$f->exempt && $f->vainqueur_athlete_id))
                     <form method="POST" action="{{ route('admin.competitions.draw.unlock', [$competition, $c]) }}" onsubmit="return dojoConfirmAction(this, @js(__('messages.competitions.unlock_confirm')))">
                         @csrf
                         <button class="btn btn-sm btn-outline-warning"><i class="fas fa-lock-open me-1"></i> {{ __('messages.competitions.draw_unlock') }}</button>
@@ -52,11 +84,12 @@
                 <div class="text-muted small">{{ __('messages.competitions.single_athlete') }}</div>
             @elseif($c->combats->isNotEmpty())
                 <div style="overflow-x: auto;">
-                    @include('admin.competitions._bracket', ['category' => $c, 'width' => 260, 'height' => 160])
+                    @include('admin.competitions._bracket', ['category' => $c, 'width' => 260, 'height' => min(170, max(50, $c->combats->where('round', 1)->count() * 2 * 10 + 7))])
                 </div>
                 @if($c->combats->max('round') >= 2)
                     <div class="small text-muted mt-2">{{ __('messages.competitions.bronze_note') }}</div>
                 @endif
+                @include('admin.competitions.tabs._results', ['category' => $c, 'podium' => $podiums[$c->id]])
             @else
                 <div class="text-muted small">{{ __('messages.competitions.draw_status_none') }}</div>
             @endif
