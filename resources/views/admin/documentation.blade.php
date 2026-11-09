@@ -20,7 +20,7 @@
         <div class="alert alert-primary mb-0">
             <div class="fw-semibold mb-1">Introduction</div>
             <div>
-                DojoManager est une application de gestion dédiée à l'écosystème du taekwondo. Elle couvre notamment
+                DojoManager est une application de gestion dédiée aux fédérations, ligues et salles d'arts martiaux (taekwondo, karaté, judo…). Elle couvre notamment
                 le suivi des disciples, des ceintures noires, des passages de grades, des finances et des paramètres
                 métier.
             </div>

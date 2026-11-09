@@ -37,7 +37,7 @@
             <tbody>
                 @forelse($federations as $federation)
                     <tr>
-                        <td class="fw-semibold">{{ $federation->nom }}</td>
+                        <td class="fw-semibold">{{ $federation->nom }}<div class="small text-muted">{{ \App\Support\Discipline::profile($federation->discipline)['label'] }}</div></td>
                         <td>{{ $federation->sigle ?? '-' }}</td>
                         <td>{{ $federation->telephone ?? '-' }}</td>
                         <td class="text-center">{{ $federation->ligues_count }}</td>

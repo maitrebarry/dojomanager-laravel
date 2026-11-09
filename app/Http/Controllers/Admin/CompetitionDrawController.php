@@ -10,11 +10,12 @@ use App\Models\Competition;
 use App\Models\CompetitionCategory;
 use App\Services\Competition\CategoryAssigner;
 use App\Services\Competition\DrawService;
-use App\Support\WeightCategories;
+use App\Support\Discipline;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Catégories d'une compétition et tirage au sort : tirer, refaire, valider
@@ -43,7 +44,7 @@ class CompetitionDrawController extends Controller
         $existing = CompetitionController::groups($competition->load('categories'));
         $order = (int) $competition->categories()->max('ordre');
         $created = 0;
-        foreach (WeightCategories::rowsFor($data['groupes']) as $row) {
+        foreach (Discipline::presetRows($competition->profile(), $data['groupes']) as $row) {
             if (isset($existing[CompetitionCategory::makeGroupKey($row['groupe'], $row['sexe'])])) {
                 continue; // groupe déjà présent : on ne le double pas
             }
@@ -144,13 +145,40 @@ class CompetitionDrawController extends Controller
     {
         $this->guardScope($competition);
         $data = $request->validate([
-            'vainqueur' => ['required', Rule::in(['bleu', 'rouge'])],
+            'vainqueur' => ['required', Rule::in(['1', '2'])],
             'score' => ['nullable', 'string', 'max:40'],
         ]);
+        $this->checkScore($data['score'] ?? null, (int) $data['vainqueur'], $competition->profile());
 
-        $this->draws->recordResult($combat, $data['vainqueur'] === 'bleu' ? $combat->athlete1_id : $combat->athlete2_id, $data['score'] ?? null);
+        $this->draws->recordResult($combat, $data['vainqueur'] === '1' ? $combat->athlete1_id : $combat->athlete2_id, $data['score'] ?? null);
 
         return $this->backToDraw($competition, $combat->category, __('messages.competitions.result_saved', ['numero' => $combat->numero]));
+    }
+
+    /**
+     * Un score chiffré s'écrit coin du haut - coin du bas (en taekwondo Bleu-Rouge : « 2-1 »
+     * = victoire du bleu) : il doit désigner le même vainqueur que le bouton cliqué, et ne
+     * peut pas être à égalité. Un score en texte (« KO », « Ippon »…) n'est pas contrôlé.
+     */
+    private function checkScore(?string $score, int $winner, array $profile): void
+    {
+        if (!preg_match('/^\s*(\d+)\s*[-–:\/]\s*(\d+)\s*$/u', (string) $score, $m)) {
+            return;
+        }
+        [$first, $second] = [(int) $m[1], (int) $m[2]];
+        [$one, $two] = [$profile['corners'][1]['short'], $profile['corners'][2]['short']];
+
+        if ($first === $second) {
+            throw ValidationException::withMessages(['score' => __('messages.competitions.score_tie', ['score' => trim($score)])]);
+        }
+        $scoreWinner = $first > $second ? 1 : 2;
+        if ($scoreWinner !== $winner) {
+            throw ValidationException::withMessages(['score' => __('messages.competitions.score_mismatch', [
+                'score' => trim($score),
+                'side' => $scoreWinner === 1 ? $one : $two,
+                'order' => $one . '-' . $two,
+            ])]);
+        }
     }
 
     public function clearResult(Competition $competition, Combat $combat): RedirectResponse

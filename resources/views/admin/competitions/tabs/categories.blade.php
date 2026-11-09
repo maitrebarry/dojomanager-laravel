@@ -2,8 +2,11 @@
 <div class="row g-3 mb-3">
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white fw-semibold">{{ __('messages.competitions.presets') }}</div>
+            <div class="card-header bg-white fw-semibold">{{ __('messages.competitions.presets_title', ['discipline' => $profile['label']]) }}</div>
             <div class="card-body">
+                @if(empty($presets))
+                    <p class="text-muted mb-0">{{ __('messages.competitions.no_presets', ['discipline' => $profile['label']]) }}</p>
+                @else
                 <form method="POST" action="{{ route('admin.competitions.categories.presets', $competition) }}">
                     @csrf
                     <table class="table table-sm mb-2">
@@ -29,6 +32,7 @@
                     <small class="text-muted d-block mb-2">{{ __('messages.competitions.presets_help') }}</small>
                     <button class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i> {{ __('messages.competitions.presets_add') }}</button>
                 </form>
+                @endif
             </div>
         </div>
     </div>

@@ -19,6 +19,14 @@
                 <input type="text" name="lieu" class="form-control" value="{{ old('lieu', $competition->lieu) }}">
             </div>
             <div class="col-md-6">
+                <label class="form-label">{{ __('messages.competitions.bronze_rule') }}</label>
+                <select name="bronze" class="form-select">
+                    <option value="deux" @selected(old('bronze', $competition->bronze) === 'deux')>{{ __('messages.competitions.bronze_two') }}</option>
+                    <option value="match" @selected(old('bronze', $competition->bronze) === 'match')>{{ __('messages.competitions.bronze_match') }}</option>
+                </select>
+                <small class="text-muted">{{ __('messages.competitions.bronze_rule_help') }}</small>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label">{{ __('messages.competitions.type') }}</label>
                 <input type="text" name="type" class="form-control" value="{{ old('type', $competition->type) }}" placeholder="{{ __('messages.competitions.type_placeholder') }}">
             </div>

@@ -330,7 +330,7 @@ class DashboardController extends Controller
             'columns' => ['date' => 'Date', 'type' => 'Type', 'lieu' => 'Lieu', 'candidats' => 'Candidats', 'statut' => 'Statut'],
             'rows' => $sessions->sortByDesc(fn ($s) => $s->date_session)->take(8)->map(fn ($s) => [
                 'date' => $s->date_session?->format('d/m/Y') ?? '-',
-                'type' => $s->type_grade ?? '-',
+                'type' => \App\Support\Discipline::gradeType($s->type_grade, $s->federation_id),
                 'lieu' => $s->lieu ?? '-',
                 'candidats' => (string) ($s->candidats_count ?? 0),
                 'statut' => $s->finalisee ? 'Finalisée' : 'Ouverte',

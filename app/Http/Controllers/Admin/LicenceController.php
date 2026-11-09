@@ -8,6 +8,7 @@ use App\Models\Disciple;
 use App\Models\Grade;
 use App\Models\Signature;
 use App\Models\User;
+use App\Support\Discipline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -231,6 +232,7 @@ class LicenceController extends Controller
             'ligue' => $ligue?->nom ?? '',
             'region' => $ligue?->region ?? '',
             'federation' => $federation?->nom ?: self::OFFICIAL['federation'],
+            'discipline' => Discipline::forFederation($federation),
             // Carte de salle (maître) : précise la salle concernée, ex. « LICENCE DE LA
             // SALLE DOJO CENTRAL ». Ligue/fédération gardent leur libellé générique.
             'license_label' => ($role === 'maitre' && $salle)
@@ -332,6 +334,7 @@ class LicenceController extends Controller
             'ligue' => $ligue?->nom ?? '',
             'region' => $ligue?->region ?? '',
             'federation' => $federation?->nom ?: self::OFFICIAL['federation'],
+            'discipline' => Discipline::forFederation($federation),
             'license_label' => $meta['badge_type'],
             'photo' => $this->fileToDataUri($u->avatar),
             'signature' => $signature?->signature_data,
@@ -370,6 +373,7 @@ class LicenceController extends Controller
             'ligue' => $ligue?->nom ?? '',
             'region' => $ligue?->region ?? '',
             'federation' => $federation?->nom ?: self::OFFICIAL['federation'],
+            'discipline' => Discipline::forFederation($federation),
             'license_label' => $meta['badge_type'],
             'photo' => $this->fileToDataUri($m->photo_path),
             'signature' => $signature?->signature_data,

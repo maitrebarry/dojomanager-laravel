@@ -27,6 +27,7 @@
     </style>
 </head>
 <body>
+@php $profile = $competition->profile(); @endphp
 @foreach($categories as $category)
     <div class="section">
         <table class="banner">
@@ -65,10 +66,10 @@
             <table>
                 <tr>
                     <td class="legend">
-                        <span style="background: #1d4ed8; margin-left: 0;"></span>{{ __('messages.competitions.blue') }}
-                        <span style="background: #b91c1c;"></span>{{ __('messages.competitions.red') }}
+                        <span style="background: {{ $profile['corners'][1]['color'] }}; margin-left: 0;"></span>{{ $profile['corners'][1]['name'] }}
+                        <span style="background: {{ $profile['corners'][2]['color'] }};"></span>{{ $profile['corners'][2]['name'] }}
                         <span style="background: #b91c1c; border-radius: 1.5mm;"></span>N° d'appel du combat
-                        &nbsp;·&nbsp; {{ __('messages.competitions.bronze_note') }}
+                        &nbsp;·&nbsp; {{ __($competition->bronze === 'match' ? 'messages.competitions.bronze_note_match' : 'messages.competitions.bronze_note') }}
                     </td>
                     <td style="text-align: right; white-space: nowrap;">
                         Tirage du {{ $category->tirage_at?->format('d/m/Y à H:i') }} &nbsp;—&nbsp; Signature : ..............................

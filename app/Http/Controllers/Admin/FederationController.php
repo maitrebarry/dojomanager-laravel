@@ -93,6 +93,7 @@ class FederationController extends Controller
         return $request->validate([
             'nom' => ['required', 'string', 'max:120', 'unique:federations,nom' . ($federation ? ',' . $federation->id : '')],
             'sigle' => ['nullable', 'string', 'max:20'],
+            'discipline' => ['required', \Illuminate\Validation\Rule::in(array_keys(\App\Support\Discipline::options()))],
             'adresse' => ['nullable', 'string', 'max:255'],
             'telephone' => ['nullable', 'string', 'max:40'],
             'email' => ['nullable', 'email', 'max:120'],

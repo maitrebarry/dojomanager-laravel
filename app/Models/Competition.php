@@ -23,6 +23,7 @@ class Competition extends Model
         'date_competition',
         'lieu',
         'type',
+        'bronze',
         'federation_id',
         'ligue_id',
         'created_by_user_id',
@@ -55,6 +56,12 @@ class Competition extends Model
     public function ligue(): BelongsTo
     {
         return $this->belongsTo(Ligue::class);
+    }
+
+    /** Profil de la discipline (vocabulaire des coins, grades, catégories proposées). */
+    public function profile(): array
+    {
+        return \App\Support\Discipline::forCompetition($this);
     }
 
     /** Année de référence pour l'âge sportif (année de la compétition − année de naissance). */

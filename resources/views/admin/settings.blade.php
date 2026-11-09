@@ -137,10 +137,10 @@
                         <tbody>
                         @forelse($federations as $f)
                             <tr>
-                                <td class="fw-semibold">{{ $f->nom }}</td><td>{{ $f->sigle ?? '-' }}</td><td>{{ $f->telephone ?? '-' }}</td>
+                                <td class="fw-semibold">{{ $f->nom }}<div class="small text-muted">{{ \App\Support\Discipline::profile($f->discipline)['label'] }}</div></td><td>{{ $f->sigle ?? '-' }}</td><td>{{ $f->telephone ?? '-' }}</td>
                                 <td class="text-end">
                                     @if($can('FÉDÉRATION_UPDATE'))
-                                        @php $plFed = ['nom'=>$f->nom,'sigle'=>$f->sigle,'adresse'=>$f->adresse,'telephone'=>$f->telephone,'email'=>$f->email]; @endphp
+                                        @php $plFed = ['nom'=>$f->nom,'sigle'=>$f->sigle,'adresse'=>$f->adresse,'telephone'=>$f->telephone,'email'=>$f->email,'discipline'=>$f->discipline]; @endphp
                                         <button type="button" class="btn btn-sm btn-outline-primary js-open" data-modal="#m-fed" data-mode="edit" data-action="{{ route('admin.federations.update', $f) }}" data-payload='@json($plFed)'><i class="fas fa-edit"></i></button>
                                     @endif
                                     @if($can('FÉDÉRATION_DELETE'))
@@ -243,7 +243,7 @@
                         <tbody>
                         @forelse($grades as $g)
                             <tr>
-                                <td>{{ $g->niveau }}</td><td class="fw-semibold">{{ $g->nom_grade }}</td><td>{{ $g->ceinture }}</td><td><span class="badge bg-{{ $g->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ $g->type_grade }}</span></td>
+                                <td>{{ $g->niveau }}</td><td class="fw-semibold">{{ $g->nom_grade }}</td><td>{{ $g->ceinture }}</td><td><span class="badge bg-{{ $g->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ \App\Support\Discipline::gradeType($g->type_grade, $g->federation_id) }}</span></td>
                                 <td class="text-end">
                                     @if($can('GRADES_UPDATE'))
                                         @php $plGrade = ['niveau'=>$g->niveau,'nom_grade'=>$g->nom_grade,'ceinture'=>$g->ceinture,'type_grade'=>$g->type_grade,'federation_id'=>$g->federation_id]; @endphp

@@ -15,6 +15,15 @@
                 <input type="text" name="sigle" class="form-control" value="{{ old('sigle', $federation->sigle) }}">
             </div>
             <div class="col-md-6">
+                <label class="form-label">{{ __('messages.federations.discipline') }} <span class="text-danger">*</span></label>
+                <select name="discipline" class="form-select" required>
+                    @foreach(\App\Support\Discipline::options() as $key => $label)
+                        <option value="{{ $key }}" @selected(old('discipline', $federation->discipline ?? \App\Support\Discipline::DEFAULT) === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <small class="text-muted">{{ __('messages.federations.discipline_help') }}</small>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label">{{ __('messages.phone') }}</label>
                 <input type="text" name="telephone" class="form-control" value="{{ old('telephone', $federation->telephone) }}">
             </div>

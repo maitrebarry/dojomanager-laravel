@@ -27,7 +27,7 @@
             <tbody>
                 @forelse($tariffs as $t)
                     <tr>
-                        <td><span class="badge bg-{{ $t->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ $t->type_grade }}</span></td>
+                        <td><span class="badge bg-{{ $t->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ \App\Support\Discipline::gradeType($t->type_grade, $t->federation_id) }}</span></td>
                         <td class="fw-semibold">{{ $t->tarif_label }}</td>
                         <td>{{ $t->grade?->nom_grade ?? '-' }}</td>
                         <td class="text-end">{{ number_format($t->montant, 0, ',', ' ') }}</td>

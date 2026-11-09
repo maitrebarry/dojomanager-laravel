@@ -21,7 +21,7 @@
             <div class="col-md-6">
                 <label class="form-label">{{ __('messages.grades.type') }} <span class="text-danger">*</span></label>
                 <select name="type_grade" class="form-select" required>
-                    <option value="KEUP" {{ old('type_grade', $grade->type_grade) === 'KEUP' ? 'selected' : '' }}>KEUP</option>
+                    <option value="KEUP" {{ old('type_grade', $grade->type_grade) === 'KEUP' ? 'selected' : '' }}>{{ \App\Support\Discipline::gradeType('KEUP', $grade->federation_id) }}</option>
                     <option value="DAN" {{ old('type_grade', $grade->type_grade) === 'DAN' ? 'selected' : '' }}>DAN</option>
                 </select>
             </div>

@@ -13,6 +13,7 @@
                 <div class="row g-2">
                     <div class="col-md-8"><label class="form-label">{{ __('messages.federations.name') }} <span class="text-danger">*</span></label><input type="text" name="nom" class="form-control" required></div>
                     <div class="col-md-4"><label class="form-label">{{ __('messages.federations.acronym') }}</label><input type="text" name="sigle" class="form-control"></div>
+                    <div class="col-12"><label class="form-label">{{ __('messages.federations.discipline') }} <span class="text-danger">*</span></label><select name="discipline" class="form-select" required>@foreach(\App\Support\Discipline::options() as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.phone') }}</label><input type="text" name="telephone" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.email') }}</label><input type="email" name="email" class="form-control"></div>
                     <div class="col-12"><label class="form-label">{{ __('messages.address') }}</label><input type="text" name="adresse" class="form-control"></div>
@@ -86,7 +87,7 @@
                     <div class="col-md-5"><label class="form-label">{{ __('messages.grades.name') }} <span class="text-danger">*</span></label><input type="text" name="nom_grade" class="form-control" required></div>
                     <div class="col-md-4"><label class="form-label">{{ __('messages.grades.belt') }} <span class="text-danger">*</span></label><input type="text" name="ceinture" class="form-control" required></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.grades.type') }} <span class="text-danger">*</span></label>
-                        <select name="type_grade" class="form-select" required><option value="KEUP">KEUP</option><option value="DAN">DAN</option></select></div>
+                        <select name="type_grade" class="form-select" required><option value="KEUP">{{ \App\Support\Discipline::gradeType('KEUP') }}</option><option value="DAN">DAN</option></select></div>
                     <div class="col-md-6"><label class="form-label">{{ __('messages.grades.federation') }} <span class="text-danger">*</span></label>
                         <select name="federation_id" class="form-select" required><option value="">-</option>@foreach($federations as $f)<option value="{{ $f->id }}">{{ $f->nom }}</option>@endforeach</select></div>
                 </div>

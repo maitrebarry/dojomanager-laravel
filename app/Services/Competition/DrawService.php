@@ -91,11 +91,16 @@ class DrawService
         abort_unless(in_array($winnerId, [$combat->athlete1_id, $combat->athlete2_id], true), 422);
 
         $next = $this->nextCombat($combat);
-        abort_if($next?->vainqueur_athlete_id && $combat->vainqueur_athlete_id !== $winnerId, 422, __('messages.competitions.next_fight_played'));
+        $third = $this->thirdPlaceFor($combat);
+        $changed = $combat->vainqueur_athlete_id !== $winnerId;
+        abort_if($changed && ($next?->vainqueur_athlete_id || $third?->vainqueur_athlete_id), 422, __('messages.competitions.next_fight_played'));
 
-        DB::transaction(function () use ($combat, $winnerId, $score, $next) {
+        $side = $combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id';
+        $loserId = $winnerId === $combat->athlete1_id ? $combat->athlete2_id : $combat->athlete1_id;
+        DB::transaction(function () use ($combat, $winnerId, $score, $next, $third, $side, $loserId) {
             $combat->update(['vainqueur_athlete_id' => $winnerId, 'score' => $score !== null && trim($score) !== '' ? trim($score) : null]);
-            $next?->update([$combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id' => $winnerId]);
+            $next?->update([$side => $winnerId]);
+            $third?->update([$side => $loserId]); // le perdant d'une demi-finale joue la 3e place
         });
     }
 
@@ -104,26 +109,46 @@ class DrawService
     {
         abort_if($combat->exempt, 422);
         $next = $this->nextCombat($combat);
-        abort_if($next?->vainqueur_athlete_id, 422, __('messages.competitions.next_fight_played'));
+        $third = $this->thirdPlaceFor($combat);
+        abort_if($next?->vainqueur_athlete_id || $third?->vainqueur_athlete_id, 422, __('messages.competitions.next_fight_played'));
 
-        DB::transaction(function () use ($combat, $next) {
+        $side = $combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id';
+        DB::transaction(function () use ($combat, $next, $third, $side) {
             $combat->update(['vainqueur_athlete_id' => null, 'score' => null]);
-            $next?->update([$combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id' => null]);
+            $next?->update([$side => null]);
+            $third?->update([$side => null]);
         });
     }
 
+    /** Combat où va le vainqueur (le match pour la 3e place n'en est jamais un). */
     public function nextCombat(Combat $combat): ?Combat
     {
+        if ($combat->troisieme_place) {
+            return null;
+        }
+
         return Combat::where('category_id', $combat->category_id)
+            ->where('troisieme_place', false)
             ->where('round', $combat->round + 1)
             ->where('position', intdiv($combat->position, 2))
             ->first();
     }
 
+    /** Match pour la 3e place où va le perdant, si le combat est une demi-finale. */
+    public function thirdPlaceFor(Combat $combat): ?Combat
+    {
+        if ($combat->troisieme_place) {
+            return null;
+        }
+        $third = Combat::where('category_id', $combat->category_id)->where('troisieme_place', true)->first();
+
+        return $third && $third->round === $combat->round + 1 ? $third : null;
+    }
+
     /**
-     * Podium d'une catégorie : or et argent à la finale, bronze aux perdants des
-     * demi-finales (deux bronzes, pas de match pour la 3e place). Un athlète seul est
-     * vainqueur sans combat.
+     * Podium d'une catégorie : or et argent à la finale ; bronze au vainqueur du match
+     * pour la 3e place s'il existe, sinon aux deux perdants des demi-finales. Un athlète
+     * seul est vainqueur sans combat.
      *
      * @return array{gold: ?CompetitionAthlete, silver: ?CompetitionAthlete, bronze: array<int, CompetitionAthlete>, complete: bool}
      */
@@ -136,18 +161,21 @@ class DrawService
 
         $combats = $category->combats;
         $rounds = (int) $combats->max('round');
-        $final = $combats->first(fn ($c) => $c->round === $rounds);
-        if (!$final?->vainqueur_athlete_id) {
+        $final = $combats->first(fn ($c) => $c->round === $rounds && !$c->troisieme_place);
+        $third = $combats->first(fn ($c) => $c->troisieme_place);
+        if (!$final?->vainqueur_athlete_id || ($third && !$third->vainqueur_athlete_id)) {
             return ['gold' => null, 'silver' => null, 'bronze' => [], 'complete' => false];
         }
 
-        $bronze = $combats->filter(fn ($c) => $c->round === $rounds - 1 && $c->loserId())
-            ->map(fn ($c) => $athletes[$c->loserId()] ?? null)->filter()->values()->all();
+        $bronze = $third
+            ? [$athletes[$third->vainqueur_athlete_id] ?? null]
+            : $combats->filter(fn ($c) => $c->round === $rounds - 1 && $c->loserId())
+                ->map(fn ($c) => $athletes[$c->loserId()] ?? null)->all();
 
         return [
             'gold' => $athletes[$final->vainqueur_athlete_id] ?? null,
             'silver' => $athletes[$final->loserId()] ?? null,
-            'bronze' => $bronze,
+            'bronze' => array_values(array_filter($bronze)),
             'complete' => true,
         ];
     }
@@ -341,7 +369,22 @@ class DrawService
                 ]);
             }
         }
+
+        // Match pour la 3e place (si la compétition le prévoit) : seulement si les deux
+        // demi-finales sont de vrais combats, sinon il n'y a qu'un perdant, 3e d'office.
+        // Avec 2 tours, les demi-finales sont le 1er tour : un vainqueur déjà connu = un exempt.
+        $semiHasBye = $rounds === 2 && array_filter($winners) !== [];
+        if ($category->competition->bronze === 'match' && $rounds >= 2 && !$semiHasBye) {
+            Combat::create($base + [
+                'tour' => self::THIRD_PLACE,
+                'round' => $rounds,
+                'position' => 1,
+                'troisieme_place' => true,
+            ]);
+        }
     }
+
+    public const THIRD_PLACE = 'Match pour la 3e place';
 
     /** Ex. pour 3 tours : « Quarts de finale », « Demi-finales », « Finale ». */
     public static function roundName(int $round, int $rounds): string
@@ -364,7 +407,8 @@ class DrawService
     private function renumber(CompetitionCategory $category): void
     {
         $number = 0;
-        $category->combats()->get()->each(function (Combat $combat) use (&$number) {
+        // Le match pour la 3e place se dispute juste avant la finale.
+        $category->combats()->get()->sortBy([['round', 'asc'], ['troisieme_place', 'desc'], ['position', 'asc']])->each(function (Combat $combat) use (&$number) {
             $combat->update(['numero' => $combat->exempt ? null : ++$number]);
         });
     }

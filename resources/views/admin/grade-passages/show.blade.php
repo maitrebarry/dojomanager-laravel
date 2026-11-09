@@ -26,7 +26,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h5 class="fw-bold mb-1">{{ $session->lieu }}</h5>
-                        <div class="text-muted">{{ $session->date_session?->format('d/m/Y') }} · <span class="badge bg-{{ $session->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ $session->type_grade }}</span></div>
+                        <div class="text-muted">{{ $session->date_session?->format('d/m/Y') }} · <span class="badge bg-{{ $session->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ \App\Support\Discipline::gradeType($session->type_grade, $session->federation_id) }}</span></div>
                     </div>
                     <span class="badge bg-{{ $session->finalisee ? 'success' : 'warning' }} fs-6">{{ $session->finalisee ? __('messages.grade_passages.finalized_badge') : __('messages.grade_passages.open') }}</span>
                 </div>

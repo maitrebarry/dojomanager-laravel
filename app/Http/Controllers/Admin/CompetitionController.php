@@ -8,9 +8,12 @@ use App\Models\Combat;
 use App\Models\Competition;
 use App\Models\CompetitionCategory;
 use App\Services\Competition\DrawService;
-use App\Support\WeightCategories;
+use App\Models\Federation;
+use App\Support\Discipline;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CompetitionController extends Controller
@@ -43,10 +46,13 @@ class CompetitionController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $federation = Federation::find($request->user()->scopeContext()['federation_id']);
+
         return view('admin.competitions.create', [
-            'competition' => new Competition(),
+            // Règle du bronze proposée selon la discipline de la fédération.
+            'competition' => new Competition(['bronze' => Discipline::forFederation($federation)['bronze']]),
             'page_title' => __('messages.competitions.add'),
         ]);
     }
@@ -56,7 +62,10 @@ class CompetitionController extends Controller
         $context = $request->user()->scopeContext();
 
         // Une ligue crée pour sa ligue (et sa fédération), une fédération pour elle-même.
-        $competition = Competition::create($this->validateData($request) + [
+        $data = $this->validateData($request);
+        $data['bronze'] ??= Discipline::forFederation(Federation::find($context['federation_id']))['bronze'];
+
+        $competition = Competition::create($data + [
             'federation_id' => $context['federation_id'],
             'ligue_id' => $context['ligue_id'],
             'created_by_user_id' => $request->user()->id,
@@ -91,7 +100,8 @@ class CompetitionController extends Controller
             'medals' => self::medals($podiums),
             'categoryLabels' => self::categoryLabels($competition),
             'groups' => self::groups($competition),
-            'presets' => WeightCategories::PRESETS,
+            'profile' => $competition->profile(),
+            'presets' => $competition->profile()['presets'],
             'orders' => \App\Services\Competition\AthleteListParser::ORDERS,
             'legacyCombats' => $competition->combats()->whereNull('category_id')
                 ->with(['combattant1', 'combattant2', 'vainqueur'])->get(),
@@ -112,10 +122,26 @@ class CompetitionController extends Controller
     public function update(Request $request, Competition $competition): RedirectResponse
     {
         $this->guardScope($competition);
-        $competition->update($this->validateData($request));
+        $data = $this->validateData($request);
+        $data['bronze'] ??= $competition->bronze;
 
-        return redirect()->route('admin.competitions.show', $competition)
-            ->with('success', __('messages.competitions.updated'));
+        // La règle du bronze change la forme des tableaux : refusée si un tirage est validé,
+        // sinon les tirages provisoires sont annulés pour être refaits.
+        $canceled = 0;
+        if ($data['bronze'] !== $competition->bronze) {
+            if ($competition->categories()->where('tirage_valide', true)->exists()) {
+                throw ValidationException::withMessages(['bronze' => __('messages.competitions.bronze_locked')]);
+            }
+            foreach ($competition->categories()->whereNotNull('tirage_at')->get() as $category) {
+                app(DrawService::class)->cancel($category);
+                $canceled++;
+            }
+        }
+        $competition->update($data);
+
+        $redirect = redirect()->route('admin.competitions.show', $competition)->with('success', __('messages.competitions.updated'));
+
+        return $canceled ? $redirect->with('warning', __('messages.competitions.bronze_redraw', ['count' => $canceled])) : $redirect;
     }
 
     public function destroy(Competition $competition): RedirectResponse
@@ -204,6 +230,7 @@ class CompetitionController extends Controller
             'date_competition' => ['nullable', 'date'],
             'lieu' => ['nullable', 'string', 'max:180'],
             'type' => ['nullable', 'string', 'max:80'],
+            'bronze' => ['nullable', Rule::in(['deux', 'match'])],
         ]);
     }
 }

@@ -24,11 +24,15 @@ class Combat extends Model
         'athlete2_id',
         'vainqueur_athlete_id',
         'exempt',
+        'troisieme_place',
         'score',
     ];
 
     protected $casts = [
         'exempt' => 'boolean',
+        'troisieme_place' => 'boolean',
+        'round' => 'integer',
+        'position' => 'integer',
     ];
 
     public function competition(): BelongsTo

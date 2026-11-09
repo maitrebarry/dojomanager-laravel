@@ -30,7 +30,7 @@
                 <select name="session" class="form-select" onchange="this.form.submit()" {{ $sessions->isEmpty() ? 'disabled' : '' }}>
                     @forelse($sessions as $s)
                         <option value="{{ $s->id }}" {{ $session && $session->id === $s->id ? 'selected' : '' }}>
-                            {{ $s->type_grade }} • {{ $s->date_session?->format('d/m/Y') }} • {{ $s->lieu }} • {{ $scopeLabel($s) }} • {{ $s->finalisee ? __('messages.grade_passages.finalized_badge') : __('messages.grade_passages.open') }}
+                            {{ \App\Support\Discipline::gradeType($s->type_grade, $s->federation_id) }} • {{ $s->date_session?->format('d/m/Y') }} • {{ $s->lieu }} • {{ $scopeLabel($s) }} • {{ $s->finalisee ? __('messages.grade_passages.finalized_badge') : __('messages.grade_passages.open') }}
                         </option>
                     @empty
                         <option value="">{{ __('messages.grade_passages.empty') }}</option>
@@ -52,7 +52,7 @@
     <div class="card-header card-header-navbar d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
         <div>
             <h5 class="mb-1">{{ __('messages.grade_passages.submission_title') }}</h5>
-            <div class="small opacity-75">{{ $session->type_grade }} • {{ $session->date_session?->format('d/m/Y') }} • {{ $session->lieu }}</div>
+            <div class="small opacity-75">{{ \App\Support\Discipline::gradeType($session->type_grade, $session->federation_id) }} • {{ $session->date_session?->format('d/m/Y') }} • {{ $session->lieu }}</div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <span class="badge bg-light text-dark border">{{ __('messages.grade_passages.stat_candidatures') }}: {{ $stats['candidatures'] }}</span>

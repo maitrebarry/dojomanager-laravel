@@ -21,6 +21,7 @@ class Federation extends Model
         'telephone',
         'sigle',
         'email',
+        'discipline',
     ];
 
     public function ligues(): HasMany

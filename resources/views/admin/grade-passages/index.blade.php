@@ -35,7 +35,7 @@
                     <tr>
                         <td class="fw-semibold">{{ $s->date_session?->format('d/m/Y') }}</td>
                         <td>{{ $s->lieu }}</td>
-                        <td><span class="badge bg-{{ $s->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ $s->type_grade }}</span></td>
+                        <td><span class="badge bg-{{ $s->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ \App\Support\Discipline::gradeType($s->type_grade, $s->federation_id) }}</span></td>
                         <td class="text-end">{{ number_format($s->frais_participation, 0, ',', ' ') }}</td>
                         <td class="text-center">{{ $s->candidats_count }}</td>
                         <td><span class="badge bg-{{ $s->finalisee ? 'success' : 'warning' }}">{{ $s->finalisee ? __('messages.grade_passages.finalized_badge') : __('messages.grade_passages.open') }}</span></td>

@@ -1,6 +1,6 @@
 {{-- Onglet Tirage : tirer, vérifier, valider (verrouiller), imprimer. --}}
 @php $drawn = $categories->contains(fn ($c) => $c->tirage_at); @endphp
-<div class="alert alert-light border small"><i class="fas fa-scale-balanced me-1"></i> {{ __('messages.competitions.draw_rules') }}</div>
+<div class="alert alert-light border small"><i class="fas fa-scale-balanced me-1"></i> {{ __('messages.competitions.draw_rules') }} {{ __($competition->bronze === 'match' ? 'messages.competitions.bronze_note_match' : 'messages.competitions.bronze_note') }}</div>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
     <form method="POST" action="{{ route('admin.competitions.draw.all', $competition) }}" onsubmit="return dojoConfirmAction(this, @js(__('messages.competitions.redraw_confirm')))">
@@ -87,7 +87,7 @@
                     @include('admin.competitions._bracket', ['category' => $c, 'width' => 260, 'height' => min(170, max(50, $c->combats->where('round', 1)->count() * 2 * 10 + 7))])
                 </div>
                 @if($c->combats->max('round') >= 2)
-                    <div class="small text-muted mt-2">{{ __('messages.competitions.bronze_note') }}</div>
+                    <div class="small text-muted mt-2">{{ __($competition->bronze === 'match' ? 'messages.competitions.bronze_note_match' : 'messages.competitions.bronze_note') }}</div>
                 @endif
                 @include('admin.competitions.tabs._results', ['category' => $c, 'podium' => $podiums[$c->id]])
             @else

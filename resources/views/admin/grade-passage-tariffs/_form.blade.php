@@ -9,7 +9,7 @@
             <div class="col-md-4">
                 <label class="form-label">{{ __('messages.grades.type') }} <span class="text-danger">*</span></label>
                 <select name="type_grade" class="form-select" required>
-                    <option value="KEUP" {{ old('type_grade', $tariff->type_grade) === 'KEUP' ? 'selected' : '' }}>KEUP</option>
+                    <option value="KEUP" {{ old('type_grade', $tariff->type_grade) === 'KEUP' ? 'selected' : '' }}>{{ \App\Support\Discipline::gradeType('KEUP', $tariff->federation_id) }}</option>
                     <option value="DAN" {{ old('type_grade', $tariff->type_grade) === 'DAN' ? 'selected' : '' }}>DAN</option>
                 </select>
             </div>

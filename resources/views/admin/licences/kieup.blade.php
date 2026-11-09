@@ -102,7 +102,11 @@
     $motto = collect(preg_split('/\s*[-–]\s*/u', $official['motto']))->filter()->values();
     $logoPath = public_path('images/legacy-taekwondo-logo.jpg');
     $logoSrc = file_exists($logoPath) ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath)) : null;
-    $kieupRows = ['9ème KIEUP','8ème KIEUP','7ème KIEUP','6ème KIEUP','5ème KIEUP','4ème KIEUP','3ème KIEUP','2ème KIEUP','1er KIEUP'];
+    // Grades du livret : liste historique en taekwondo ; ailleurs, les grades de couleur de la fédération.
+    $legacyRows = ['9ème KIEUP','8ème KIEUP','7ème KIEUP','6ème KIEUP','5ème KIEUP','4ème KIEUP','3ème KIEUP','2ème KIEUP','1er KIEUP'];
+    $gradeRowsFor = fn ($c) => $c['discipline']['key'] === 'taekwondo'
+        ? $legacyRows
+        : (collect($c['grade_rows'] ?? [])->pluck('label')->filter()->values()->all() ?: array_fill(0, 9, ''));
     $pairs = collect($cards)->chunk(2);
 @endphp
 <body>
@@ -144,7 +148,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($kieupRows as $row)
+                                @foreach($gradeRowsFor($c) as $row)
                                     <tr>
                                         <td>{{ $row }}<br>le</td>
                                         <td>@if($c['grade'] === $row) {{ $c['birth_date'] }} @endif</td>
@@ -177,8 +181,8 @@
                         <div class="warning">
                             <h3>N'ATTAQUER JAMAIS LE PREMIER</h3>
                             <h4>ATTENTION</h4>
-                            <p>Il est formellement interdit à tout pratiquant de <strong>TAEKWONDO</strong> de faire usage de ses connaissances en dehors du dojang, pour provoquer des bagarres, sauf en cas de légitime défense.</p>
-                            <p>Toute pratique du <strong>TAEKWONDO</strong> en dehors des lieux autorisés est prohibée.</p>
+                            <p>Il est formellement interdit à tout pratiquant de <strong>{{ mb_strtoupper($c['discipline']['label']) }}</strong> de faire usage de ses connaissances en dehors du {{ $c['discipline']['key'] === 'taekwondo' ? 'dojang' : 'dojo' }}, pour provoquer des bagarres, sauf en cas de légitime défense.</p>
+                            <p>Toute pratique du <strong>{{ mb_strtoupper($c['discipline']['label']) }}</strong> en dehors des lieux autorisés est prohibée.</p>
                         </div>
                     </div>
                     <div class="panel panel-right">
@@ -189,10 +193,10 @@
                             <p>
                                 @if($c['region'])Région : {{ $c['region'] }}<br>@endif
                                 {{ $c['ligue'] }}<br>
-                                Taekwondo
+                                {{ $c['discipline']['label'] }}
                             </p>
                         </div>
-                        @if($logoSrc)
+                        @if($logoSrc && $c['discipline']['key'] === 'taekwondo')
                             <img class="large-logo" src="{{ $logoSrc }}" alt="">
                         @endif
                         <div class="licence-title">{{ $c['license_label'] }}</div>

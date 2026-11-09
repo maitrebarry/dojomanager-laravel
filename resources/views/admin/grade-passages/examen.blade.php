@@ -31,7 +31,7 @@
                 <select name="session" class="form-select" onchange="this.form.submit()" {{ $sessions->isEmpty() ? 'disabled' : '' }}>
                     @forelse($sessions as $s)
                         <option value="{{ $s->id }}" {{ $session && $session->id === $s->id ? 'selected' : '' }}>
-                            {{ $s->type_grade }} • {{ $s->date_session?->format('d/m/Y') }} • {{ $s->lieu }} • {{ $scopeLabel($s) }} • {{ $s->finalisee ? __('messages.grade_passages.finalized_badge') : __('messages.grade_passages.open') }}
+                            {{ \App\Support\Discipline::gradeType($s->type_grade, $s->federation_id) }} • {{ $s->date_session?->format('d/m/Y') }} • {{ $s->lieu }} • {{ $scopeLabel($s) }} • {{ $s->finalisee ? __('messages.grade_passages.finalized_badge') : __('messages.grade_passages.open') }}
                         </option>
                     @empty
                         <option value="">{{ __('messages.grade_passages.empty') }}</option>

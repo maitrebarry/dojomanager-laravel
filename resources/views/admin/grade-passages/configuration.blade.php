@@ -191,7 +191,7 @@
                         <tbody>
                             @forelse($tariffs as $t)
                                 <tr>
-                                    <td><span class="badge bg-{{ $t->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ $t->type_grade }}</span></td>
+                                    <td><span class="badge bg-{{ $t->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ \App\Support\Discipline::gradeType($t->type_grade, $t->federation_id) }}</span></td>
                                     <td>{{ $t->tarif_label }}@if($t->grade) <span class="text-muted small">({{ $t->grade->nom_grade }})</span>@elseif($t->ceinture_keys) <span class="text-muted small">({{ $t->ceinture_keys }})</span>@endif</td>
                                     <td class="text-end fw-semibold">{{ number_format($t->montant, 0, ',', ' ') }}</td>
                                     <td class="text-end">

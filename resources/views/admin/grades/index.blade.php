@@ -23,7 +23,7 @@
             <div class="col-md-3">
                 <select name="type" class="form-select form-select-sm js-auto-filter">
                     <option value="">{{ __('messages.grades.all_types') }}</option>
-                    <option value="KEUP" {{ request('type') === 'KEUP' ? 'selected' : '' }}>KEUP</option>
+                    <option value="KEUP" {{ request('type') === 'KEUP' ? 'selected' : '' }}>{{ \App\Support\Discipline::gradeType('KEUP') }}</option>
                     <option value="DAN" {{ request('type') === 'DAN' ? 'selected' : '' }}>DAN</option>
                 </select>
             </div>
@@ -47,7 +47,7 @@
                         <td>{{ $grade->niveau }}</td>
                         <td class="fw-semibold">{{ $grade->nom_grade }}</td>
                         <td>{{ $grade->ceinture }}</td>
-                        <td><span class="badge bg-{{ $grade->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ $grade->type_grade }}</span></td>
+                        <td><span class="badge bg-{{ $grade->type_grade === 'DAN' ? 'dark' : 'info' }}">{{ \App\Support\Discipline::gradeType($grade->type_grade, $grade->federation_id) }}</span></td>
                         <td>{{ $grade->federation?->nom ?? '-' }}</td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm" role="group">
