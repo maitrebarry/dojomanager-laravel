@@ -120,11 +120,30 @@
         $sections->prepend(['id' => 0, 'label' => __('messages.competitions.to_weigh'), 'athletes' => $toWeigh, 'locked' => false, 'help' => __('messages.competitions.to_weigh_help')]);
     }
 @endphp
+{{-- Suppression en masse : les cases (attribut form=) visent ce formulaire placé hors du tableau,
+     car le tableau contient déjà un formulaire par ligne. --}}
+@if($competition->athletes->isNotEmpty())
+    <div class="d-flex flex-wrap gap-2 mb-2">
+        <form method="POST" action="{{ route('admin.competitions.athletes.destroy-many', $competition) }}" id="bulkDeleteForm" onsubmit="return dojoConfirmDelete(this, @js(__('messages.competitions.delete_selected_confirm')))">
+            @csrf @method('DELETE')
+            <button class="btn btn-sm btn-outline-danger" id="bulkDeleteButton" disabled>
+                <i class="fas fa-trash me-1"></i> {{ __('messages.competitions.delete_selected') }} (<span id="bulkCount">0</span>)
+            </button>
+        </form>
+        <form method="POST" action="{{ route('admin.competitions.athletes.destroy-many', $competition) }}" onsubmit="return dojoConfirmDelete(this, @js(__('messages.competitions.delete_all_confirm')))">
+            @csrf @method('DELETE')
+            <input type="hidden" name="tout" value="1">
+            <button class="btn btn-sm btn-danger"><i class="fas fa-trash-can me-1"></i> {{ __('messages.competitions.delete_all') }}</button>
+        </form>
+    </div>
+@endif
+
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm align-middle mb-0" id="athletesTable">
             <thead class="table-light">
                 <tr>
+                    <th style="width: 32px;"></th>
                     <th>{{ __('messages.competitions.last_name') }}</th>
                     <th>{{ __('messages.competitions.first_name') }}</th>
                     <th class="text-center">{{ __('messages.competitions.age') }}</th>
@@ -138,6 +157,11 @@
             <tbody>
                 @forelse($sections as $section)
                     <tr class="{{ $section['id'] ? 'table-secondary' : 'table-warning' }}">
+                        <td>
+                            @unless($section['locked'])
+                                <input type="checkbox" class="form-check-input section-check" data-section="{{ $loop->index }}" title="{{ __('messages.competitions.select_section') }}">
+                            @endunless
+                        </td>
                         <td colspan="8" class="fw-bold">
                             {{ $section['label'] }} <span class="badge bg-dark ms-1">{{ $section['athletes']->count() }}</span>
                             @if($section['locked'])<span class="badge bg-success ms-1"><i class="fas fa-lock"></i> {{ __('messages.competitions.draw_status_valid') }}</span>@endif
@@ -157,6 +181,11 @@
                             ];
                         @endphp
                         <tr>
+                            <td>
+                                @unless($section['locked'])
+                                    <input type="checkbox" class="form-check-input athlete-check" name="ids[]" value="{{ $a->id }}" form="bulkDeleteForm" data-section="{{ $loop->parent->index }}">
+                                @endunless
+                            </td>
                             <td class="fw-semibold">{{ $a->nom }}</td>
                             <td>{{ $a->prenom }}</td>
                             <td class="text-center">{{ $a->sportAge($year) ?? '-' }}</td>
@@ -182,7 +211,7 @@
                         </tr>
                     @endforeach
                 @empty
-                    <tr><td colspan="8" class="text-center text-muted py-5">{{ __('messages.competitions.no_athletes') }}</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-5">{{ __('messages.competitions.no_athletes') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -220,6 +249,27 @@
             if (field) { field.value = data[key] === null ? '' : data[key]; }
         });
     });
+
+    // Cases de suppression : une catégorie entière d'un clic, compteur sur le bouton.
+    (function () {
+        var table = document.getElementById('athletesTable');
+        var button = document.getElementById('bulkDeleteButton');
+        if (!table || !button) { return; }
+
+        function refresh() {
+            var count = table.querySelectorAll('.athlete-check:checked').length;
+            document.getElementById('bulkCount').textContent = count;
+            button.disabled = count === 0;
+        }
+
+        table.addEventListener('change', function (event) {
+            var box = event.target;
+            if (box.classList.contains('section-check')) {
+                table.querySelectorAll('.athlete-check[data-section="' + box.dataset.section + '"]').forEach(function (c) { c.checked = box.checked; });
+            }
+            refresh();
+        });
+    })();
 
     // Saisie en tableau : ajouter / retirer des lignes, Entrée passe à une nouvelle ligne.
     (function () {

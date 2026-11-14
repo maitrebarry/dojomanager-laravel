@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\AuthorizesScope;
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Competition;
 use App\Models\CompetitionAthlete;
 use App\Services\Competition\AthleteListParser;
@@ -71,6 +72,45 @@ class CompetitionAthleteController extends Controller
         $athlete->delete();
 
         return $this->backToList($competition, __('messages.competitions.athlete_deleted'), $canceled);
+    }
+
+    /**
+     * Suppression en masse : les athlètes cochés (ids[]) ou toute la liste (tout=1), par ex.
+     * pour reprendre un import raté. Les catégories au tirage validé ne sont pas touchées ;
+     * un tirage provisoire devenu faux est annulé.
+     */
+    public function destroyMany(Request $request, Competition $competition): RedirectResponse
+    {
+        $this->guardScope($competition);
+        $data = $request->validate([
+            'tout' => ['nullable', 'boolean'],
+            'ids' => ['required_without:tout', 'array'],
+            'ids.*' => ['integer'],
+        ], ['ids.required_without' => __('messages.competitions.delete_none_selected')]);
+
+        $athletes = $competition->athletes()->with('category')
+            ->when(empty($data['tout']), fn ($q) => $q->whereIn('id', $data['ids'] ?? []))
+            ->get();
+        [$locked, $deletable] = $athletes->partition(fn ($a) => $a->category?->tirage_valide);
+
+        $canceled = false;
+        foreach ($deletable->pluck('category')->filter()->unique('id') as $category) {
+            $canceled = $this->draws->beforeChange($category) || $canceled;
+        }
+        CompetitionAthlete::whereIn('id', $deletable->pluck('id'))->delete();
+
+        ActivityLog::log(
+            action: 'delete_athletes',
+            subject: 'Competition',
+            subjectId: $competition->id,
+            description: $deletable->count() . ' athlète(s) supprimé(s) de « ' . $competition->nom . ' »' . (empty($data['tout']) ? '' : ' (toute la liste)')
+        );
+
+        $redirect = $this->backToList($competition, __('messages.competitions.athletes_deleted', ['count' => $deletable->count()]), $canceled);
+
+        return $locked->isNotEmpty()
+            ? $redirect->with('warning', __('messages.competitions.athletes_locked_kept', ['count' => $locked->count()]))
+            : $redirect;
     }
 
     /**

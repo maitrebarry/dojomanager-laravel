@@ -146,6 +146,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('competitions/{competition}/combats/{combat}', [CompetitionController::class, 'removeCombat'])->name('competitions.combats.remove');
         Route::scopeBindings()->prefix('competitions/{competition}')->name('competitions.')->group(function () {
             Route::put('athletes/{athlete}', [CompetitionAthleteController::class, 'update'])->name('athletes.update');
+            Route::delete('athletes', [CompetitionAthleteController::class, 'destroyMany'])->name('athletes.destroy-many');
             Route::delete('athletes/{athlete}', [CompetitionAthleteController::class, 'destroy'])->name('athletes.destroy');
             Route::post('athletes-ranger', [CompetitionAthleteController::class, 'assign'])->name('athletes.assign');
             Route::post('pesee', [CompetitionAthleteController::class, 'weighIn'])->name('athletes.weigh');
