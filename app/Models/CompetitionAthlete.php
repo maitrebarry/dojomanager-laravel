@@ -24,7 +24,7 @@ class CompetitionAthlete extends Model
 
     protected $casts = [
         'date_naissance' => 'date',
-        'poids' => 'decimal:1',
+        'poids' => 'decimal:3',
     ];
 
     public function competition(): BelongsTo

@@ -46,6 +46,7 @@
                         <th style="width: 70px;">{{ __('messages.competitions.sex') }}</th>
                         <th style="width: 130px;">{{ __('messages.competitions.birth') }}</th>
                         <th>{{ __('messages.competitions.club') }}</th>
+                        <th style="width: 110px;">{{ __('messages.competitions.group') }}</th>
                         <th>{{ __('messages.competitions.import_errors') }}</th>
                     </tr>
                 </thead>
@@ -54,7 +55,7 @@
                     @foreach($rows as $i => $row)
                         @php
                             // Doublon : déjà inscrit, ou déjà plus haut dans la même liste.
-                            $identity = mb_strtolower(trim($row['nom']) . '|' . trim($row['prenom']));
+                            $identity = \App\Http\Controllers\Admin\CompetitionAthleteController::identity($row['nom'], $row['prenom'], $row['poids']);
                             $duplicate = trim($row['nom']) !== '' && isset($seen[$identity]);
                             $seen[$identity] = true;
                             $has = fn ($word) => collect($row['errors'])->contains(fn ($e) => str_contains($e, $word));
@@ -73,6 +74,7 @@
                             <td><input name="rows[{{ $i }}][sexe]" value="{{ $row['sexe'] }}" class="form-control form-control-sm {{ $has('sexe') ? 'is-invalid' : '' }}" maxlength="10"></td>
                             <td><input name="rows[{{ $i }}][naissance]" value="{{ $row['naissance'] }}" class="form-control form-control-sm {{ $has('âge') ? 'is-invalid' : '' }}"></td>
                             <td><input name="rows[{{ $i }}][club]" value="{{ $row['club'] }}" class="form-control form-control-sm"></td>
+                            <td><input name="rows[{{ $i }}][groupe]" value="{{ $row['groupe'] ?? '' }}" class="form-control form-control-sm {{ $has('groupe') ? 'is-invalid' : '' }}" placeholder="—"></td>
                             <td class="small">
                                 @if($row['errors'])<span class="text-danger">{{ implode(', ', $row['errors']) }}</span>@endif
                                 @if($duplicate)<span class="text-muted">{{ __('messages.competitions.import_duplicate') }}</span>@endif

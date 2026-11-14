@@ -20,7 +20,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
  */
 class AthleteListParser
 {
-    public const COLUMNS = ['nom', 'prenom', 'poids', 'sexe', 'naissance', 'club'];
+    public const COLUMNS = ['nom', 'prenom', 'poids', 'sexe', 'naissance', 'club', 'groupe'];
 
     /** Ordres de colonnes proposés pour une liste sans ligne de titres. */
     public const ORDERS = [
@@ -37,6 +37,7 @@ class AthleteListParser
      * terminé par * (début de mot). Le prénom est testé avant le nom.
      */
     private const HEADER_WORDS = [
+        'groupe' => ['groupe', 'tranche d age', 'categorie d age'],
         'prenom' => ['prenom', 'first name'],
         'nom' => ['nom', 'name'],
         'poids' => ['poids', 'kg', 'weight'],
@@ -298,6 +299,7 @@ class AthleteListParser
         $line['nom'] = trim((string) ($line['nom'] ?? ''));
         $line['prenom'] = trim((string) ($line['prenom'] ?? ''));
         $line['club'] = trim((string) ($line['club'] ?? ''));
+        $line['groupe'] = trim((string) ($line['groupe'] ?? ''));
         $line['poids'] = str_replace([',', 'kg', 'KG', ' '], ['.', '', '', ''], trim((string) ($line['poids'] ?? '')));
         $line['sexe'] = $this->parseSexe((string) ($line['sexe'] ?? '')) ?? trim((string) ($line['sexe'] ?? ''));
         $line['naissance'] = trim((string) ($line['naissance'] ?? ''));

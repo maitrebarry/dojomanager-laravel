@@ -158,6 +158,7 @@ return [
         'lieu' => 'lieu',
         'date_competition' => 'date de la compétition',
         'bronze' => 'règle du bronze',
+        'tolerance_g' => 'tolérance de poids',
         'groupe' => 'groupe',
         'groupes' => 'groupes',
         'age_min' => 'âge minimum',

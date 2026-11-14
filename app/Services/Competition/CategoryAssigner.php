@@ -52,11 +52,39 @@ class CategoryAssigner
             return null; // aucun groupe, ou plusieurs possibles : à classer à la main
         }
 
-        $poids = (float) $athlete->poids;
+        // Comparaison en grammes : jusqu'à tolerance_g au-dessus de la limite, l'athlète
+        // reste dans la catégorie ; au-delà, il passe à la suivante.
+        $grams = (int) round((float) $athlete->poids * 1000);
+        $tolerance = (int) ($this->competition->tolerance_g ?? 0);
 
         return $candidates
             ->sortBy(fn (CompetitionCategory $c) => $c->poids_max === null ? PHP_FLOAT_MAX : (float) $c->poids_max)
-            ->first(fn (CompetitionCategory $c) => $c->poids_max === null || $poids <= (float) $c->poids_max);
+            ->first(fn (CompetitionCategory $c) => $c->poids_max === null || $grams <= (int) round((float) $c->poids_max * 1000) + $tolerance);
+    }
+
+    /**
+     * Reclasse tous les athlètes pesés (ex. après un changement de tolérance), sauf dans
+     * les catégories au tirage validé. Renvoie [athlètes déplacés, tirage annulé ?].
+     *
+     * @return array{0: int, 1: bool}
+     */
+    public function reassignAll(DrawService $draws): array
+    {
+        $moved = 0;
+        $canceled = false;
+        $this->competition->athletes()->with('category')->whereNotNull('poids')->get()
+            ->each(function (CompetitionAthlete $athlete) use ($draws, &$moved, &$canceled) {
+                $new = $this->categoryFor($athlete);
+                if ($new?->id === $athlete->category_id || $athlete->category?->tirage_valide || $new?->tirage_valide) {
+                    return;
+                }
+                $canceled = $draws->beforeChange($athlete->category) || $canceled;
+                $canceled = $draws->beforeChange($new) || $canceled;
+                $athlete->update(['category_id' => $new?->id]);
+                $moved++;
+            });
+
+        return [$moved, $canceled];
     }
 
     /** Range tous les athlètes pesés et non classés ; renvoie le nombre d'athlètes rangés. */

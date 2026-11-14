@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Combat;
 use App\Models\Competition;
 use App\Models\CompetitionCategory;
+use App\Services\Competition\CategoryAssigner;
 use App\Services\Competition\DrawService;
 use App\Models\Federation;
 use App\Support\Discipline;
@@ -62,7 +63,7 @@ class CompetitionController extends Controller
         $context = $request->user()->scopeContext();
 
         // Une ligue crée pour sa ligue (et sa fédération), une fédération pour elle-même.
-        $data = $this->validateData($request);
+        $data = array_filter($this->validateData($request), fn ($v) => $v !== null); // tolérance vide : 5 g par défaut
         $data['bronze'] ??= Discipline::forFederation(Federation::find($context['federation_id']))['bronze'];
 
         $competition = Competition::create($data + [
@@ -124,6 +125,8 @@ class CompetitionController extends Controller
         $this->guardScope($competition);
         $data = $this->validateData($request);
         $data['bronze'] ??= $competition->bronze;
+        $data['tolerance_g'] ??= $competition->tolerance_g;
+        $toleranceChanged = (int) $data['tolerance_g'] !== (int) $competition->tolerance_g;
 
         // La règle du bronze change la forme des tableaux : refusée si un tirage est validé,
         // sinon les tirages provisoires sont annulés pour être refaits.
@@ -139,9 +142,18 @@ class CompetitionController extends Controller
         }
         $competition->update($data);
 
+        $warnings = $canceled ? [__('messages.competitions.bronze_redraw', ['count' => $canceled])] : [];
+        // Nouvelle tolérance : les athlètes sont reclassés (hors catégories au tirage validé).
+        if ($toleranceChanged) {
+            [$moved, $drawCanceled] = (new CategoryAssigner($competition->fresh()))->reassignAll(app(DrawService::class));
+            $warnings[] = __('messages.competitions.tolerance_reassigned', ['count' => $moved]);
+            if ($drawCanceled) {
+                $warnings[] = __('messages.competitions.draw_canceled');
+            }
+        }
         $redirect = redirect()->route('admin.competitions.show', $competition)->with('success', __('messages.competitions.updated'));
 
-        return $canceled ? $redirect->with('warning', __('messages.competitions.bronze_redraw', ['count' => $canceled])) : $redirect;
+        return $warnings ? $redirect->with('warning', implode(' ', $warnings)) : $redirect;
     }
 
     public function destroy(Competition $competition): RedirectResponse
@@ -231,6 +243,7 @@ class CompetitionController extends Controller
             'lieu' => ['nullable', 'string', 'max:180'],
             'type' => ['nullable', 'string', 'max:80'],
             'bronze' => ['nullable', Rule::in(['deux', 'match'])],
+            'tolerance_g' => ['nullable', 'integer', 'min:0', 'max:5000'],
         ]);
     }
 }

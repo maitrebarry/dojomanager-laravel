@@ -24,6 +24,7 @@ class Competition extends Model
         'lieu',
         'type',
         'bronze',
+        'tolerance_g',
         'federation_id',
         'ligue_id',
         'created_by_user_id',

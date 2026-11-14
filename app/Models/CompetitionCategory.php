@@ -86,8 +86,9 @@ class CompetitionCategory extends Model
         };
     }
 
+    /** Poids lisible sans zéros inutiles : 52,5 · 37,3 · 33,004 (pesée au gramme). */
     public static function formatKg(float $kg): string
     {
-        return rtrim(rtrim(number_format($kg, 1, ',', ''), '0'), ',');
+        return rtrim(rtrim(number_format($kg, 3, ',', ''), '0'), ',');
     }
 }

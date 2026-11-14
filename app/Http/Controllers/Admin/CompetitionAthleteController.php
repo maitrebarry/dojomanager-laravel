@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -211,6 +212,15 @@ class CompetitionAthleteController extends Controller
             return back()->with('error', __('messages.competitions.import_empty'));
         }
 
+        // Colonne Groupe : signalée dès l'aperçu si le groupe n'existe pas dans la compétition.
+        $groups = CompetitionController::groups($competition);
+        foreach ($rows as $i => $row) {
+            [, $error] = $this->resolveGroup($row, $request->input('groupe'), $groups);
+            if ($error) {
+                $rows[$i]['errors'][] = $error;
+            }
+        }
+
         session([self::IMPORT_SESSION . '.' . $competition->id => [
             'rows' => $rows,
             'groupe' => $request->input('groupe'),
@@ -234,8 +244,8 @@ class CompetitionAthleteController extends Controller
             'rows' => $import['rows'],
             'groupe' => $import['groupe'],
             'groups' => CompetitionController::groups($competition),
-            'existing' => $competition->athletes()->get(['nom', 'prenom'])
-                ->map(fn ($a) => $this->identity($a->nom, $a->prenom))->flip()->all(),
+            'existing' => $competition->athletes()->get(['nom', 'prenom', 'poids'])
+                ->map(fn ($a) => self::identity($a->nom, $a->prenom, $a->poids))->flip()->all(),
             'page_title' => __('messages.competitions.import_preview'),
         ]);
     }
@@ -252,8 +262,8 @@ class CompetitionAthleteController extends Controller
         $groupKey = $request->input('groupe') ?: null;
 
         $assigner = new CategoryAssigner($competition);
-        $existing = $competition->athletes()->get(['nom', 'prenom'])
-            ->map(fn ($a) => $this->identity($a->nom, $a->prenom))->flip()->all();
+        $existing = $competition->athletes()->get(['nom', 'prenom', 'poids'])
+            ->map(fn ($a) => self::identity($a->nom, $a->prenom, $a->poids))->flip()->all();
 
         $added = 0;
         $skipped = 0;
@@ -265,11 +275,15 @@ class CompetitionAthleteController extends Controller
                 continue;
             }
             $line = $parser->check(Arr::only($input, AthleteListParser::COLUMNS) + ['line' => (int) ($input['line'] ?? 0)]);
+            [$lineGroup, $groupError] = $this->resolveGroup($line, $groupKey, $groups);
+            if ($groupError) {
+                $line['errors'][] = $groupError;
+            }
             if ($line['errors']) {
                 $invalid[] = $line;
                 continue;
             }
-            $identity = $this->identity($line['nom'], $line['prenom']);
+            $identity = self::identity($line['nom'], $line['prenom'], $line['poids']);
             if (isset($existing[$identity])) {
                 $skipped++;
                 continue;
@@ -281,13 +295,13 @@ class CompetitionAthleteController extends Controller
                 'nom' => mb_strtoupper($line['nom']),
                 'prenom' => $line['prenom'],
                 'poids' => $line['poids'] === '' ? null : (float) $line['poids'],
-                'sexe' => $line['sexe'] ?: ($groupKey ? (explode('|', $groupKey)[1] ?: null) : null),
+                'sexe' => $line['sexe'] ?: ($lineGroup ? (explode('|', $lineGroup)[1] ?: null) : null),
                 'age' => $birth['age'],
                 'date_naissance' => $birth['date_naissance'],
                 'club' => $line['club'] ?: null,
-                'groupe' => $groupKey,
+                'groupe' => $lineGroup,
             ]);
-            $category = $assigner->categoryFor($athlete, $groupKey);
+            $category = $assigner->categoryFor($athlete, $lineGroup);
             $canceled = $this->draws->beforeChange($category) || $canceled;
             $athlete->category_id = $category?->id;
             $athlete->save();
@@ -308,6 +322,48 @@ class CompetitionAthleteController extends Controller
             . ($skipped ? ' ' . __('messages.competitions.import_duplicates', ['count' => $skipped]) : '');
 
         return $this->backToList($competition, $message, $canceled);
+    }
+
+    /**
+     * Groupe d'une ligne importée. La colonne Groupe (« Juniors », « cadet »…) l'emporte sur
+     * le groupe choisi pour toute la liste ; avec la colonne Sexe elle désigne « Juniors|F ».
+     *
+     * @param array<string, string> $groups groupes de la compétition (« Juniors|F » => libellé)
+     * @return array{0: ?string, 1: ?string} [clé du groupe, erreur]
+     */
+    private function resolveGroup(array $line, ?string $listGroup, array $groups): array
+    {
+        $name = trim((string) ($line['groupe'] ?? ''));
+        if ($name === '') {
+            return [$listGroup ?: null, null];
+        }
+
+        $simple = fn (string $v) => rtrim(Str::lower(Str::ascii(trim($v))), 's');
+        $candidates = array_values(array_filter(array_keys($groups), fn ($key) => $simple(explode('|', $key)[0]) === $simple($name)));
+        if ($candidates === []) {
+            return [null, __('messages.competitions.group_unknown', ['groupe' => $name])];
+        }
+
+        $sexe = $line['sexe'] ?? '';
+        $sexe = in_array($sexe, ['M', 'F'], true) ? $sexe : ($listGroup ? (explode('|', $listGroup)[1] ?? '') : '');
+        $bySex = [];
+        foreach ($candidates as $key) {
+            $bySex[explode('|', $key)[1]] = $key;
+        }
+        // Le groupe du bon sexe, sinon un groupe mixte, sinon le seul groupe existant.
+        if ($sexe !== '' && isset($bySex[$sexe])) {
+            return [$bySex[$sexe], null];
+        }
+        if (isset($bySex[''])) {
+            return [$bySex[''], null];
+        }
+        if ($sexe === '' && count($bySex) === 1) {
+            return [reset($bySex), null];
+        }
+
+        return [null, $sexe === ''
+            ? __('messages.competitions.group_needs_sex', ['groupe' => $name])
+            : __('messages.competitions.group_unknown', ['groupe' => $name . ' ' . ($sexe === 'F' ? 'filles' : 'garçons')])];
     }
 
     public function cancelImport(Competition $competition): RedirectResponse
@@ -404,9 +460,16 @@ class CompetitionAthleteController extends Controller
         ];
     }
 
-    private function identity(string $nom, string $prenom): string
+    /**
+     * Clé de doublon : nom + prénom + poids. Deux homonymes de groupes différents (ex. un
+     * cadet et un junior « Mohamed TRAORE ») ont un poids différent ; la même liste
+     * importée deux fois, le même poids.
+     */
+    public static function identity(string $nom, string $prenom, $poids = null): string
     {
-        return mb_strtolower(trim($nom) . '|' . trim($prenom));
+        $grams = $poids === null || $poids === '' ? '' : (string) (int) round((float) str_replace(',', '.', (string) $poids) * 1000);
+
+        return mb_strtolower(trim($nom) . '|' . trim($prenom)) . '|' . $grams;
     }
 
     private function backToList(Competition $competition, string $message, bool $drawCanceled): RedirectResponse
