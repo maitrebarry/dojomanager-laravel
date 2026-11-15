@@ -22,7 +22,7 @@
     <div class="small text-muted mt-3"><i class="fas fa-lock me-1"></i> {{ __('messages.competitions.results_locked_hint') }}</div>
 @else
     <h6 class="mt-4 mb-1 fw-semibold">{{ __('messages.competitions.results') }}</h6>
-    <div class="small text-muted mb-2">{{ __('messages.competitions.results_help', ['order' => $profile['corners'][1]['short'] . '-' . $profile['corners'][2]['short'], 'example' => $profile['score_example']]) }}</div>
+    <div class="small text-muted mb-2">{{ __('messages.competitions.results_help', ['order' => $profile['corners'][1]['short'] . '-' . $profile['corners'][2]['short'], 'example' => $profile['score_example']]) }} {{ __('messages.competitions.results_enter_tip') }}</div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
@@ -60,18 +60,19 @@
                                     <span class="badge" style="background: {{ $profile['corners'][$f->vainqueur_athlete_id === $f->athlete1_id ? 1 : 2]['color'] }};"><i class="fas fa-trophy me-1"></i>{{ $f->vainqueurAthlete?->fullName() }}</span>
                                     @if($f->score)<span class="small">{{ $f->score }}</span>@endif
                                     @if($canClear($f))
-                                        <form method="POST" action="{{ route('admin.competitions.fights.clear', [$competition, $f]) }}" class="ms-auto" onsubmit="return dojoConfirmAction(this, @js(__('messages.competitions.cancel_result_confirm')))">
+                                        <form method="POST" action="{{ route('admin.competitions.fights.clear', [$competition, $f]) }}" class="ms-auto js-result-form" data-no-spinner="1" data-confirm="{{ __('messages.competitions.cancel_result_confirm') }}">
                                             @csrf @method('DELETE')
                                             <button class="btn btn-sm btn-link text-muted p-0" title="{{ __('messages.competitions.cancel_result') }}"><i class="fas fa-rotate-left"></i></button>
                                         </form>
                                     @endif
                                 </div>
                             @elseif($f->isReady())
-                                <form method="POST" action="{{ route('admin.competitions.fights.result', [$competition, $f]) }}" class="d-flex gap-1">
+                                {{-- Enregistré sans recharger la page (script de l'onglet Tirage). Score + Entrée :
+                                     le vainqueur est déduit du score chiffré. --}}
+                                <form method="POST" action="{{ route('admin.competitions.fights.result', [$competition, $f]) }}" class="d-flex gap-1 js-result-form" data-no-spinner="1">
                                     @csrf
-                                    {{-- Champ caché : le bouton cliqué est désactivé pendant l'envoi (indicateur de chargement), sa valeur ne partirait pas. --}}
                                     <input type="hidden" name="vainqueur">
-                                    <input name="score" class="form-control form-control-sm" style="max-width: 90px;" placeholder="{{ $profile['corners'][1]['short'] }}-{{ $profile['corners'][2]['short'] }}" maxlength="40">
+                                    <input name="score" class="form-control form-control-sm js-score" style="max-width: 90px;" placeholder="{{ $profile['corners'][1]['short'] }}-{{ $profile['corners'][2]['short'] }}" maxlength="40" autocomplete="off">
                                     @foreach([1, 2] as $corner)
                                         <button class="btn btn-sm text-white text-nowrap" style="background: {{ $profile['corners'][$corner]['color'] }};" onclick="this.form.vainqueur.value = '{{ $corner }}'">{{ __('messages.competitions.corner_wins', ['corner' => $profile['corners'][$corner]['short']]) }}</button>
                                     @endforeach

@@ -53,26 +53,25 @@ class CompetitionAthleteController extends Controller
             ? $competition->categories()->find($data['category_id'])
             : (new CategoryAssigner($competition))->categoryFor($athlete);
 
-        $canceled = false;
         if ($old?->id !== $new?->id || $athlete->isDirty(['poids', 'club', 'tete_de_serie'])) {
-            $canceled = $this->draws->beforeChange($old);
+            $this->draws->beforeChange($old);
             if ($new && $new->id !== $old?->id) {
-                $canceled = $this->draws->beforeChange($new) || $canceled;
+                $this->draws->beforeChange($new);
             }
         }
         $athlete->category_id = $new?->id;
         $athlete->save();
 
-        return $this->backToList($competition, __('messages.competitions.athlete_updated'), $canceled);
+        return $this->backToList($competition, __('messages.competitions.athlete_updated'));
     }
 
     public function destroy(Competition $competition, CompetitionAthlete $athlete): RedirectResponse
     {
         $this->guardScope($competition);
-        $canceled = $this->draws->beforeChange($athlete->category);
+        $this->draws->beforeChange($athlete->category);
         $athlete->delete();
 
-        return $this->backToList($competition, __('messages.competitions.athlete_deleted'), $canceled);
+        return $this->backToList($competition, __('messages.competitions.athlete_deleted'));
     }
 
     /**
@@ -94,9 +93,8 @@ class CompetitionAthleteController extends Controller
             ->get();
         [$locked, $deletable] = $athletes->partition(fn ($a) => $a->category?->tirage_valide);
 
-        $canceled = false;
         foreach ($deletable->pluck('category')->filter()->unique('id') as $category) {
-            $canceled = $this->draws->beforeChange($category) || $canceled;
+            $this->draws->beforeChange($category);
         }
         CompetitionAthlete::whereIn('id', $deletable->pluck('id'))->delete();
 
@@ -107,11 +105,11 @@ class CompetitionAthleteController extends Controller
             description: $deletable->count() . ' athlète(s) supprimé(s) de « ' . $competition->nom . ' »' . (empty($data['tout']) ? '' : ' (toute la liste)')
         );
 
-        $redirect = $this->backToList($competition, __('messages.competitions.athletes_deleted', ['count' => $deletable->count()]), $canceled);
-
-        return $locked->isNotEmpty()
-            ? $redirect->with('warning', __('messages.competitions.athletes_locked_kept', ['count' => $locked->count()]))
-            : $redirect;
+        return $this->backToList(
+            $competition,
+            __('messages.competitions.athletes_deleted', ['count' => $deletable->count()]),
+            $locked->isNotEmpty() ? [__('messages.competitions.athletes_locked_kept', ['count' => $locked->count()])] : []
+        );
     }
 
     /**
@@ -128,7 +126,6 @@ class CompetitionAthleteController extends Controller
         $saved = 0;
         $invalid = [];
         $locked = [];
-        $canceled = false;
 
         foreach ($athletes as $athlete) {
             $raw = str_replace([',', ' ', 'kg'], ['.', '', ''], trim((string) $request->input('poids.' . $athlete->id)));
@@ -147,9 +144,9 @@ class CompetitionAthleteController extends Controller
                 $locked[] = $athlete->fullName();
                 continue;
             }
-            $canceled = $this->draws->beforeChange($old) || $canceled;
+            $this->draws->beforeChange($old);
             if ($new?->id !== $old?->id) {
-                $canceled = $this->draws->beforeChange($new) || $canceled;
+                $this->draws->beforeChange($new);
             }
             $athlete->category_id = $new?->id;
             $athlete->save();
@@ -165,8 +162,8 @@ class CompetitionAthleteController extends Controller
         if ($locked) {
             $warnings[] = __('messages.competitions.weighed_locked', ['names' => implode(', ', $locked)]);
         }
-        if ($canceled) {
-            $warnings[] = __('messages.competitions.draw_canceled');
+        if ($redraw = $this->draws->redrawCanceled()) {
+            $warnings[] = $redraw; // tirages provisoires refaits avec les nouveaux poids
         }
 
         return $warnings ? $redirect->with('warning', implode(' ', $warnings)) : $redirect;
@@ -176,9 +173,11 @@ class CompetitionAthleteController extends Controller
     public function assign(Competition $competition): RedirectResponse
     {
         $this->guardScope($competition);
-        $count = (new CategoryAssigner($competition))->assignUnclassified();
+        $count = (new CategoryAssigner($competition))->assignUnclassified($this->draws);
+        $redirect = back()->with('success', __('messages.competitions.assigned', ['count' => $count]));
+        $redraw = $this->draws->redrawCanceled();
 
-        return back()->with('success', __('messages.competitions.assigned', ['count' => $count]));
+        return $redraw ? $redirect->with('warning', $redraw) : $redirect;
     }
 
     /** Étape 1 de l'import : lit le fichier ou le texte collé, puis affiche l'aperçu. */
@@ -268,7 +267,6 @@ class CompetitionAthleteController extends Controller
         $added = 0;
         $skipped = 0;
         $invalid = [];
-        $canceled = false;
         foreach ($request->input('rows') as $input) {
             // Ligne décochée dans l'aperçu, ou laissée vide dans le tableau de saisie.
             if (!empty($input['ignore']) || implode('', array_map('trim', Arr::only($input, AthleteListParser::COLUMNS))) === '') {
@@ -302,7 +300,7 @@ class CompetitionAthleteController extends Controller
                 'groupe' => $lineGroup,
             ]);
             $category = $assigner->categoryFor($athlete, $lineGroup);
-            $canceled = $this->draws->beforeChange($category) || $canceled;
+            $this->draws->beforeChange($category);
             $athlete->category_id = $category?->id;
             $athlete->save();
             $existing[$identity] = true;
@@ -311,9 +309,10 @@ class CompetitionAthleteController extends Controller
 
         if ($invalid) {
             session([self::IMPORT_SESSION . '.' . $competition->id => ['rows' => $invalid, 'groupe' => $groupKey]]);
+            $redraw = $this->draws->redrawCanceled();
 
             return redirect()->route('admin.competitions.athletes.preview', $competition)
-                ->with('warning', __('messages.competitions.import_partial', ['added' => $added, 'invalid' => count($invalid)]));
+                ->with('warning', trim(__('messages.competitions.import_partial', ['added' => $added, 'invalid' => count($invalid)]) . ' ' . $redraw));
         }
 
         session()->forget(self::IMPORT_SESSION . '.' . $competition->id);
@@ -321,7 +320,7 @@ class CompetitionAthleteController extends Controller
         $message = __('messages.competitions.import_done', ['added' => $added])
             . ($skipped ? ' ' . __('messages.competitions.import_duplicates', ['count' => $skipped]) : '');
 
-        return $this->backToList($competition, $message, $canceled);
+        return $this->backToList($competition, $message);
     }
 
     /**
@@ -472,10 +471,14 @@ class CompetitionAthleteController extends Controller
         return mb_strtolower(trim($nom) . '|' . trim($prenom)) . '|' . $grams;
     }
 
-    private function backToList(Competition $competition, string $message, bool $drawCanceled): RedirectResponse
+    /** Retour à la liste ; les tirages provisoires touchés sont refaits et signalés. */
+    private function backToList(Competition $competition, string $message, array $warnings = []): RedirectResponse
     {
+        if ($redraw = $this->draws->redrawCanceled()) {
+            $warnings[] = $redraw;
+        }
         $redirect = redirect()->route('admin.competitions.show', [$competition, 'tab' => 'athletes'])->with('success', $message);
 
-        return $drawCanceled ? $redirect->with('warning', __('messages.competitions.draw_canceled')) : $redirect;
+        return $warnings ? $redirect->with('warning', implode(' ', $warnings)) : $redirect;
     }
 }

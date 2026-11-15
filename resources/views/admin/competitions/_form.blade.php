@@ -29,7 +29,7 @@
             <div class="col-md-6">
                 <label class="form-label">{{ __('messages.competitions.tolerance') }}</label>
                 <div class="input-group">
-                    <input type="number" name="tolerance_g" class="form-control" min="0" max="5000" step="1" value="{{ old('tolerance_g', $competition->tolerance_g ?? 5) }}">
+                    <input type="number" name="tolerance_g" class="form-control" min="0" max="5000" step="1" value="{{ old('tolerance_g', $competition->tolerance_g ?? 500) }}">
                     <span class="input-group-text">g</span>
                 </div>
                 <small class="text-muted">{{ __('messages.competitions.tolerance_help') }}</small>

@@ -8,6 +8,8 @@
  *  - presets     : catégories de poids proposées (groupe => âges + limites par sexe,
  *                  null = catégorie « + » sans limite). Vide : catégories à créer à la main.
  *  - bronze      : règle par défaut, modifiable par compétition (deux | match)
+ *  - tolerance_g : tolérance de pesée par défaut en grammes, modifiable par compétition :
+ *                  un athlète reste dans une catégorie jusqu'à « limite + tolérance »
  *
  * Les limites de poids reprennent les règlements internationaux connus : elles restent
  * modifiables dans chaque compétition et sont à vérifier avec la fédération nationale.
@@ -21,6 +23,7 @@ return [
         ],
         'color_grade' => 'Keup',
         'bronze' => 'deux',
+        'tolerance_g' => 500, // règle des compétitions de taekwondo : limite + 500 g
         'score_example' => '2-1',
         'presets' => [
             'Cadets' => [
@@ -38,6 +41,13 @@ return [
                 'M' => [54, 58, 63, 68, 74, 80, 87, null],
                 'F' => [46, 49, 53, 57, 62, 67, 73, null],
             ],
+            // Les 4 catégories des Jeux olympiques, à la place des 8 ci-dessus si le
+            // règlement de la compétition le prévoit.
+            'Seniors olympiques' => [
+                'age_min' => 18, 'age_max' => null,
+                'M' => [58, 68, 80, null],
+                'F' => [49, 57, 67, null],
+            ],
         ],
     ],
 
@@ -49,6 +59,7 @@ return [
         ],
         'color_grade' => 'Kyu',
         'bronze' => 'deux',
+        'tolerance_g' => 0,
         'score_example' => '5-3',
         'presets' => [
             'Cadets' => [
@@ -77,6 +88,7 @@ return [
         ],
         'color_grade' => 'Kyu',
         'bronze' => 'match',
+        'tolerance_g' => 0,
         'score_example' => 'Ippon',
         'presets' => [],
     ],
@@ -89,6 +101,7 @@ return [
         ],
         'color_grade' => 'Kyu',
         'bronze' => 'deux',
+        'tolerance_g' => 0,
         'score_example' => 'Ippon',
         'presets' => [
             'Cadets' => [
@@ -112,6 +125,7 @@ return [
         ],
         'color_grade' => 'Kyu',
         'bronze' => 'deux',
+        'tolerance_g' => 0,
         'score_example' => '2-1',
         'presets' => [],
     ],

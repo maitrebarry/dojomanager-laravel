@@ -25,6 +25,9 @@ class DrawService
 {
     private Randomizer $random;
 
+    /** Catégories dont le tirage provisoire a été annulé pendant la requête, à refaire. */
+    private array $canceled = [];
+
     public function __construct(?int $seed = null)
     {
         $this->random = new Randomizer($seed === null ? null : new Mt19937($seed));
@@ -72,11 +75,58 @@ class DrawService
 
         if ($category->tirage_at) {
             $this->cancel($category);
+            $this->canceled[$category->id] = $category;
 
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Refait le tirage des catégories annulées par beforeChange() (changement de poids, de
+     * tolérance, ajout ou retrait d'athlètes), une fois tous les changements faits. Le
+     * nouveau tirage reste provisoire, à vérifier puis valider. Renvoie le message à
+     * afficher, ou null si aucun tirage n'a été touché.
+     */
+    public function redrawCanceled(): ?string
+    {
+        if ($this->canceled === []) {
+            return null;
+        }
+
+        $redrawn = [];
+        $empty = [];
+        foreach ($this->canceled as $category) {
+            $category = $category->fresh();
+            if (!$category || $category->tirage_valide || $category->tirage_at) {
+                continue;
+            }
+            $label = \App\Http\Controllers\Admin\CompetitionController::categoryLabels($category->competition->load('categories'))[$category->id] ?? $category->groupe;
+            if ($category->athletes()->count() < 2) {
+                $empty[] = $label;
+                continue;
+            }
+            $this->draw($category);
+            $redrawn[] = $label;
+            \App\Models\ActivityLog::log(
+                action: 'draw',
+                subject: 'CompetitionCategory',
+                subjectId: $category->id,
+                description: 'Tirage refait automatiquement après modification — ' . $category->competition->nom . ' / ' . $label
+            );
+        }
+        $this->canceled = [];
+
+        $messages = [];
+        if ($redrawn) {
+            $messages[] = __('messages.competitions.redrawn_auto', ['categories' => implode(', ', $redrawn)]);
+        }
+        if ($empty) {
+            $messages[] = __('messages.competitions.redraw_too_few', ['categories' => implode(', ', $empty)]);
+        }
+
+        return $messages ? implode(' ', $messages) : null;
     }
 
     /**

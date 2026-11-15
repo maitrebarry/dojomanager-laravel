@@ -12,6 +12,7 @@ use App\Services\Competition\CategoryAssigner;
 use App\Services\Competition\DrawService;
 use App\Support\Discipline;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -141,18 +142,67 @@ class CompetitionDrawController extends Controller
     /* -------------------- Résultats -------------------- */
 
     /** Vainqueur d'un combat (bleu ou rouge) et score facultatif ; il passe au combat suivant. */
-    public function result(Request $request, Competition $competition, Combat $combat): RedirectResponse
+    public function result(Request $request, Competition $competition, Combat $combat): RedirectResponse|JsonResponse
     {
         $this->guardScope($competition);
         $data = $request->validate([
-            'vainqueur' => ['required', Rule::in(['1', '2'])],
+            'vainqueur' => ['nullable', Rule::in(['1', '2'])],
             'score' => ['nullable', 'string', 'max:40'],
         ]);
-        $this->checkScore($data['score'] ?? null, (int) $data['vainqueur'], $competition->profile());
+        // Sans bouton cliqué (score + Entrée), le vainqueur est déduit du score chiffré.
+        $winner = (int) ($data['vainqueur'] ?? 0) ?: $this->winnerFromScore($data['score'] ?? null);
+        if (!$winner) {
+            $this->checkScore($data['score'] ?? null, 1, $competition->profile()); // « 2-2 » : message d'égalité
+            throw ValidationException::withMessages(['vainqueur' => __('messages.competitions.winner_missing')]);
+        }
+        $this->checkScore($data['score'] ?? null, $winner, $competition->profile());
 
-        $this->draws->recordResult($combat, $data['vainqueur'] === '1' ? $combat->athlete1_id : $combat->athlete2_id, $data['score'] ?? null);
+        $this->draws->recordResult($combat, $winner === 1 ? $combat->athlete1_id : $combat->athlete2_id, $data['score'] ?? null);
 
-        return $this->backToDraw($competition, $combat->category, __('messages.competitions.result_saved', ['numero' => $combat->numero]));
+        return $this->fightResponse($request, $competition, $combat->category, __('messages.competitions.result_saved', ['numero' => $combat->numero]));
+    }
+
+    /** Coin vainqueur d'après un score chiffré (« 2-1 » → 1), ou 0 si le score n'en dit rien. */
+    private function winnerFromScore(?string $score): int
+    {
+        if (!preg_match('/^\s*(\d+)\s*[-–:\/]\s*(\d+)\s*$/u', (string) $score, $m) || (int) $m[1] === (int) $m[2]) {
+            return 0;
+        }
+
+        return (int) $m[1] > (int) $m[2] ? 1 : 2;
+    }
+
+    /**
+     * Après un résultat : saisi sans rechargement, on renvoie la carte de la catégorie et
+     * le tableau des médailles à jour ; sinon, retour classique à l'onglet Tirage.
+     */
+    private function fightResponse(Request $request, Competition $competition, CompetitionCategory $category, string $message): RedirectResponse|JsonResponse
+    {
+        if (!$request->expectsJson()) {
+            return $this->backToDraw($competition, $category, $message);
+        }
+
+        $competition->load([
+            'categories' => fn ($q) => $q->withCount('athletes'),
+            'categories.combats.athlete1',
+            'categories.combats.athlete2',
+            'categories.combats.vainqueurAthlete',
+            'categories.athletes',
+        ]);
+        $podiums = $competition->categories->mapWithKeys(fn ($c) => [$c->id => $this->draws->podium($c)]);
+        $card = $competition->categories->firstWhere('id', $category->id);
+
+        return response()->json([
+            'message' => $message,
+            'category' => $category->id,
+            'card' => view('admin.competitions.tabs._category_card', [
+                'competition' => $competition,
+                'c' => $card,
+                'podium' => $podiums[$category->id],
+                'categoryLabels' => CompetitionController::categoryLabels($competition),
+            ])->render(),
+            'medals' => view('admin.competitions.tabs._medals', ['medals' => CompetitionController::medals($podiums)])->render(),
+        ]);
     }
 
     /**
@@ -181,12 +231,12 @@ class CompetitionDrawController extends Controller
         }
     }
 
-    public function clearResult(Competition $competition, Combat $combat): RedirectResponse
+    public function clearResult(Request $request, Competition $competition, Combat $combat): RedirectResponse|JsonResponse
     {
         $this->guardScope($competition);
         $this->draws->clearResult($combat);
 
-        return $this->backToDraw($competition, $combat->category, __('messages.competitions.result_cleared', ['numero' => $combat->numero]));
+        return $this->fightResponse($request, $competition, $combat->category, __('messages.competitions.result_cleared', ['numero' => $combat->numero]));
     }
 
     /** Tableaux de tirage en PDF : une catégorie (?category=id) ou toutes celles tirées. */
@@ -231,10 +281,14 @@ class CompetitionDrawController extends Controller
     private function afterCategoriesChange(Competition $competition, string $message): RedirectResponse
     {
         // Les athlètes en attente d'une catégorie y sont rangés dès qu'elle existe.
-        $assigned = (new CategoryAssigner($competition->fresh()))->assignUnclassified();
+        $assigned = (new CategoryAssigner($competition->fresh()))->assignUnclassified($this->draws);
+        $warnings = $assigned ? [__('messages.competitions.assigned', ['count' => $assigned])] : [];
+        if ($redraw = $this->draws->redrawCanceled()) {
+            $warnings[] = $redraw;
+        }
         $redirect = redirect()->route('admin.competitions.show', [$competition, 'tab' => 'categories'])->with('success', $message);
 
-        return $assigned ? $redirect->with('warning', __('messages.competitions.assigned', ['count' => $assigned])) : $redirect;
+        return $warnings ? $redirect->with('warning', implode(' ', $warnings)) : $redirect;
     }
 
     private function backToDraw(Competition $competition, ?CompetitionCategory $category, string $message): RedirectResponse

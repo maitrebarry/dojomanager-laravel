@@ -49,11 +49,11 @@ class CompetitionController extends Controller
 
     public function create(Request $request): View
     {
-        $federation = Federation::find($request->user()->scopeContext()['federation_id']);
+        $profile = Discipline::forFederation(Federation::find($request->user()->scopeContext()['federation_id']));
 
         return view('admin.competitions.create', [
-            // Règle du bronze proposée selon la discipline de la fédération.
-            'competition' => new Competition(['bronze' => Discipline::forFederation($federation)['bronze']]),
+            // Règle du bronze et tolérance de pesée proposées selon la discipline de la fédération.
+            'competition' => new Competition(['bronze' => $profile['bronze'], 'tolerance_g' => $profile['tolerance_g']]),
             'page_title' => __('messages.competitions.add'),
         ]);
     }
@@ -63,8 +63,10 @@ class CompetitionController extends Controller
         $context = $request->user()->scopeContext();
 
         // Une ligue crée pour sa ligue (et sa fédération), une fédération pour elle-même.
-        $data = array_filter($this->validateData($request), fn ($v) => $v !== null); // tolérance vide : 5 g par défaut
-        $data['bronze'] ??= Discipline::forFederation(Federation::find($context['federation_id']))['bronze'];
+        $data = array_filter($this->validateData($request), fn ($v) => $v !== null);
+        $profile = Discipline::forFederation(Federation::find($context['federation_id']));
+        $data['bronze'] ??= $profile['bronze'];
+        $data['tolerance_g'] ??= $profile['tolerance_g'];
 
         $competition = Competition::create($data + [
             'federation_id' => $context['federation_id'],
@@ -145,10 +147,14 @@ class CompetitionController extends Controller
         $warnings = $canceled ? [__('messages.competitions.bronze_redraw', ['count' => $canceled])] : [];
         // Nouvelle tolérance : les athlètes sont reclassés (hors catégories au tirage validé).
         if ($toleranceChanged) {
-            [$moved, $drawCanceled] = (new CategoryAssigner($competition->fresh()))->reassignAll(app(DrawService::class));
+            $draws = app(DrawService::class);
+            [$moved, $locked] = (new CategoryAssigner($competition->fresh()))->reassignAll($draws);
             $warnings[] = __('messages.competitions.tolerance_reassigned', ['count' => $moved]);
-            if ($drawCanceled) {
-                $warnings[] = __('messages.competitions.draw_canceled');
+            if ($locked) {
+                $warnings[] = __('messages.competitions.tolerance_locked', ['count' => $locked]);
+            }
+            if ($redraw = $draws->redrawCanceled()) {
+                $warnings[] = $redraw; // tirages provisoires refaits avec le nouveau classement
             }
         }
         $redirect = redirect()->route('admin.competitions.show', $competition)->with('success', __('messages.competitions.updated'));

@@ -63,37 +63,48 @@ class CategoryAssigner
     }
 
     /**
-     * Reclasse tous les athlètes pesés (ex. après un changement de tolérance), sauf dans
-     * les catégories au tirage validé. Renvoie [athlètes déplacés, tirage annulé ?].
+     * Reclasse tous les athlètes pesés (ex. après un changement de tolérance). Les
+     * catégories au tirage validé ne bougent pas : leurs athlètes qui devraient changer
+     * de catégorie sont comptés à part. Renvoie [déplacés, restés dans un tirage validé].
      *
-     * @return array{0: int, 1: bool}
+     * @return array{0: int, 1: int}
      */
     public function reassignAll(DrawService $draws): array
     {
         $moved = 0;
-        $canceled = false;
+        $locked = 0;
         $this->competition->athletes()->with('category')->whereNotNull('poids')->get()
-            ->each(function (CompetitionAthlete $athlete) use ($draws, &$moved, &$canceled) {
+            ->each(function (CompetitionAthlete $athlete) use ($draws, &$moved, &$locked) {
                 $new = $this->categoryFor($athlete);
-                if ($new?->id === $athlete->category_id || $athlete->category?->tirage_valide || $new?->tirage_valide) {
+                if ($new?->id === $athlete->category_id) {
                     return;
                 }
-                $canceled = $draws->beforeChange($athlete->category) || $canceled;
-                $canceled = $draws->beforeChange($new) || $canceled;
+                if ($athlete->category?->tirage_valide || $new?->tirage_valide) {
+                    $locked++;
+
+                    return;
+                }
+                $draws->beforeChange($athlete->category);
+                $draws->beforeChange($new);
                 $athlete->update(['category_id' => $new?->id]);
                 $moved++;
             });
 
-        return [$moved, $canceled];
+        return [$moved, $locked];
     }
 
-    /** Range tous les athlètes pesés et non classés ; renvoie le nombre d'athlètes rangés. */
-    public function assignUnclassified(): int
+    /**
+     * Range tous les athlètes pesés et non classés ; renvoie le nombre d'athlètes rangés.
+     * Avec $draws, le tirage provisoire d'une catégorie qui reçoit un athlète est annulé
+     * (et un tirage validé n'en reçoit pas).
+     */
+    public function assignUnclassified(?DrawService $draws = null): int
     {
         $count = 0;
         $this->competition->athletes()->whereNull('category_id')->whereNotNull('poids')->get()
-            ->each(function (CompetitionAthlete $athlete) use (&$count) {
-                if ($category = $this->categoryFor($athlete)) {
+            ->each(function (CompetitionAthlete $athlete) use (&$count, $draws) {
+                if (($category = $this->categoryFor($athlete)) && !$category->tirage_valide) {
+                    $draws?->beforeChange($category);
                     $athlete->update(['category_id' => $category->id]);
                     $count++;
                 }

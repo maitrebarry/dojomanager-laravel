@@ -13,88 +13,10 @@
     @endif
 </div>
 
-@if($medals)
-    <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-white fw-semibold"><i class="fas fa-medal me-1 text-warning"></i> {{ __('messages.competitions.medals') }}</div>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>{{ __('messages.competitions.club') }}</th>
-                        <th class="text-center">🥇 {{ __('messages.competitions.gold') }}</th>
-                        <th class="text-center">🥈 {{ __('messages.competitions.silver') }}</th>
-                        <th class="text-center">🥉 {{ __('messages.competitions.bronze') }}</th>
-                        <th class="text-center">{{ __('messages.competitions.total') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($medals as $club => $m)
-                        <tr>
-                            <td class="fw-semibold">{{ $club }}</td>
-                            <td class="text-center">{{ $m['gold'] }}</td>
-                            <td class="text-center">{{ $m['silver'] }}</td>
-                            <td class="text-center">{{ $m['bronze'] }}</td>
-                            <td class="text-center fw-bold">{{ $m['gold'] + $m['silver'] + $m['bronze'] }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        <div class="card-footer bg-white small text-muted">{{ __('messages.competitions.medals_help') }}</div>
-    </div>
-@endif
+<div id="medals">@include('admin.competitions.tabs._medals')</div>
 
 @forelse($categories->filter(fn ($c) => $c->athletes_count > 0) as $c)
-    <div class="card border-0 shadow-sm mb-3" id="categorie-{{ $c->id }}">
-        <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
-            <span class="fw-bold me-1">{{ $categoryLabels[$c->id] }}</span>
-            <span class="badge bg-dark">{{ $c->athletes_count }}</span>
-            @include('admin.competitions.tabs._draw_status', ['category' => $c])
-            <div class="ms-auto d-flex flex-wrap gap-1">
-                @if($c->athletes_count >= 2 && !$c->tirage_valide)
-                    <form method="POST" action="{{ route('admin.competitions.draw', [$competition, $c]) }}" @if($c->tirage_at) onsubmit="return dojoConfirmAction(this, @js(__('messages.competitions.redraw_confirm')))" @endif>
-                        @csrf
-                        <button class="btn btn-sm btn-primary"><i class="fas fa-shuffle me-1"></i> {{ $c->tirage_at ? __('messages.competitions.redraw') : __('messages.competitions.draw') }}</button>
-                    </form>
-                @endif
-                @if($c->tirage_at && !$c->tirage_valide)
-                    <form method="POST" action="{{ route('admin.competitions.draw.validate', [$competition, $c]) }}">
-                        @csrf
-                        <button class="btn btn-sm btn-success"><i class="fas fa-lock me-1"></i> {{ __('messages.competitions.draw_validate') }}</button>
-                    </form>
-                    <form method="POST" action="{{ route('admin.competitions.draw.cancel', [$competition, $c]) }}" onsubmit="return dojoConfirmDelete(this)">
-                        @csrf @method('DELETE')
-                        <button class="btn btn-sm btn-outline-danger" title="{{ __('messages.competitions.draw_delete') }}"><i class="fas fa-trash"></i></button>
-                    </form>
-                @endif
-                {{-- Plus de déverrouillage une fois des résultats saisis. --}}
-                @if($c->tirage_valide && !$c->combats->contains(fn ($f) => !$f->exempt && $f->vainqueur_athlete_id))
-                    <form method="POST" action="{{ route('admin.competitions.draw.unlock', [$competition, $c]) }}" onsubmit="return dojoConfirmAction(this, @js(__('messages.competitions.unlock_confirm')))">
-                        @csrf
-                        <button class="btn btn-sm btn-outline-warning"><i class="fas fa-lock-open me-1"></i> {{ __('messages.competitions.draw_unlock') }}</button>
-                    </form>
-                @endif
-                @if($c->tirage_at)
-                    <a class="btn btn-sm btn-outline-dark" target="_blank" href="{{ route('admin.competitions.draw.pdf', [$competition, 'category' => $c->id]) }}"><i class="fas fa-file-pdf"></i> PDF</a>
-                @endif
-            </div>
-        </div>
-        <div class="card-body">
-            @if($c->athletes_count < 2)
-                <div class="text-muted small">{{ __('messages.competitions.single_athlete') }}</div>
-            @elseif($c->combats->isNotEmpty())
-                <div style="overflow-x: auto;">
-                    @include('admin.competitions._bracket', ['category' => $c, 'width' => 260, 'height' => min(170, max(50, $c->combats->where('round', 1)->count() * 2 * 10 + 7))])
-                </div>
-                @if($c->combats->max('round') >= 2)
-                    <div class="small text-muted mt-2">{{ __($competition->bronze === 'match' ? 'messages.competitions.bronze_note_match' : 'messages.competitions.bronze_note') }}</div>
-                @endif
-                @include('admin.competitions.tabs._results', ['category' => $c, 'podium' => $podiums[$c->id]])
-            @else
-                <div class="text-muted small">{{ __('messages.competitions.draw_status_none') }}</div>
-            @endif
-        </div>
-    </div>
+    @include('admin.competitions.tabs._category_card', ['c' => $c, 'podium' => $podiums[$c->id]])
 @empty
     <div class="card border-0 shadow-sm"><div class="card-body text-center text-muted py-5">{{ __('messages.competitions.no_athletes') }}</div></div>
 @endforelse
@@ -125,3 +47,64 @@
         </div>
     </div>
 @endif
+
+<script>
+    // Résultats saisis sans recharger la page : la carte de la catégorie et les médailles
+    // sont remplacées par la version renvoyée par le serveur, puis le curseur va au
+    // combat suivant. Score chiffré + Entrée : le vainqueur est déduit du score.
+    (function () {
+        function toast(type, message) {
+            if (window.dojoToast) { window.dojoToast(type, message); } else { alert(message); }
+        }
+
+        function send(form) {
+            var buttons = form.querySelectorAll('button');
+            buttons.forEach(function (b) { b.disabled = true; });
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: new FormData(form)
+            }).then(function (response) {
+                return response.json().then(function (data) { return { ok: response.ok, data: data }; });
+            }).then(function (result) {
+                var data = result.data;
+                if (!result.ok) {
+                    var errors = data.errors ? [].concat.apply([], Object.values(data.errors)) : [data.message];
+                    toast('error', errors.join(' '));
+                    buttons.forEach(function (b) { b.disabled = false; });
+                    return;
+                }
+                var holder = document.createElement('div');
+                holder.innerHTML = data.card.trim();
+                document.getElementById('categorie-' + data.category).replaceWith(holder.firstElementChild);
+                document.getElementById('medals').innerHTML = data.medals;
+                toast('success', data.message);
+                var next = document.querySelector('#categorie-' + data.category + ' .js-score');
+                if (next) { next.focus(); }
+            }).catch(function () {
+                buttons.forEach(function (b) { b.disabled = false; });
+                toast('error', @js(__('messages.competitions.network_error')));
+            });
+        }
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!form.classList || !form.classList.contains('js-result-form')) { return; }
+            event.preventDefault();
+            if (!form.dataset.confirm) { send(form); return; }
+            if (!window.Swal) { if (confirm(form.dataset.confirm)) { send(form); } return; }
+            Swal.fire({
+                text: form.dataset.confirm, icon: 'question', showCancelButton: true,
+                confirmButtonColor: '#0f5132', cancelButtonColor: '#6c757d',
+                confirmButtonText: @js(__('messages.confirm')), cancelButtonText: @js(__('messages.cancel'))
+            }).then(function (r) { if (r.isConfirmed) { send(form); } });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' || !event.target.classList || !event.target.classList.contains('js-score')) { return; }
+            event.preventDefault();
+            event.target.form.vainqueur.value = '';
+            send(event.target.form);
+        });
+    })();
+</script>
