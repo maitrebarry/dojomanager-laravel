@@ -34,6 +34,19 @@
                 </div>
                 <small class="text-muted">{{ __('messages.competitions.tolerance_help') }}</small>
             </div>
+            @php $chronoDefault = $competition->profile()['chrono']; @endphp
+            <div class="col-md-6">
+                <label class="form-label">{{ __('messages.competitions.durations') }}</label>
+                <div class="input-group">
+                    <span class="input-group-text">{{ __('messages.competitions.round_time') }}</span>
+                    <input type="text" name="manche" class="form-control" inputmode="numeric" value="{{ old('manche', \App\Support\Duration::format($competition->manche_s)) }}" placeholder="{{ \App\Support\Duration::format($chronoDefault['round']) }}">
+                    <span class="input-group-text">{{ __('messages.competitions.rest_time') }}</span>
+                    <input type="text" name="repos" class="form-control" inputmode="numeric" value="{{ old('repos', \App\Support\Duration::format($competition->repos_s)) }}" placeholder="{{ \App\Support\Duration::format($chronoDefault['rest']) }}">
+                    <span class="input-group-text">×</span>
+                    <input type="number" name="manches" class="form-control" min="1" max="10" style="max-width: 80px;" value="{{ old('manches', $competition->manches) }}" placeholder="{{ $chronoDefault['rounds'] }}">
+                </div>
+                <small class="text-muted">{{ __('messages.competitions.durations_help') }}</small>
+            </div>
             <div class="col-md-6">
                 <label class="form-label">{{ __('messages.competitions.type') }}</label>
                 <input type="text" name="type" class="form-control" value="{{ old('type', $competition->type) }}" placeholder="{{ __('messages.competitions.type_placeholder') }}">

@@ -77,6 +77,28 @@
     </div>
 </div>
 
+{{-- Durée des manches par groupe d'âge (ex. cadets 1:00, seniors 1:30) ; vide = durée de la compétition. --}}
+@if($groups)
+    @php $chrono = $competition->chronoSettings(); @endphp
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white fw-semibold"><i class="fas fa-stopwatch me-1"></i> {{ __('messages.competitions.group_durations') }}</div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('admin.competitions.categories.durations', $competition) }}" class="row g-2 align-items-end">
+                @csrf
+                @foreach($groups as $key => $label)
+                    @php $current = $categories->first(fn ($c) => $c->groupKey() === $key)?->manche_s; @endphp
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label small mb-1">{{ $label }}</label>
+                        <input type="text" name="durees[{{ $key }}]" class="form-control form-control-sm" inputmode="numeric" value="{{ \App\Support\Duration::format($current) }}" placeholder="{{ \App\Support\Duration::format($chrono['round']) }}">
+                    </div>
+                @endforeach
+                <div class="col-12 col-md-auto"><button class="btn btn-sm btn-primary"><i class="fas fa-save me-1"></i> {{ __('messages.save') }}</button></div>
+            </form>
+            <small class="text-muted d-block mt-2">{{ __('messages.competitions.group_durations_help', ['round' => \App\Support\Duration::format($chrono['round']), 'rest' => \App\Support\Duration::format($chrono['rest']), 'rounds' => $chrono['rounds']]) }}</small>
+        </div>
+    </div>
+@endif
+
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
@@ -84,6 +106,7 @@
                 <tr>
                     <th>{{ __('messages.competitions.category') }}</th>
                     <th>{{ __('messages.competitions.age') }}</th>
+                    <th class="text-center">{{ __('messages.competitions.round_time') }}</th>
                     <th class="text-center">{{ __('messages.competitions.athletes_count') }}</th>
                     <th>{{ __('messages.competitions.tab_draw') }}</th>
                     <th class="text-end" style="width: 60px;"></th>
@@ -94,6 +117,7 @@
                     <tr>
                         <td class="fw-semibold">{{ $categoryLabels[$c->id] }}</td>
                         <td>{{ $c->ageLabel() ?: '-' }}</td>
+                        <td class="text-center {{ $c->manche_s ? 'fw-semibold' : 'text-muted' }}">{{ \App\Support\Duration::format($c->roundSeconds()) }}</td>
                         <td class="text-center">{{ $c->athletes_count }}</td>
                         <td>@include('admin.competitions.tabs._draw_status', ['category' => $c])</td>
                         <td class="text-end">
@@ -106,7 +130,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center text-muted py-5">{{ __('messages.competitions.no_categories') }}</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-5">{{ __('messages.competitions.no_categories') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

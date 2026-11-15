@@ -7,7 +7,7 @@
         @csrf
         <button class="btn btn-primary" @disabled($categories->isEmpty())><i class="fas fa-shuffle me-1"></i> {{ __('messages.competitions.draw_all') }}</button>
     </form>
-    <a class="btn btn-dark" target="_blank" href="{{ route('admin.competitions.chrono', $competition) }}"><i class="fas fa-stopwatch me-1"></i> {{ __('messages.competitions.chrono') }}</a>
+    <button type="button" class="btn btn-dark js-chrono-open"><i class="fas fa-stopwatch me-1"></i> {{ __('messages.competitions.chrono') }}</button>
     @if($drawn)
         <a class="btn btn-outline-dark" target="_blank" href="{{ route('admin.competitions.draw.pdf', $competition) }}"><i class="fas fa-file-pdf me-1"></i> {{ __('messages.competitions.draw_pdf') }}</a>
         <a class="btn btn-outline-dark" target="_blank" href="{{ route('admin.competitions.fights.pdf', $competition) }}"><i class="fas fa-list-ol me-1"></i> {{ __('messages.competitions.fights_pdf') }}</a>
@@ -112,18 +112,19 @@
             var link = event.target.closest && event.target.closest('a[href]');
             if (!link || link.target === '_blank' || link.getAttribute('href').charAt(0) === '#' || event.ctrlKey || event.metaKey) { return; }
             var pending = Array.prototype.filter.call(document.querySelectorAll('.js-score'), function (i) { return i.value.trim() !== ''; });
-            if (!pending.length || !window.Swal) { return; }
+            var chronoRunning = window.dojoTirageChrono && window.dojoTirageChrono.isRunning();
+            if ((!pending.length && !chronoRunning) || !window.Swal) { return; }
             event.preventDefault();
             Swal.fire({
                 title: @js(__('messages.competitions.leave_title')),
-                text: @js(__('messages.competitions.leave_text')),
+                text: chronoRunning ? @js(__('messages.competitions.chrono_leave_text')) : @js(__('messages.competitions.leave_text')),
                 icon: 'warning', showCancelButton: true, reverseButtons: true,
                 confirmButtonColor: '#6c757d', cancelButtonColor: '#0f5132',
                 confirmButtonText: @js(__('messages.competitions.leave_anyway')),
                 cancelButtonText: @js(__('messages.competitions.leave_stay'))
             }).then(function (r) {
                 if (r.isConfirmed) { window.location.href = link.href; }
-                else { pending[0].scrollIntoView({ block: 'center' }); pending[0].focus(); }
+                else if (pending.length) { pending[0].scrollIntoView({ block: 'center' }); pending[0].focus(); }
             });
         });
 
@@ -246,3 +247,5 @@
         });
     })();
 </script>
+
+@include('admin.competitions.tabs._chrono_panel')

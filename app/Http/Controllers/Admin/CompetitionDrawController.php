@@ -13,6 +13,7 @@ use App\Services\Competition\DailyReport;
 use App\Services\Competition\DrawService;
 use App\Services\Competition\FightOrder;
 use App\Support\Discipline;
+use App\Support\Duration;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -33,8 +34,8 @@ class CompetitionDrawController extends Controller
     {
         $this->middleware('auth');
         $this->middleware('admin');
-        $this->middleware('permission:COMPETITION_MANAGE')->only(['presets', 'storeCategory', 'destroyCategory']);
-        $this->middleware('permission:COMPETITION_MANAGE,COMBAT_MANAGE')->except(['presets', 'storeCategory', 'destroyCategory']);
+        $this->middleware('permission:COMPETITION_MANAGE')->only(['presets', 'storeCategory', 'destroyCategory', 'groupDurations']);
+        $this->middleware('permission:COMPETITION_MANAGE,COMBAT_MANAGE')->except(['presets', 'storeCategory', 'destroyCategory', 'groupDurations']);
     }
 
     /* -------------------- Catégories -------------------- */
@@ -75,6 +76,32 @@ class CompetitionDrawController extends Controller
         $competition->categories()->create($data + ['ordre' => (int) $competition->categories()->max('ordre') + 1]);
 
         return $this->afterCategoriesChange($competition, __('messages.competitions.category_created'));
+    }
+
+    /** Durée des manches par groupe (durees[« Cadets|M »] = « 1:00 ») ; vide = durée de la compétition. */
+    public function groupDurations(Request $request, Competition $competition): RedirectResponse
+    {
+        $this->guardScope($competition);
+        $data = $request->validate(['durees' => ['required', 'array'], 'durees.*' => ['nullable', 'string', 'max:10']]);
+
+        $groups = CompetitionController::groups($competition->load('categories'));
+        foreach ($data['durees'] as $key => $value) {
+            if (!isset($groups[$key])) {
+                continue;
+            }
+            $value = trim((string) $value);
+            $seconds = Duration::parse($value);
+            if ($value !== '' && ($seconds === null || $seconds > 1200)) {
+                throw ValidationException::withMessages(['durees' => __('messages.competitions.duration_invalid') . ' (' . $groups[$key] . ')']);
+            }
+            [$groupe, $sexe] = explode('|', $key);
+            $competition->categories()->where('groupe', $groupe)
+                ->when($sexe === '', fn ($q) => $q->whereNull('sexe'), fn ($q) => $q->where('sexe', $sexe))
+                ->update(['manche_s' => $value === '' ? null : $seconds]);
+        }
+
+        return redirect()->route('admin.competitions.show', [$competition, 'tab' => 'categories'])
+            ->with('success', __('messages.competitions.group_durations_saved'));
     }
 
     public function destroyCategory(Competition $competition, CompetitionCategory $category): RedirectResponse
@@ -274,11 +301,13 @@ class CompetitionDrawController extends Controller
                 'label' => $i['order'] . ' · ' . $labels[$i['category_id']] . ' · ' . $i['stage'],
                 'one' => $i['combat']->athlete1->fullName(),
                 'two' => $i['combat']->athlete2->fullName(),
+                'round' => $competition->categories->firstWhere('id', $i['category_id'])->roundSeconds(),
             ])->values();
 
         return view('admin.competitions.chrono', [
             'competition' => $competition,
             'profile' => $competition->profile(),
+            'chrono' => $competition->chronoSettings(),
             'fights' => $fights,
         ]);
     }

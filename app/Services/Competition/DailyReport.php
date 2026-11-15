@@ -9,7 +9,8 @@ use Illuminate\Support\Carbon;
 /**
  * Rapport d'une journée de compétition : combats disputés ce jour-là, avancement général,
  * catégories terminées et podiums, médailles par club, ce qui reste à jouer et une
- * prévision de durée (rythme réel de la journée, à défaut durées du chrono).
+ * prévision de durée (rythme réel de la journée, à défaut durée réglementaire des
+ * manches de chaque catégorie).
  */
 class DailyReport
 {
@@ -64,10 +65,17 @@ class DailyReport
         if ($pace !== null && $pace < 60) {
             $pace = null;
         }
-        $chrono = $competition->profile()['chrono'];
-        $theoretical = ($chrono['rounds'] * $chrono['round'] + max(0, $chrono['rounds'] - 1) * $chrono['rest'] + self::TRANSITION_SECONDS) / max(1, $aires);
-        $remaining = $fights->count() - $played->count();
-        $secondsLeft = (int) round($remaining * ($pace ?: $theoretical));
+        // Durée réglementaire de chaque combat restant, avec la durée de manche de sa catégorie.
+        // Combat en manches gagnantes (taekwondo : 2 sur 3) : 2,5 manches en moyenne, pas 3.
+        $chrono = $competition->chronoSettings();
+        $toWin = $competition->profile()['rounds_to_win'] ?? null;
+        $rounds = $toWin ? ($toWin + $chrono['rounds']) / 2 : $chrono['rounds'];
+        $remainingFights = $fights->reject(fn ($pair) => $pair[0]->vainqueur_athlete_id);
+        $remaining = $remainingFights->count();
+        $theoreticalTotal = $remainingFights->sum(fn ($pair) => $rounds * $pair[1]->roundSeconds() + max(0, $rounds - 1) * $chrono['rest'] + self::TRANSITION_SECONDS) / max(1, $aires);
+        $theoretical = $remaining ? $theoreticalTotal / $remaining
+            : ($rounds * $chrono['round'] + max(0, $rounds - 1) * $chrono['rest'] + self::TRANSITION_SECONDS) / max(1, $aires);
+        $secondsLeft = (int) round($pace ? $remaining * $pace : $theoreticalTotal);
 
         $readyOrder = FightOrder::for($competition, $aires)->filter(fn ($i) => $i['combat']->isReady())->take(10)->values()
             ->map(fn ($i) => ['order' => $i['order'], 'aire' => $i['aire'], 'category' => $labels[$i['category_id']], 'stage' => $i['stage'], 'one' => $i['combat']->athlete1, 'two' => $i['combat']->athlete2]);

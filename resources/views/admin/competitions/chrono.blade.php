@@ -47,226 +47,56 @@
     <div class="fight">
         <select id="fight">
             <option value="">— Combat en cours (facultatif) —</option>
-            @foreach($fights as $f)<option value="{{ $f['id'] }}" data-one="{{ $f['one'] }}" data-two="{{ $f['two'] }}">{{ $f['label'] }} · {{ $f['one'] }} / {{ $f['two'] }}</option>@endforeach
+            @foreach($fights as $f)<option value="{{ $f['id'] }}" data-one="{{ $f['one'] }}" data-two="{{ $f['two'] }}" data-round="{{ $f['round'] }}">{{ $f['label'] }} · {{ $f['one'] }} / {{ $f['two'] }}</option>@endforeach
         </select>
     </div>
     <div class="names">
-        <div id="nameOne" style="background: {{ $profile['corners'][1]['color'] }};">{{ $profile['corners'][1]['name'] }}</div>
-        <div id="nameTwo" style="background: {{ $profile['corners'][2]['color'] }};">{{ $profile['corners'][2]['name'] }}</div>
+        <div data-c="nameOne" style="background: {{ $profile['corners'][1]['color'] }};">{{ $profile['corners'][1]['name'] }}</div>
+        <div data-c="nameTwo" style="background: {{ $profile['corners'][2]['color'] }};">{{ $profile['corners'][2]['name'] }}</div>
     </div>
 
-    <div class="phase" id="phase">Prêt</div>
-    <div class="time" id="time">0:00</div>
-    <div class="bar" id="bar"><div></div></div>
+    <div class="phase" data-c="phase">Prêt</div>
+    <div class="time" data-c="time">0:00</div>
+    <div class="bar" data-c="bar"><div></div></div>
 
     <div class="controls">
-        <button type="button" class="start" id="start">▶ Démarrer</button>
-        <button type="button" class="next" id="next">⏭ Manche suivante</button>
-        <button type="button" class="reset" id="reset">↺ Remettre à zéro</button>
-        <button type="button" class="stop" id="stop">■ Fin du combat</button>
+        <button type="button" class="start" data-c="start">▶ Démarrer</button>
+        <button type="button" class="next" data-c="next">⏭ Manche suivante</button>
+        <button type="button" class="reset" data-c="reset">↺ Remettre à zéro</button>
+        <button type="button" class="stop" data-c="stop">■ Fin du combat</button>
     </div>
 
     <details>
         <summary>⚙ Réglages du chrono</summary>
         <div class="settings">
-            <label>Durée d'une manche (min:s)<input id="roundTime" inputmode="numeric" placeholder="2:00"></label>
-            <label>Repos entre manches (min:s)<input id="restTime" inputmode="numeric" placeholder="1:00"></label>
-            <label>Nombre de manches<input id="rounds" type="number" min="1" max="10"></label>
-            <label class="check"><input type="checkbox" id="warn"> Bip 10 s avant la fin</label>
-            <label class="check"><input type="checkbox" id="autoRest"> Repos lancé automatiquement</label>
-            <button type="button" id="testBeep" style="background:#334155;color:#fff;border:0;border-radius:8px;padding:8px;">🔊 Tester le son</button>
+            <label>Durée d'une manche (min:s)<input data-c="roundTime" inputmode="numeric" placeholder="2:00"></label>
+            <label>Repos entre manches (min:s)<input data-c="restTime" inputmode="numeric" placeholder="1:00"></label>
+            <label>Nombre de manches<input data-c="rounds" type="number" min="1" max="10"></label>
+            <label class="check"><input type="checkbox" data-c="warn"> Bip 10 s avant la fin</label>
+            <label class="check"><input type="checkbox" data-c="autoRest"> Repos lancé automatiquement</label>
+            <button type="button" data-c="testBeep" style="background:#334155;color:#fff;border:0;border-radius:8px;padding:8px;">🔊 Tester le son</button>
         </div>
     </details>
     <p class="hint">Barre d'espace : démarrer / pause. Le son est autorisé au premier appui sur « Démarrer » (règle des navigateurs) : testez-le avant le premier combat et montez le volume. Gardez cette page au premier plan : l'écran reste allumé pendant le décompte, mais certains téléphones coupent le son d'une page passée en arrière-plan.</p>
 </main>
 
+@include('admin.competitions._chrono_engine')
 <script>
 (function () {
-    // Réglages par défaut de la discipline, puis ceux enregistrés sur cet appareil.
-    var KEY = 'chrono.{{ $profile['key'] }}';
-    var defaults = { round: {{ (int) $profile['chrono']['round'] }}, rest: {{ (int) $profile['chrono']['rest'] }}, rounds: {{ (int) $profile['chrono']['rounds'] }}, warn: true, autoRest: true };
-    var settings = Object.assign({}, defaults);
-    try { Object.assign(settings, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
-
-    var $ = function (id) { return document.getElementById(id); };
-    var fmt = function (s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-    var parse = function (v, fallback) {
-        v = String(v || '').trim();
-        if (/^\d+:\d{1,2}$/.test(v)) { var p = v.split(':'); return +p[0] * 60 + +p[1]; }
-        if (/^\d+$/.test(v)) { return +v * (+v <= 10 ? 60 : 1); } // « 2 » = 2 min, « 90 » = 90 s
-        return fallback;
-    };
-
-    // ---------- Son : bips synthétisés (aucun fichier), programmés sur l'horloge audio ----------
-    var audio = null, scheduled = [];
-    function audioCtx() {
-        if (!audio) { audio = new (window.AudioContext || window.webkitAudioContext)(); }
-        if (audio.state === 'suspended') { audio.resume(); }
-        return audio;
-    }
-    function tone(at, freq, duration) {
-        var ctx = audioCtx(), osc = ctx.createOscillator(), gain = ctx.createGain();
-        osc.type = 'square'; osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.0001, at);
-        gain.gain.exponentialRampToValueAtTime(0.5, at + 0.02);
-        gain.gain.setValueAtTime(0.5, at + duration - 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(at); osc.stop(at + duration + 0.05);
-        scheduled.push(osc);
-    }
-    function cancelSounds() { scheduled.forEach(function (o) { try { o.stop(); } catch (e) {} }); scheduled = []; }
-    var sounds = {
-        endRound: function (at) { tone(at, 880, 1.6); },                                    // long bip : fin de manche
-        endRest: function (at) { tone(at, 1046, 0.35); tone(at + 0.5, 1046, 0.35); },        // double bip : fin du repos
-        warning: function (at) { tone(at, 660, 0.25); }                                      // bip court : 10 s
-    };
-
-    // ---------- Chrono ----------
-    var phase = 'ready', round = 1, running = false, remaining = settings.round, endAt = 0, wakeLock = null;
-
-    function phaseLength() { return phase === 'rest' ? settings.rest : settings.round; }
-
-    function render() {
-        var t = running ? (endAt - performance.now()) / 1000 : remaining;
-        $('time').textContent = fmt(t);
-        $('time').className = 'time' + (phase === 'round' && t <= 10 && t > 0 && running ? ' warning' : '');
-        var label = { ready: 'Prêt — manche ' + round + ' / ' + settings.rounds, round: 'Manche ' + round + ' / ' + settings.rounds, rest: 'Repos', between: 'Manche ' + round + ' / ' + settings.rounds + ' — prêt', done: 'Combat terminé' }[phase];
-        $('phase').textContent = label + (!running && (phase === 'round' || phase === 'rest') ? ' — pause' : '');
-        $('phase').className = 'phase' + (phase === 'rest' ? ' rest' : '') + (phase === 'done' ? ' done' : '');
-        $('bar').className = 'bar' + (phase === 'rest' ? ' rest' : '');
-        var length = phaseLength();
-        $('bar').firstElementChild.style.width = (phase === 'round' || phase === 'rest') && length ? (100 - Math.max(0, t) / length * 100) + '%' : (phase === 'done' ? '100%' : '0');
-        $('start').textContent = running ? '⏸ Pause' : (phase === 'done' ? '▶ Nouveau combat' : '▶ Démarrer');
-        $('start').className = 'start' + (running ? ' pause' : '');
-    }
-
-    function run() {
-        var ctx = audioCtx(), now = ctx.currentTime;
-        endAt = performance.now() + remaining * 1000;
-        running = true;
-        if (phase === 'round') {
-            if (settings.warn && remaining > 10.5) { sounds.warning(now + remaining - 10); }
-            sounds.endRound(now + remaining);
-        } else if (phase === 'rest') {
-            sounds.endRest(now + remaining);
-        }
-        keepAwake(true);
-    }
-
-    function pause() {
-        remaining = Math.max(0, (endAt - performance.now()) / 1000);
-        running = false;
-        cancelSounds();
-        keepAwake(false);
-    }
-
-    function startPause() {
-        audioCtx();
-        if (running) { pause(); }
-        else if (phase === 'done') { reset(); }
-        else {
-            if (phase === 'ready' || phase === 'between') { phase = 'round'; remaining = settings.round; }
-            run(); // reprise d'une manche ou d'un repos en pause
-        }
-        render();
-    }
-
-    // Fin du temps : on enchaîne selon la phase (le son a déjà été joué par l'horloge audio).
-    function phaseEnded() {
-        running = false; cancelSounds(); remaining = 0;
-        if (phase === 'round') {
-            if (round >= settings.rounds) { phase = 'done'; keepAwake(false); }
-            else if (settings.rest > 0) {
-                // Repos : lancé tout de suite, ou en attente de « Démarrer ».
-                phase = 'rest'; remaining = settings.rest;
-                if (settings.autoRest) { run(); } else { keepAwake(false); }
-            } else { round++; phase = 'between'; remaining = settings.round; keepAwake(false); }
-        } else if (phase === 'rest') {
-            // Fin du repos : la manche suivante attend que l'arbitre la relance.
-            round++; phase = 'between'; remaining = settings.round; keepAwake(false);
-        }
-        render();
-    }
-
-    // « Manche suivante » : saute le temps restant (et le repos) jusqu'à la manche suivante.
-    function goNext() {
-        cancelSounds(); running = false; keepAwake(false);
-        if (round >= settings.rounds && phase !== 'ready') { phase = 'done'; remaining = 0; }
-        else { round = Math.min(settings.rounds, round + 1); phase = 'between'; remaining = settings.round; }
-        render();
-    }
-
-    function reset() {
-        cancelSounds(); running = false; keepAwake(false);
-        phase = 'ready'; round = 1; remaining = settings.round;
-        render();
-    }
-
-    function stopFight() {
-        cancelSounds(); running = false; keepAwake(false);
-        phase = 'done'; remaining = 0;
-        render();
-    }
-
-    // Écran allumé pendant le décompte (téléphones).
-    async function keepAwake(on) {
-        try {
-            if (on && 'wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); }
-            if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
-        } catch (e) {}
-    }
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible' && running) { wakeLock = null; keepAwake(true); }
+    var chrono = DojoChrono(document.body, {
+        key: 'chrono.competition.{{ $competition->id }}',
+        defaults: { round: {{ (int) $chrono['round'] }}, rest: {{ (int) $chrono['rest'] }}, rounds: {{ (int) $chrono['rounds'] }} },
+        corners: [@js($profile['corners'][1]['name']), @js($profile['corners'][2]['name'])],
+        spaceKey: true
     });
-
-    function loop() {
-        if (running && endAt - performance.now() <= 0) { phaseEnded(); }
-        render();
-        requestAnimationFrame(loop);
-    }
-    setInterval(function () { if (running && endAt - performance.now() <= 0) { phaseEnded(); } }, 250); // onglet en arrière-plan
-
-    // ---------- Réglages ----------
-    function showSettings() {
-        $('roundTime').value = fmt(settings.round); $('restTime').value = fmt(settings.rest);
-        $('rounds').value = settings.rounds; $('warn').checked = !!settings.warn; $('autoRest').checked = !!settings.autoRest;
-    }
-    function saveSettings() {
-        settings.round = Math.max(5, parse($('roundTime').value, settings.round));
-        settings.rest = Math.max(0, parse($('restTime').value, settings.rest));
-        settings.rounds = Math.min(10, Math.max(1, parseInt($('rounds').value, 10) || settings.rounds));
-        settings.warn = $('warn').checked; settings.autoRest = $('autoRest').checked;
-        try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) {}
-        if (!running && (phase === 'ready' || phase === 'between')) { remaining = settings.round; }
-        render();
-    }
-    ['roundTime', 'restTime', 'rounds'].forEach(function (id) { $(id).addEventListener('change', function () { saveSettings(); showSettings(); }); });
-    ['warn', 'autoRest'].forEach(function (id) { $(id).addEventListener('change', saveSettings); });
-
-    // ---------- Boutons ----------
-    $('start').addEventListener('click', startPause);
-    $('next').addEventListener('click', goNext);
-    $('reset').addEventListener('click', reset);
-    $('stop').addEventListener('click', stopFight);
-    $('testBeep').addEventListener('click', function () { sounds.endRound(audioCtx().currentTime + 0.05); });
-    $('fullscreen').addEventListener('click', function () {
+    document.getElementById('fight').addEventListener('change', function () {
+        var o = this.selectedOptions[0];
+        chrono.loadFight(o.value ? { id: o.value, one: o.dataset.one, two: o.dataset.two, round: o.dataset.round } : null);
+    });
+    document.getElementById('fullscreen').addEventListener('click', function () {
         if (document.fullscreenElement) { document.exitFullscreen(); } else if (document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen(); }
     });
-    document.addEventListener('keydown', function (e) {
-        if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); startPause(); }
-    });
-    $('fight').addEventListener('change', function () {
-        var o = this.selectedOptions[0];
-        $('nameOne').textContent = o.dataset.one || @js($profile['corners'][1]['name']);
-        $('nameTwo').textContent = o.dataset.two || @js($profile['corners'][2]['name']);
-        reset();
-    });
-
-    window.__chrono = { state: function () { return { phase: phase, round: round, running: running, remaining: running ? (endAt - performance.now()) / 1000 : remaining, settings: settings, scheduled: scheduled.length }; } };
-    showSettings();
-    render();
-    requestAnimationFrame(loop);
+    window.__chrono = chrono;
 })();
 </script>
 </body>

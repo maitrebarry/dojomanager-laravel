@@ -25,6 +25,9 @@ class Competition extends Model
         'type',
         'bronze',
         'tolerance_g',
+        'manche_s',
+        'repos_s',
+        'manches',
         'federation_id',
         'ligue_id',
         'created_by_user_id',
@@ -63,6 +66,23 @@ class Competition extends Model
     public function profile(): array
     {
         return \App\Support\Discipline::forCompetition($this);
+    }
+
+    /**
+     * Durées des combats (secondes) : celles de la compétition, à défaut celles de la
+     * discipline. La durée d'une manche peut encore être précisée par catégorie.
+     *
+     * @return array{round: int, rest: int, rounds: int}
+     */
+    public function chronoSettings(): array
+    {
+        $default = $this->profile()['chrono'];
+
+        return [
+            'round' => $this->manche_s ?? $default['round'],
+            'rest' => $this->repos_s ?? $default['rest'],
+            'rounds' => $this->manches ?? $default['rounds'],
+        ];
     }
 
     /** Année de référence pour l'âge sportif (année de la compétition − année de naissance). */

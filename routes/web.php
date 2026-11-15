@@ -159,6 +159,7 @@ Route::middleware('auth')->group(function () {
 
             Route::post('categories/standard', [CompetitionDrawController::class, 'presets'])->name('categories.presets');
             Route::post('categories', [CompetitionDrawController::class, 'storeCategory'])->name('categories.store');
+            Route::post('categories/durees', [CompetitionDrawController::class, 'groupDurations'])->name('categories.durations');
             Route::delete('categories/{category}', [CompetitionDrawController::class, 'destroyCategory'])->name('categories.destroy');
 
             Route::post('tirage', [CompetitionDrawController::class, 'drawAll'])->name('draw.all');

@@ -15,6 +15,7 @@ class CompetitionCategory extends Model
         'age_min',
         'age_max',
         'poids_max',
+        'manche_s',
         'ordre',
         'tirage_at',
         'tirage_valide',
@@ -39,6 +40,12 @@ class CompetitionCategory extends Model
     public function combats(): HasMany
     {
         return $this->hasMany(Combat::class, 'category_id')->orderBy('round')->orderBy('position');
+    }
+
+    /** Durée d'une manche (secondes) : celle de la catégorie, sinon celle de la compétition. */
+    public function roundSeconds(): int
+    {
+        return $this->manche_s ?? $this->competition->chronoSettings()['round'];
     }
 
     /** Clé du groupe (groupe + sexe), utilisée pour ranger un athlète dans « Seniors garçons ». */

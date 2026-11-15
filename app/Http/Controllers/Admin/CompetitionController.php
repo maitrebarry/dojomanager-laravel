@@ -12,6 +12,7 @@ use App\Services\Competition\DrawService;
 use App\Services\Competition\FightOrder;
 use App\Models\Federation;
 use App\Support\Discipline;
+use App\Support\Duration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -50,11 +51,12 @@ class CompetitionController extends Controller
 
     public function create(Request $request): View
     {
-        $profile = Discipline::forFederation(Federation::find($request->user()->scopeContext()['federation_id']));
+        $federationId = $request->user()->scopeContext()['federation_id'];
+        $profile = Discipline::forFederation(Federation::find($federationId));
 
         return view('admin.competitions.create', [
-            // Règle du bronze et tolérance de pesée proposées selon la discipline de la fédération.
-            'competition' => new Competition(['bronze' => $profile['bronze'], 'tolerance_g' => $profile['tolerance_g']]),
+            // Règles proposées selon la discipline de la fédération (bronze, tolérance, durées).
+            'competition' => new Competition(['federation_id' => $federationId, 'bronze' => $profile['bronze'], 'tolerance_g' => $profile['tolerance_g']]),
             'page_title' => __('messages.competitions.add'),
         ]);
     }
@@ -248,13 +250,29 @@ class CompetitionController extends Controller
 
     private function validateData(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'nom' => ['required', 'string', 'max:150'],
             'date_competition' => ['nullable', 'date'],
             'lieu' => ['nullable', 'string', 'max:180'],
             'type' => ['nullable', 'string', 'max:80'],
             'bronze' => ['nullable', Rule::in(['deux', 'match'])],
             'tolerance_g' => ['nullable', 'integer', 'min:0', 'max:5000'],
+            'manche' => ['nullable', 'string', 'max:10'],
+            'repos' => ['nullable', 'string', 'max:10'],
+            'manches' => ['nullable', 'integer', 'min:1', 'max:10'],
         ]);
+
+        // Durées saisies « 1:30 », « 1 » ou « 90 » ; vide = valeur de la discipline.
+        foreach (['manche' => 'manche_s', 'repos' => 'repos_s'] as $field => $column) {
+            $value = trim((string) ($data[$field] ?? ''));
+            $seconds = Duration::parse($value);
+            if ($value !== '' && ($seconds === null || $seconds > 1200)) {
+                throw ValidationException::withMessages([$field => __('messages.competitions.duration_invalid')]);
+            }
+            $data[$column] = $value === '' ? null : $seconds;
+            unset($data[$field]);
+        }
+
+        return $data;
     }
 }

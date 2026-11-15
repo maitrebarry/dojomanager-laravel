@@ -76,6 +76,9 @@
                                 <form method="POST" action="{{ route('admin.competitions.fights.result', [$competition, $f]) }}" class="d-flex gap-1 js-result-form" data-no-spinner="1">
                                     @csrf
                                     <input type="hidden" name="vainqueur">
+                                    {{-- ⏱ : charge ce combat dans le chrono flottant (noms + durée de manche de la catégorie). --}}
+                                    <button type="button" class="btn btn-sm btn-dark js-chrono-load" title="{{ __('messages.competitions.chrono_load') }}"
+                                        data-combat="{{ $f->id }}" data-one="{{ $f->athlete1->fullName() }}" data-two="{{ $f->athlete2->fullName() }}" data-round="{{ $category->roundSeconds() }}">⏱</button>
                                     <input name="score" data-combat="{{ $f->id }}" class="form-control form-control-sm js-score" style="max-width: 90px;" placeholder="{{ $profile['corners'][1]['short'] }}-{{ $profile['corners'][2]['short'] }}" maxlength="40" autocomplete="off">
                                     @foreach([1, 2] as $corner)
                                         <button class="btn btn-sm text-white text-nowrap" style="background: {{ $profile['corners'][$corner]['color'] }};" onclick="this.form.vainqueur.value = '{{ $corner }}'">{{ __('messages.competitions.corner_wins', ['corner' => $profile['corners'][$corner]['short']]) }}</button>
