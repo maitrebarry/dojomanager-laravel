@@ -74,7 +74,7 @@ class CotisationAnnuelleController extends Controller
             403
         );
 
-        $membres = $cotisations_annuelle->membres()->orderBy('nom')->orderBy('prenom')->paginate(25);
+        $membres = $cotisations_annuelle->membres()->orderBy('prenom')->orderBy('nom')->paginate(25);
 
         $totaux = [
             'du' => $cotisations_annuelle->membres()->sum('montant_du'),

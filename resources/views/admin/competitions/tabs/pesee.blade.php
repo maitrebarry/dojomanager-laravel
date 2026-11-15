@@ -18,8 +18,8 @@
             <table class="table table-sm align-middle mb-0" id="weighTable">
                 <thead class="table-light">
                     <tr>
-                        <th>{{ __('messages.competitions.last_name') }}</th>
                         <th>{{ __('messages.competitions.first_name') }}</th>
+                        <th>{{ __('messages.competitions.last_name') }}</th>
                         <th class="text-center">{{ __('messages.competitions.age') }}</th>
                         <th class="text-center">{{ __('messages.competitions.sex') }}</th>
                         <th>{{ __('messages.competitions.club') }}</th>
@@ -30,8 +30,8 @@
                 <tbody>
                     @forelse($competition->athletes as $a)
                         <tr data-missing="{{ $a->poids === null ? 1 : 0 }}" data-search="{{ mb_strtolower($a->nom . ' ' . $a->prenom . ' ' . $a->club) }}">
-                            <td class="fw-semibold">{{ $a->nom }}</td>
                             <td>{{ $a->prenom }}</td>
+                            <td class="fw-semibold">{{ $a->nom }}</td>
                             <td class="text-center">{{ $a->sportAge($year) ?? '-' }}</td>
                             <td class="text-center">{{ $a->sexe ?? '-' }}</td>
                             <td>{{ $a->club ?? '-' }}</td>

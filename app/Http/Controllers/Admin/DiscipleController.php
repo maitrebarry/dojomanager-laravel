@@ -50,8 +50,8 @@ class DiscipleController extends Controller
                         ->orWhere('telephone', 'like', "%{$search}%");
                 });
             })
-            ->orderBy('nom')
             ->orderBy('prenom')
+            ->orderBy('nom')
             ->get();
 
         return view('admin.disciples.index', [

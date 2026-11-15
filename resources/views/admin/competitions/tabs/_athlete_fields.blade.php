@@ -1,11 +1,11 @@
 {{-- Champs d'un athlète (ajout et modification). Obligatoires : nom, prénom, poids. --}}
 <div class="col-6 col-md-2">
-    <label class="form-label small">{{ __('messages.competitions.last_name') }} <span class="text-danger">*</span></label>
-    <input type="text" name="nom" class="form-control form-control-sm" value="{{ old('nom') }}" required maxlength="100">
-</div>
-<div class="col-6 col-md-2">
     <label class="form-label small">{{ __('messages.competitions.first_name') }} <span class="text-danger">*</span></label>
     <input type="text" name="prenom" class="form-control form-control-sm" value="{{ old('prenom') }}" required maxlength="100">
+</div>
+<div class="col-6 col-md-2">
+    <label class="form-label small">{{ __('messages.competitions.last_name') }} <span class="text-danger">*</span></label>
+    <input type="text" name="nom" class="form-control form-control-sm" value="{{ old('nom') }}" required maxlength="100">
 </div>
 <div class="col-4 col-md-1">
     <label class="form-label small">{{ __('messages.competitions.weight') }}</label>

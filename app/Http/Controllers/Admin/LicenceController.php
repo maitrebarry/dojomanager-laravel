@@ -79,7 +79,7 @@ class LicenceController extends Controller
         $cards = $disciples->map(fn (Disciple $d) => $this->buildCard($d, $role, $meta, $issuerSignature))
             ->concat($gestionnaires->map(fn (User $u) => $this->buildCardFromUser($u, $role, $meta, $issuerSignature)))
             ->concat($manuelles->map(fn (CeintureNoireManuelle $m) => $this->buildCardFromManuelle($m, $role, $meta, $issuerSignature)))
-            ->sortBy('nom')
+            ->sortBy([['prenom', 'asc'], ['nom', 'asc']])
             ->values()
             ->all();
 

@@ -91,7 +91,7 @@ class CompetitionController extends Controller
             'categories.combats.athlete2',
             'categories.combats.vainqueurAthlete',
             'categories.athletes',
-            'athletes' => fn ($q) => $q->orderBy('nom')->orderBy('prenom'),
+            'athletes' => fn ($q) => $q->orderBy('prenom')->orderBy('nom'),
         ]);
 
         $draws = app(DrawService::class);

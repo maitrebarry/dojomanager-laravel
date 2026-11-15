@@ -33,8 +33,8 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 40px;">#</th>
-                                <th>{{ __('messages.competitions.last_name') }} <span class="text-danger">*</span></th>
                                 <th>{{ __('messages.competitions.first_name') }} <span class="text-danger">*</span></th>
+                                <th>{{ __('messages.competitions.last_name') }} <span class="text-danger">*</span></th>
                                 <th style="width: 100px;">{{ __('messages.competitions.weight') }}</th>
                                 <th style="width: 80px;">{{ __('messages.competitions.sex') }}</th>
                                 <th style="width: 160px;">{{ __('messages.competitions.birth') }}</th>
@@ -48,8 +48,8 @@
                 <template id="addRowTemplate">
                     <tr>
                         <td class="text-muted small row-number"></td>
-                        <td><input name="rows[__i__][nom]" class="form-control form-control-sm" maxlength="100"></td>
                         <td><input name="rows[__i__][prenom]" class="form-control form-control-sm" maxlength="100"></td>
+                        <td><input name="rows[__i__][nom]" class="form-control form-control-sm" maxlength="100"></td>
                         <td><input name="rows[__i__][poids]" class="form-control form-control-sm" inputmode="decimal" placeholder="kg"></td>
                         <td>
                             <select name="rows[__i__][sexe]" class="form-select form-select-sm">
@@ -144,8 +144,8 @@
             <thead class="table-light">
                 <tr>
                     <th style="width: 32px;"></th>
-                    <th>{{ __('messages.competitions.last_name') }}</th>
                     <th>{{ __('messages.competitions.first_name') }}</th>
+                    <th>{{ __('messages.competitions.last_name') }}</th>
                     <th class="text-center">{{ __('messages.competitions.age') }}</th>
                     <th class="text-center">{{ __('messages.competitions.sex') }}</th>
                     <th>{{ __('messages.competitions.club') }}</th>
@@ -186,8 +186,8 @@
                                     <input type="checkbox" class="form-check-input athlete-check" name="ids[]" value="{{ $a->id }}" form="bulkDeleteForm" data-section="{{ $loop->parent->index }}">
                                 @endunless
                             </td>
-                            <td class="fw-semibold">{{ $a->nom }}</td>
                             <td>{{ $a->prenom }}</td>
+                            <td class="fw-semibold">{{ $a->nom }}</td>
                             <td class="text-center">{{ $a->sportAge($year) ?? '-' }}</td>
                             <td class="text-center">{{ $a->sexe ?? '-' }}</td>
                             <td>{{ $a->club ?? '-' }}</td>

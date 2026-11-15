@@ -42,9 +42,10 @@ class CompetitionAthlete extends Model
         return $this->belongsTo(Disciple::class);
     }
 
+    /** « Prénom NOM », comme partout dans l'application. */
     public function fullName(): string
     {
-        return mb_strtoupper($this->nom) . ' ' . $this->prenom;
+        return $this->prenom . ' ' . mb_strtoupper($this->nom);
     }
 
     /** Âge sportif : année de la compétition − année de naissance (règle du taekwondo), sinon l'âge saisi. */

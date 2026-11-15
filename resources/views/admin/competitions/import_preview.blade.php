@@ -40,8 +40,8 @@
                     <tr>
                         <th class="text-center" style="width: 60px;">{{ __('messages.competitions.import_keep') }}</th>
                         <th style="width: 50px;">{{ __('messages.competitions.import_line') }}</th>
-                        <th>{{ __('messages.competitions.last_name') }} *</th>
                         <th>{{ __('messages.competitions.first_name') }} *</th>
+                        <th>{{ __('messages.competitions.last_name') }} *</th>
                         <th style="width: 90px;">{{ __('messages.competitions.weight') }}</th>
                         <th style="width: 70px;">{{ __('messages.competitions.sex') }}</th>
                         <th style="width: 130px;">{{ __('messages.competitions.birth') }}</th>
@@ -68,8 +68,8 @@
                                 <input type="checkbox" class="form-check-input" name="rows[{{ $i }}][ignore]" value="" @checked(!$duplicate)>
                             </td>
                             <td class="text-muted small">{{ $row['line'] }}</td>
-                            <td><input name="rows[{{ $i }}][nom]" value="{{ $row['nom'] }}" class="form-control form-control-sm {{ $has('nom') ? 'is-invalid' : '' }}"></td>
                             <td><input name="rows[{{ $i }}][prenom]" value="{{ $row['prenom'] }}" class="form-control form-control-sm {{ $has('prénom') ? 'is-invalid' : '' }}"></td>
+                            <td><input name="rows[{{ $i }}][nom]" value="{{ $row['nom'] }}" class="form-control form-control-sm {{ $has('nom') ? 'is-invalid' : '' }}"></td>
                             <td><input name="rows[{{ $i }}][poids]" value="{{ $row['poids'] }}" class="form-control form-control-sm {{ $has('poids') ? 'is-invalid' : '' }}" inputmode="decimal"></td>
                             <td><input name="rows[{{ $i }}][sexe]" value="{{ $row['sexe'] }}" class="form-control form-control-sm {{ $has('sexe') ? 'is-invalid' : '' }}" maxlength="10"></td>
                             <td><input name="rows[{{ $i }}][naissance]" value="{{ $row['naissance'] }}" class="form-control form-control-sm {{ $has('âge') ? 'is-invalid' : '' }}"></td>

@@ -23,8 +23,8 @@
             <thead>
                 <tr>
                     <th style="width: 5%;">N°</th>
-                    <th style="width: 17%;">{{ __('messages.competitions.last_name') }}</th>
                     <th style="width: 17%;">{{ __('messages.competitions.first_name') }}</th>
+                    <th style="width: 17%;">{{ __('messages.competitions.last_name') }}</th>
                     <th style="width: 6%;">{{ __('messages.competitions.age') }}</th>
                     <th style="width: 15%;">{{ __('messages.competitions.club') }}</th>
                     <th style="width: 8%;">{{ __('messages.competitions.weight') }}</th>
@@ -37,8 +37,8 @@
                 @foreach($section['athletes'] as $i => $a)
                     <tr>
                         <td class="center">{{ $loop->iteration }}</td>
-                        <td><strong>{{ $a->nom }}</strong></td>
                         <td>{{ $a->prenom }}</td>
+                        <td><strong>{{ $a->nom }}</strong></td>
                         <td class="center">{{ $a->sportAge($year) }}</td>
                         <td>{{ $a->club }}</td>
                         <td class="center">{{ $a->poids !== null ? \App\Models\CompetitionCategory::formatKg((float) $a->poids) : '' }}</td>

@@ -403,7 +403,7 @@ class CompetitionAthleteController extends Controller
     public function listPdf(Request $request, Competition $competition)
     {
         $this->guardScope($competition);
-        $competition->load(['categories', 'athletes' => fn ($q) => $q->orderBy('nom')->orderBy('prenom')]);
+        $competition->load(['categories', 'athletes' => fn ($q) => $q->orderBy('prenom')->orderBy('nom')]);
 
         $labels = CompetitionController::categoryLabels($competition);
         $byCategory = $competition->athletes->groupBy(fn ($a) => $a->category_id ?? 0);

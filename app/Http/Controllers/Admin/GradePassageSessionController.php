@@ -102,13 +102,13 @@ class GradePassageSessionController extends Controller
         $stats = ['candidatures' => 0, 'validees' => 0, 'evaluees' => 0, 'admis' => 0, 'attendus' => 0, 'paye' => 0, 'reste' => 0];
 
         if ($session) {
-            $candidates = $session->candidats->sortBy([['nom', 'asc'], ['prenom', 'asc']])->values();
+            $candidates = $session->candidats->sortBy([['prenom', 'asc'], ['nom', 'asc']])->values();
 
             $existingIds = $candidates->where('candidate_type', 'DISCIPLE')->pluck('source_id')->filter()->all();
             $eligibles = Disciple::active()->visibleTo($user)
                 ->with(['grade:id,nom_grade,niveau', 'salle:id,nom'])
                 ->whereNotIn('id', $existingIds)
-                ->orderBy('nom')->orderBy('prenom')
+                ->orderBy('prenom')->orderBy('nom')
                 ->get();
 
             $grades = Grade::visibleTo($user)
@@ -186,7 +186,7 @@ class GradePassageSessionController extends Controller
         if ($session) {
             // On note les candidats dont le paiement est complet (fidèle au flux React).
             $candidates = $session->candidats
-                ->sortBy([['salle_nom', 'asc'], ['nom', 'asc'], ['prenom', 'asc']])
+                ->sortBy([['salle_nom', 'asc'], ['prenom', 'asc'], ['nom', 'asc']])
                 ->values();
 
             $total = $candidates->count();
@@ -325,7 +325,7 @@ class GradePassageSessionController extends Controller
             403
         );
 
-        $grade_passage->load(['candidats' => fn ($q) => $q->orderBy('nom')->orderBy('prenom')]);
+        $grade_passage->load(['candidats' => fn ($q) => $q->orderBy('prenom')->orderBy('nom')]);
 
         return view('admin.grade-passages.show', [
             'session' => $grade_passage,

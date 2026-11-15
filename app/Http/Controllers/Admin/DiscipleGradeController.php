@@ -50,7 +50,7 @@ class DiscipleGradeController extends Controller
                 });
             })
             ->when($gradeId !== null && $gradeId !== '', fn ($q) => $q->where('grade_id', $gradeId))
-            ->orderBy('nom')->orderBy('prenom')
+            ->orderBy('prenom')->orderBy('nom')
             ->get();
 
         return view('admin.disciples.grade-updates', [
@@ -220,7 +220,7 @@ class DiscipleGradeController extends Controller
             ->whereIn('id', $validated['disciple_ids'])
             ->whereNotNull('grade_id')
             ->with('salle.maitre', 'salle.maitreUser.grade', 'grade')
-            ->orderBy('nom')->orderBy('prenom')
+            ->orderBy('prenom')->orderBy('nom')
             ->get();
 
         abort_if($disciples->isEmpty(), 404);
@@ -255,7 +255,7 @@ class DiscipleGradeController extends Controller
             ->visibleTo($user)
             ->whereIn('id', $validated['disciple_ids'])
             ->with(['grade', 'salle.ligue.federation'])
-            ->orderBy('nom')->orderBy('prenom')
+            ->orderBy('prenom')->orderBy('nom')
             ->get()
             ->map(fn (Disciple $d) => (object) [
                 'disciple' => $d,

@@ -183,7 +183,7 @@
                                                 <span>{{ mb_strtoupper(mb_substr($c['prenom'], 0, 1) . mb_substr($c['nom'], 0, 1)) }}</span>
                                             @endif
                                         </div>
-                                        <div class="sheet-name">{{ mb_strtoupper($c['nom']) }} {{ $c['prenom'] }}</div>
+                                        <div class="sheet-name">{{ $c['prenom'] }} {{ mb_strtoupper($c['nom']) }}</div>
                                         <div class="sheet-fields">
                                             <div><strong>Nom</strong><span>{{ mb_strtoupper($c['nom']) }}</span></div>
                                             <div><strong>Prénom</strong><span>{{ $c['prenom'] }}</span></div>
