@@ -10,6 +10,8 @@
  *  - bronze      : règle par défaut, modifiable par compétition (deux | match)
  *  - tolerance_g : tolérance de pesée par défaut en grammes, modifiable par compétition :
  *                  un athlète reste dans une catégorie jusqu'à « limite + tolérance »
+ *  - rounds_to_win : combat en manches, nombre de manches à gagner (taekwondo : 2, donc
+ *                  3 manches au plus) ; le score chiffré compte alors les manches gagnées
  *
  * Les limites de poids reprennent les règlements internationaux connus : elles restent
  * modifiables dans chaque compétition et sont à vérifier avec la fédération nationale.
@@ -24,6 +26,7 @@ return [
         'color_grade' => 'Keup',
         'bronze' => 'deux',
         'tolerance_g' => 500, // règle des compétitions de taekwondo : limite + 500 g
+        'rounds_to_win' => 2, // chaque manche a un vainqueur ; le premier à 2 manches gagne
         'score_example' => '2-1',
         'presets' => [
             'Cadets' => [

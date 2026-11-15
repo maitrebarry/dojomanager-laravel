@@ -22,7 +22,11 @@
     <div class="small text-muted mt-3"><i class="fas fa-lock me-1"></i> {{ __('messages.competitions.results_locked_hint') }}</div>
 @else
     <h6 class="mt-4 mb-1 fw-semibold">{{ __('messages.competitions.results') }}</h6>
-    <div class="small text-muted mb-2">{{ __('messages.competitions.results_help', ['order' => $profile['corners'][1]['short'] . '-' . $profile['corners'][2]['short'], 'example' => $profile['score_example']]) }} {{ __('messages.competitions.results_enter_tip') }}</div>
+    <div class="small text-muted mb-2">{{ __('messages.competitions.results_help', ['order' => $profile['corners'][1]['short'] . '-' . $profile['corners'][2]['short'], 'example' => $profile['score_example']]) }} {{ __('messages.competitions.results_enter_tip') }}
+        @if($toWin = $profile['rounds_to_win'] ?? null)
+            <strong>{{ __('messages.competitions.results_rounds_tip', ['rounds' => $toWin, 'examples' => collect(range(0, $toWin - 1))->map(fn ($l) => $toWin . '-' . $l)->implode(', ')]) }}</strong>
+        @endif
+    </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">

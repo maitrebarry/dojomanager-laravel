@@ -1113,6 +1113,8 @@ return [
         'score_placeholder' => 'Bleu-Rouge',
         'score_tie' => 'Score :score à égalité : un combat a toujours un vainqueur. Corrigez le score (ex. 2-1) ou écrivez la décision (ex. « décision arbitrale »).',
         'score_mismatch' => 'Le score :score donne la victoire à :side (le score s\'écrit :order). Corrigez le score ou cliquez sur l\'autre bouton.',
+        'score_rounds' => 'Score :score impossible : le vainqueur doit gagner :rounds manches (scores possibles : :examples). Pour une fin de combat avant terme, écrivez-la en texte (KO, disqualification, abandon…) et cliquez sur le vainqueur.',
+        'results_rounds_tip' => 'Combat en :rounds manches gagnantes : le score compte les manches gagnées (:examples).',
         'corner_wins' => ':corner gagne',
         'waiting' => 'En attente',
         'cancel_result' => 'Annuler le résultat',

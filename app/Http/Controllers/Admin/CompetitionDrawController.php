@@ -222,6 +222,20 @@ class CompetitionDrawController extends Controller
         if ($first === $second) {
             throw ValidationException::withMessages(['score' => __('messages.competitions.score_tie', ['score' => trim($score)])]);
         }
+        // Combat en manches (taekwondo : le premier à 2 manches gagne, 3 manches au plus) :
+        // seuls 2-0, 2-1, 1-2 et 0-2 sont possibles.
+        $toWin = $profile['rounds_to_win'] ?? null;
+        if ($toWin && (max($first, $second) !== $toWin || min($first, $second) >= $toWin)) {
+            throw ValidationException::withMessages(['score' => __('messages.competitions.score_rounds', [
+                'score' => trim($score),
+                'rounds' => $toWin,
+                'examples' => implode(', ', array_merge(
+                    array_map(fn ($l) => $toWin . '-' . $l, range(0, $toWin - 1)),
+                    array_map(fn ($l) => $l . '-' . $toWin, range($toWin - 1, 0))
+                )),
+            ])]);
+        }
+
         $scoreWinner = $first > $second ? 1 : 2;
         if ($scoreWinner !== $winner) {
             throw ValidationException::withMessages(['score' => __('messages.competitions.score_mismatch', [
