@@ -254,6 +254,33 @@ class CompetitionDrawController extends Controller
         return $this->fightResponse($request, $competition, $combat->category, __('messages.competitions.result_cleared', ['numero' => $combat->numero]));
     }
 
+    /**
+     * Chrono d'arbitrage (page plein écran, pensée pour un téléphone) : durées par défaut de
+     * la discipline, et liste des combats prêts pour afficher les noms des combattants.
+     * Tout le décompte et les signaux sonores se font dans le navigateur.
+     */
+    public function chrono(Competition $competition)
+    {
+        $this->guardScope($competition);
+        $competition->load(['categories.combats.athlete1', 'categories.combats.athlete2']);
+        $labels = CompetitionController::categoryLabels($competition);
+
+        $fights = FightOrder::for($competition)
+            ->filter(fn ($i) => $i['combat']->isReady())
+            ->map(fn ($i) => [
+                'id' => $i['combat']->id,
+                'label' => $i['order'] . ' · ' . $labels[$i['category_id']] . ' · ' . $i['stage'],
+                'one' => $i['combat']->athlete1->fullName(),
+                'two' => $i['combat']->athlete2->fullName(),
+            ])->values();
+
+        return view('admin.competitions.chrono', [
+            'competition' => $competition,
+            'profile' => $competition->profile(),
+            'fights' => $fights,
+        ]);
+    }
+
     /** Ordre de passage de tous les combats (une section par aire de combat si ?aires=n). */
     public function orderPdf(Request $request, Competition $competition)
     {

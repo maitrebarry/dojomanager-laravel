@@ -905,6 +905,7 @@ return [
         'legacy_fights' => 'Combats saisis à la main (avant le tirage automatique)',
 
         'tab_summary' => 'Synthèse',
+        'chrono' => 'Chrono',
         'summary_to_weigh' => ':count à peser',
         'summary_all_weighed' => 'Tous pesés',
         'summary_categories' => ':drawn tirée(s), :valid validée(s)',

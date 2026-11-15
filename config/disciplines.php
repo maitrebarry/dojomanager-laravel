@@ -10,6 +10,8 @@
  *  - bronze      : règle par défaut, modifiable par compétition (deux | match)
  *  - tolerance_g : tolérance de pesée par défaut en grammes, modifiable par compétition :
  *                  un athlète reste dans une catégorie jusqu'à « limite + tolérance »
+ *  - chrono      : durées par défaut du chrono d'arbitrage (secondes) : manche, repos, nombre
+ *                  de manches ; modifiables sur la page du chrono
  *  - rounds_to_win : combat en manches, nombre de manches à gagner (taekwondo : 2, donc
  *                  3 manches au plus) ; le score chiffré compte alors les manches gagnées
  *
@@ -28,6 +30,7 @@ return [
         'tolerance_g' => 500, // règle des compétitions de taekwondo : limite + 500 g
         'rounds_to_win' => 2, // chaque manche a un vainqueur ; le premier à 2 manches gagne
         'score_example' => '2-1',
+        'chrono' => ['round' => 120, 'rest' => 60, 'rounds' => 3], // 3 manches de 2 min, 1 min de repos
         'presets' => [
             'Cadets' => [
                 'age_min' => 12, 'age_max' => 14,
@@ -64,6 +67,7 @@ return [
         'bronze' => 'deux',
         'tolerance_g' => 0,
         'score_example' => '5-3',
+        'chrono' => ['round' => 180, 'rest' => 0, 'rounds' => 1],
         'presets' => [
             'Cadets' => [
                 'age_min' => 14, 'age_max' => 15,
@@ -93,6 +97,7 @@ return [
         'bronze' => 'match',
         'tolerance_g' => 0,
         'score_example' => 'Ippon',
+        'chrono' => ['round' => 180, 'rest' => 0, 'rounds' => 1],
         'presets' => [],
     ],
 
@@ -106,6 +111,7 @@ return [
         'bronze' => 'deux',
         'tolerance_g' => 0,
         'score_example' => 'Ippon',
+        'chrono' => ['round' => 240, 'rest' => 0, 'rounds' => 1],
         'presets' => [
             'Cadets' => [
                 'age_min' => 15, 'age_max' => 17,
@@ -130,6 +136,7 @@ return [
         'bronze' => 'deux',
         'tolerance_g' => 0,
         'score_example' => '2-1',
+        'chrono' => ['round' => 120, 'rest' => 60, 'rounds' => 3],
         'presets' => [],
     ],
 ];

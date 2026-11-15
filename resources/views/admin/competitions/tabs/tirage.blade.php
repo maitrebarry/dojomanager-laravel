@@ -7,6 +7,7 @@
         @csrf
         <button class="btn btn-primary" @disabled($categories->isEmpty())><i class="fas fa-shuffle me-1"></i> {{ __('messages.competitions.draw_all') }}</button>
     </form>
+    <a class="btn btn-dark" target="_blank" href="{{ route('admin.competitions.chrono', $competition) }}"><i class="fas fa-stopwatch me-1"></i> {{ __('messages.competitions.chrono') }}</a>
     @if($drawn)
         <a class="btn btn-outline-dark" target="_blank" href="{{ route('admin.competitions.draw.pdf', $competition) }}"><i class="fas fa-file-pdf me-1"></i> {{ __('messages.competitions.draw_pdf') }}</a>
         <a class="btn btn-outline-dark" target="_blank" href="{{ route('admin.competitions.fights.pdf', $competition) }}"><i class="fas fa-list-ol me-1"></i> {{ __('messages.competitions.fights_pdf') }}</a>

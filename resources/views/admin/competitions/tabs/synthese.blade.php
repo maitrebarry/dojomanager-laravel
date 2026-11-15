@@ -132,8 +132,9 @@
                 @for($n = 1; $n <= 6; $n++)<option value="{{ $n }}" @selected($aires === $n)>{{ $n }}</option>@endfor
             </select>
         </form>
+        <a class="btn btn-sm btn-dark ms-auto" target="_blank" href="{{ route('admin.competitions.chrono', $competition) }}"><i class="fas fa-stopwatch me-1"></i> {{ __('messages.competitions.chrono') }}</a>
         @if($fightOrder->isNotEmpty())
-            <a class="btn btn-sm btn-outline-dark ms-auto" target="_blank" href="{{ route('admin.competitions.order.pdf', [$competition, 'aires' => $aires]) }}"><i class="fas fa-file-pdf me-1"></i> {{ __('messages.competitions.order_pdf') }}</a>
+            <a class="btn btn-sm btn-outline-dark" target="_blank" href="{{ route('admin.competitions.order.pdf', [$competition, 'aires' => $aires]) }}"><i class="fas fa-file-pdf me-1"></i> {{ __('messages.competitions.order_pdf') }}</a>
         @endif
     </div>
     <div class="card-body py-2 small text-muted">{{ __('messages.competitions.order_help') }}</div>
