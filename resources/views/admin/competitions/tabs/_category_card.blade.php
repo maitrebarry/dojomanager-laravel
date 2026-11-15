@@ -45,7 +45,7 @@
             @endif
             @include('admin.competitions.tabs._results', ['category' => $c, 'podium' => $podium])
         @else
-            <div class="text-muted small">{{ __('messages.competitions.draw_status_none') }}</div>
+            <div class="text-muted small"><i class="fas fa-shuffle me-1"></i>{{ __('messages.competitions.draw_todo_hint') }}</div>
         @endif
     </div>
 </div>
