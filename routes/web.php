@@ -170,6 +170,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('combats/{combat}/resultat', [CompetitionDrawController::class, 'clearResult'])->name('fights.clear');
             Route::get('tirage.pdf', [CompetitionDrawController::class, 'bracketsPdf'])->name('draw.pdf');
             Route::get('combats.pdf', [CompetitionDrawController::class, 'fightsPdf'])->name('fights.pdf');
+            Route::get('ordre-de-passage.pdf', [CompetitionDrawController::class, 'orderPdf'])->name('order.pdf');
         });
         Route::resource('competitions', CompetitionController::class);
 

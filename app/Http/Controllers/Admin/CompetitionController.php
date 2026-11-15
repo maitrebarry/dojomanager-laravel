@@ -9,6 +9,7 @@ use App\Models\Competition;
 use App\Models\CompetitionCategory;
 use App\Services\Competition\CategoryAssigner;
 use App\Services\Competition\DrawService;
+use App\Services\Competition\FightOrder;
 use App\Models\Federation;
 use App\Support\Discipline;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,7 @@ class CompetitionController extends Controller
 {
     use AuthorizesScope;
 
-    public const TABS = ['athletes', 'pesee', 'categories', 'tirage'];
+    public const TABS = ['synthese', 'athletes', 'pesee', 'categories', 'tirage'];
 
     public function __construct()
     {
@@ -82,7 +83,7 @@ class CompetitionController extends Controller
     {
         $this->guardScope($competition);
 
-        $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'athletes';
+        $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'synthese';
 
         $competition->load([
             'categories' => fn ($q) => $q->withCount('athletes'),
@@ -96,9 +97,13 @@ class CompetitionController extends Controller
         $draws = app(DrawService::class);
         $podiums = $competition->categories->mapWithKeys(fn ($c) => [$c->id => $draws->podium($c)]);
 
+        $aires = min(10, max(1, $request->integer('aires', 1)));
+
         return view('admin.competitions.show', [
             'competition' => $competition,
             'tab' => $tab,
+            'aires' => $aires,
+            'fightOrder' => $tab === 'synthese' ? FightOrder::for($competition, $aires) : collect(),
             'podiums' => $podiums,
             'medals' => self::medals($podiums),
             'categoryLabels' => self::categoryLabels($competition),

@@ -10,6 +10,7 @@ use App\Models\Competition;
 use App\Models\CompetitionCategory;
 use App\Services\Competition\CategoryAssigner;
 use App\Services\Competition\DrawService;
+use App\Services\Competition\FightOrder;
 use App\Support\Discipline;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -237,6 +238,24 @@ class CompetitionDrawController extends Controller
         $this->draws->clearResult($combat);
 
         return $this->fightResponse($request, $competition, $combat->category, __('messages.competitions.result_cleared', ['numero' => $combat->numero]));
+    }
+
+    /** Ordre de passage de tous les combats (une section par aire de combat si ?aires=n). */
+    public function orderPdf(Request $request, Competition $competition)
+    {
+        $this->guardScope($competition);
+        $competition->load(['categories.combats.athlete1', 'categories.combats.athlete2', 'categories.combats.vainqueurAthlete']);
+        $aires = min(10, max(1, $request->integer('aires', 1)));
+        $order = FightOrder::for($competition, $aires);
+        abort_if($order->isEmpty(), 404, __('messages.competitions.no_draw'));
+
+        return Pdf::loadView('admin.competitions.pdf.ordre', [
+            'competition' => $competition,
+            'order' => $order,
+            'aires' => $aires,
+            'labels' => CompetitionController::categoryLabels($competition),
+            'profile' => $competition->profile(),
+        ])->setPaper('a4', 'portrait')->stream('ordre-de-passage-' . $competition->id . '.pdf');
     }
 
     /** Tableaux de tirage en PDF : une catégorie (?category=id) ou toutes celles tirées. */

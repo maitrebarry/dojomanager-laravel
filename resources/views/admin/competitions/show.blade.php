@@ -41,13 +41,16 @@
 </div>
 
 <ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link {{ $tab === 'synthese' ? 'active' : '' }}" href="{{ route('admin.competitions.show', [$competition, 'tab' => 'synthese']) }}"><i class="fas fa-chart-pie me-1"></i> {{ __('messages.competitions.tab_summary') }}</a></li>
     <li class="nav-item"><a class="nav-link {{ $tab === 'athletes' ? 'active' : '' }}" href="{{ route('admin.competitions.show', [$competition, 'tab' => 'athletes']) }}"><i class="fas fa-users me-1"></i> {{ __('messages.competitions.tab_athletes') }}</a></li>
     <li class="nav-item"><a class="nav-link {{ $tab === 'pesee' ? 'active' : '' }}" href="{{ route('admin.competitions.show', [$competition, 'tab' => 'pesee']) }}"><i class="fas fa-scale-unbalanced me-1"></i> {{ __('messages.competitions.tab_weigh') }} @if($toWeigh->isNotEmpty())<span class="badge bg-warning text-dark">{{ $toWeigh->count() }}</span>@endif</a></li>
     <li class="nav-item"><a class="nav-link {{ $tab === 'categories' ? 'active' : '' }}" href="{{ route('admin.competitions.show', [$competition, 'tab' => 'categories']) }}"><i class="fas fa-weight-scale me-1"></i> {{ __('messages.competitions.tab_categories') }}</a></li>
     <li class="nav-item"><a class="nav-link {{ $tab === 'tirage' ? 'active' : '' }}" href="{{ route('admin.competitions.show', [$competition, 'tab' => 'tirage']) }}"><i class="fas fa-sitemap me-1"></i> {{ __('messages.competitions.tab_draw') }}</a></li>
 </ul>
 
-@if($tab === 'athletes')
+@if($tab === 'synthese')
+    @include('admin.competitions.tabs.synthese')
+@elseif($tab === 'athletes')
     @include('admin.competitions.tabs.athletes')
 @elseif($tab === 'pesee')
     @include('admin.competitions.tabs.pesee')
