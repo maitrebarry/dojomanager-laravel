@@ -23,6 +23,14 @@
         .footer table { width: 100%; margin-top: 2mm; }
         .legend span { display: inline-block; width: 3mm; height: 3mm; border-radius: .6mm; vertical-align: middle; margin: 0 1mm 0 3mm; }
         .single { margin-top: 40mm; text-align: center; font-size: 6mm; }
+
+        /* Page de fin : catégories sans tableau (pas de hauteur fixe, elle peut déborder). */
+        .others h2 { font-size: 4.5mm; color: #0f5132; margin: 5mm 0 2mm; }
+        .others p { font-size: 3mm; color: #475569; margin: 0 0 3mm; }
+        .others table { width: 100%; border-collapse: collapse; font-size: 3.2mm; }
+        .others th, .others td { border: .3mm solid #94a3b8; padding: 1.6mm 2mm; text-align: left; }
+        .others th { background: #e8f3ed; color: #0f5132; }
+        .others .medal { color: #92400e; font-weight: bold; }
         .single small { display: block; margin-top: 4mm; font-size: 3.5mm; color: #64748b; }
     </style>
 </head>
@@ -79,5 +87,59 @@
         </div>
     </div>
 @endforeach
+
+@if($singles->isNotEmpty() || $pending->isNotEmpty())
+    <div class="others">
+        <table class="banner">
+            <tr>
+                <td>
+                    <div class="kicker">{{ mb_strtoupper(__('messages.competitions.brackets_title')) }}</div>
+                    <div class="category">{{ __('messages.competitions.pdf_others_title') }}</div>
+                </td>
+                <td class="event">
+                    <strong>{{ $competition->nom }}</strong><br>
+                    {{ optional($competition->date_competition)->format('d/m/Y') }}@if($competition->lieu) — {{ $competition->lieu }}@endif
+                </td>
+            </tr>
+        </table>
+
+        @if($singles->isNotEmpty())
+            <h2>{{ __('messages.competitions.pdf_singles_title', ['count' => $singles->count()]) }}</h2>
+            <p>{{ __('messages.competitions.pdf_singles_help') }}</p>
+            <table>
+                <thead><tr><th style="width: 6%;">N°</th><th style="width: 34%;">{{ __('messages.competitions.category') }}</th><th style="width: 26%;">{{ __('messages.competitions.athletes') }}</th><th style="width: 18%;">{{ __('messages.competitions.club') }}</th><th style="width: 16%;">{{ __('messages.competitions.pdf_result') }}</th></tr></thead>
+                <tbody>
+                    @foreach($singles as $i => $category)
+                        @php $athlete = $category->athletes->first(); @endphp
+                        <tr>
+                            <td>{{ $i + 1 }}</td>
+                            <td>{{ $labels[$category->id] }}</td>
+                            <td><strong>{{ $athlete->fullName() }}</strong></td>
+                            <td>{{ $athlete->club ?: '—' }}</td>
+                            <td class="medal">{{ __('messages.competitions.pdf_walkover') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if($pending->isNotEmpty())
+            <h2>{{ __('messages.competitions.pdf_pending_title', ['count' => $pending->count()]) }}</h2>
+            <p>{{ __('messages.competitions.pdf_pending_help') }}</p>
+            <table>
+                <thead><tr><th style="width: 6%;">N°</th><th style="width: 34%;">{{ __('messages.competitions.category') }}</th><th style="width: 60%;">{{ __('messages.competitions.athletes') }}</th></tr></thead>
+                <tbody>
+                    @foreach($pending as $i => $category)
+                        <tr>
+                            <td>{{ $i + 1 }}</td>
+                            <td>{{ $labels[$category->id] }}</td>
+                            <td>{{ $category->athletes->map->fullName()->implode(', ') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+    </div>
+@endif
 </body>
 </html>

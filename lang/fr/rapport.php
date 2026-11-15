@@ -1,0 +1,74 @@
+<?php
+
+// Rapport journalier d'une compétition (version française). Voir aussi lang/ar/rapport.php.
+return [
+    'title' => 'Rapport journalier des combats',
+    'day' => 'Journée du :date',
+    'print' => 'Imprimer',
+    'close' => 'Fermer',
+    'other_language' => 'نسخة عربية',
+    'generated' => 'Rapport établi le :date à :time',
+
+    'summary' => 'Résumé de la journée',
+    'narrative_today' => 'Au cours de la journée du :date, :count combat(s) ont été disputés.',
+    'narrative_none' => 'Aucun combat n\'a été disputé au cours de la journée du :date.',
+    'narrative_total' => 'Depuis le début de la compétition, :played combat(s) sur :total ont été joués (:percent %).',
+    'narrative_categories' => ':finished catégorie(s) sur :categories sont terminées, dont :today au cours de cette journée.',
+    'narrative_remaining' => 'Il reste :count combat(s) à disputer.',
+    'narrative_pace' => 'Au rythme constaté aujourd\'hui (un combat toutes les :pace environ), il faut compter environ :duration pour les terminer.',
+    'narrative_theory' => 'D\'après la durée réglementaire des combats (environ :per_fight par combat sur :aires aire(s)), il faut compter environ :duration pour les terminer.',
+    'narrative_end' => 'Fin estimée vers :time.',
+    'narrative_done' => 'Tous les combats de la compétition sont terminés.',
+    'narrative_attention' => 'Points à régler avant la suite : :items.',
+
+    'kpi_athletes' => 'Athlètes',
+    'kpi_clubs' => 'Clubs',
+    'kpi_categories' => 'Catégories',
+    'kpi_finished' => 'Catégories terminées',
+    'kpi_today' => 'Combats du jour',
+    'kpi_played' => 'Combats joués',
+    'kpi_remaining' => 'Combats restants',
+
+    'results' => 'Combats disputés dans la journée',
+    'podiums' => 'Catégories terminées dans la journée',
+    'medals' => 'Médailles par club (depuis le début)',
+    'remaining' => 'Reste à disputer par catégorie',
+    'next' => 'Prochains combats à appeler',
+    'attention' => 'Points d\'attention',
+    'observations' => 'Observations',
+    'signatures' => 'Signatures',
+
+    'col_time' => 'Heure',
+    'col_category' => 'Catégorie',
+    'col_round' => 'Tour',
+    'col_winner' => 'Vainqueur',
+    'col_loser' => 'Perdant',
+    'col_score' => 'Score',
+    'col_order' => 'Ordre',
+    'col_area' => 'Aire',
+    'col_fighters' => 'Combattants',
+    'col_left' => 'Restants',
+    'col_club' => 'Club',
+    'col_total' => 'Total',
+    'gold' => 'Or',
+    'silver' => 'Argent',
+    'bronze' => 'Bronze',
+    'none' => 'Aucun.',
+
+    'to_weigh' => ':count athlète(s) à peser',
+    'unclassified' => ':count athlète(s) non classé(s)',
+    'not_drawn' => ':count catégorie(s) sans tirage',
+    'singles' => ':count catégorie(s) avec un seul athlète (vainqueur sans combat)',
+    'nothing' => 'Rien à signaler.',
+
+    'sign_organizer' => 'Le responsable de la compétition',
+    'sign_referee' => 'L\'arbitre en chef',
+    'sign_delegate' => 'Le délégué de la ligue',
+
+    'duration_hm' => ':h h :m min',
+    'duration_m' => ':m min',
+    'duration_s' => ':s s',
+
+    // Mots des catégories et des tours : aucune traduction en français.
+    'words' => [],
+];

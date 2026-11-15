@@ -9,6 +9,7 @@ use App\Models\Combat;
 use App\Models\Competition;
 use App\Models\CompetitionCategory;
 use App\Services\Competition\CategoryAssigner;
+use App\Services\Competition\DailyReport;
 use App\Services\Competition\DrawService;
 use App\Services\Competition\FightOrder;
 use App\Support\Discipline;
@@ -16,6 +17,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -281,6 +283,30 @@ class CompetitionDrawController extends Controller
         ]);
     }
 
+    /**
+     * Rapport journalier imprimable (?date=AAAA-MM-JJ, ?lang=fr|ar, ?aires=n). Page HTML
+     * pensée pour l'impression : le navigateur assemble correctement l'arabe, ce que le
+     * générateur de PDF ne sait pas faire.
+     */
+    public function report(Request $request, Competition $competition)
+    {
+        $this->guardScope($competition);
+        $lang = $request->query('lang') === 'ar' ? 'ar' : 'fr';
+        try {
+            $day = Carbon::parse($request->query('date', now()->toDateString()))->startOfDay();
+        } catch (\Throwable) {
+            $day = now()->startOfDay();
+        }
+        $aires = min(10, max(1, $request->integer('aires', 1)));
+
+        return view('admin.competitions.rapport', [
+            'competition' => $competition,
+            'report' => DailyReport::build($competition, $day, $aires),
+            'lang' => $lang,
+            'profile' => $competition->profile(),
+        ]);
+    }
+
     /** Ordre de passage de tous les combats (une section par aire de combat si ?aires=n). */
     public function orderPdf(Request $request, Competition $competition)
     {
@@ -303,11 +329,21 @@ class CompetitionDrawController extends Controller
     public function bracketsPdf(Request $request, Competition $competition)
     {
         $this->guardScope($competition);
-        $categories = $this->drawnCategories($request, $competition);
+        $categories = $this->drawnCategories($request, $competition, false);
+
+        // En fin de document, les catégories sans tableau, pour montrer qu'elles ne sont pas
+        // oubliées : athlète seul (vainqueur sans combat) ou tirage pas encore fait.
+        $others = $competition->categories
+            ->when($request->filled('category'), fn ($c) => $c->where('id', $request->integer('category')))
+            ->filter(fn ($c) => !$c->tirage_at && $c->athletes->isNotEmpty())
+            ->values();
+        abort_if($categories->isEmpty() && $others->isEmpty(), 404, __('messages.competitions.no_draw'));
 
         return Pdf::loadView('admin.competitions.pdf.tableaux', [
             'competition' => $competition,
             'categories' => $categories,
+            'singles' => $others->filter(fn ($c) => $c->athletes->count() === 1)->values(),
+            'pending' => $others->filter(fn ($c) => $c->athletes->count() >= 2)->values(),
             'labels' => CompetitionController::categoryLabels($competition),
         ])->setPaper('a4', 'landscape')->stream('tirage-' . $competition->id . '.pdf');
     }
@@ -325,7 +361,7 @@ class CompetitionDrawController extends Controller
         ])->setPaper('a4', 'portrait')->stream('combats-' . $competition->id . '.pdf');
     }
 
-    private function drawnCategories(Request $request, Competition $competition)
+    private function drawnCategories(Request $request, Competition $competition, bool $required = true)
     {
         $competition->load(['categories.combats.athlete1', 'categories.combats.athlete2', 'categories.combats.vainqueurAthlete', 'categories.athletes']);
 
@@ -333,7 +369,7 @@ class CompetitionDrawController extends Controller
             ->when($request->filled('category'), fn ($c) => $c->where('id', $request->integer('category')))
             ->filter(fn ($c) => $c->tirage_at && $c->athletes->isNotEmpty())
             ->values();
-        abort_if($categories->isEmpty(), 404, __('messages.competitions.no_draw'));
+        abort_if($required && $categories->isEmpty(), 404, __('messages.competitions.no_draw'));
 
         return $categories;
     }

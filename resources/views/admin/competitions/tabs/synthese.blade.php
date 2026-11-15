@@ -121,6 +121,34 @@
     </div>
 </div>
 
+{{-- Rapport journalier imprimable (français ou arabe) --}}
+@php
+    $reportDays = $fights->filter(fn ($f) => $f->vainqueur_athlete_id)->map(fn ($f) => ($f->joue_at ?? $f->updated_at)?->toDateString())
+        ->push(now()->toDateString())->push($competition->date_competition?->toDateString())
+        ->filter()->unique()->sortDesc()->values();
+@endphp
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body d-flex flex-wrap align-items-center gap-2">
+        <span class="fw-semibold me-2"><i class="fas fa-file-lines me-1"></i> {{ __('messages.competitions.report_title') }}</span>
+        <select id="reportDay" class="form-select form-select-sm w-auto">
+            @foreach($reportDays as $d)
+                <option value="{{ $d }}" @selected($d === now()->toDateString())>{{ \Illuminate\Support\Carbon::parse($d)->locale('fr')->translatedFormat('l j F Y') }}</option>
+            @endforeach
+        </select>
+        <a class="btn btn-sm btn-outline-success js-report" data-lang="fr" target="_blank" href="#"><i class="fas fa-print me-1"></i> {{ __('messages.competitions.report_fr') }}</a>
+        <a class="btn btn-sm btn-outline-success js-report" data-lang="ar" target="_blank" href="#"><i class="fas fa-print me-1"></i> {{ __('messages.competitions.report_ar') }}</a>
+        <small class="text-muted w-100">{{ __('messages.competitions.report_help') }}</small>
+    </div>
+</div>
+<script>
+    document.querySelectorAll('.js-report').forEach(function (link) {
+        link.addEventListener('click', function () {
+            this.href = @js(route('admin.competitions.report', $competition)) + '?lang=' + this.dataset.lang
+                + '&aires=' + @js($aires) + '&date=' + document.getElementById('reportDay').value;
+        });
+    });
+</script>
+
 {{-- Ordre de passage de tous les combats --}}
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">

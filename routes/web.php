@@ -172,6 +172,7 @@ Route::middleware('auth')->group(function () {
             Route::get('combats.pdf', [CompetitionDrawController::class, 'fightsPdf'])->name('fights.pdf');
             Route::get('ordre-de-passage.pdf', [CompetitionDrawController::class, 'orderPdf'])->name('order.pdf');
             Route::get('chrono', [CompetitionDrawController::class, 'chrono'])->name('chrono');
+            Route::get('rapport', [CompetitionDrawController::class, 'report'])->name('report');
         });
         Route::resource('competitions', CompetitionController::class);
 

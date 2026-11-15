@@ -105,10 +105,26 @@
             rememberCategory(input);
         });
 
-        // Avant de quitter la page avec un score tapé mais pas enregistré : le navigateur demande confirmation.
-        window.addEventListener('beforeunload', function (event) {
-            var pending = Array.prototype.some.call(document.querySelectorAll('.js-score'), function (i) { return i.value.trim() !== ''; });
-            if (pending) { event.preventDefault(); event.returnValue = ''; }
+        // Clic sur un lien de l'application avec un score tapé mais pas enregistré : confirmation
+        // SweetAlert. (La fenêtre native du navigateur n'est pas utilisée : on ne peut pas la
+        // personnaliser, et le brouillon est de toute façon gardé et remis au retour.)
+        document.addEventListener('click', function (event) {
+            var link = event.target.closest && event.target.closest('a[href]');
+            if (!link || link.target === '_blank' || link.getAttribute('href').charAt(0) === '#' || event.ctrlKey || event.metaKey) { return; }
+            var pending = Array.prototype.filter.call(document.querySelectorAll('.js-score'), function (i) { return i.value.trim() !== ''; });
+            if (!pending.length || !window.Swal) { return; }
+            event.preventDefault();
+            Swal.fire({
+                title: @js(__('messages.competitions.leave_title')),
+                text: @js(__('messages.competitions.leave_text')),
+                icon: 'warning', showCancelButton: true, reverseButtons: true,
+                confirmButtonColor: '#6c757d', cancelButtonColor: '#0f5132',
+                confirmButtonText: @js(__('messages.competitions.leave_anyway')),
+                cancelButtonText: @js(__('messages.competitions.leave_stay'))
+            }).then(function (r) {
+                if (r.isConfirmed) { window.location.href = link.href; }
+                else { pending[0].scrollIntoView({ block: 'center' }); pending[0].focus(); }
+            });
         });
 
         // ---------- Retour à la catégorie où l'on était ----------

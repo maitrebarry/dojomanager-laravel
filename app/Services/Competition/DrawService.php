@@ -148,7 +148,11 @@ class DrawService
         $side = $combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id';
         $loserId = $winnerId === $combat->athlete1_id ? $combat->athlete2_id : $combat->athlete1_id;
         DB::transaction(function () use ($combat, $winnerId, $score, $next, $third, $side, $loserId) {
-            $combat->update(['vainqueur_athlete_id' => $winnerId, 'score' => $score !== null && trim($score) !== '' ? trim($score) : null]);
+            $combat->update([
+                'vainqueur_athlete_id' => $winnerId,
+                'score' => $score !== null && trim($score) !== '' ? trim($score) : null,
+                'joue_at' => $combat->joue_at ?? now(), // heure du combat, gardée si on corrige le score
+            ]);
             $next?->update([$side => $winnerId]);
             $third?->update([$side => $loserId]); // le perdant d'une demi-finale joue la 3e place
         });
@@ -164,7 +168,7 @@ class DrawService
 
         $side = $combat->position % 2 === 0 ? 'athlete1_id' : 'athlete2_id';
         DB::transaction(function () use ($combat, $next, $third, $side) {
-            $combat->update(['vainqueur_athlete_id' => null, 'score' => null]);
+            $combat->update(['vainqueur_athlete_id' => null, 'score' => null, 'joue_at' => null]);
             $next?->update([$side => null]);
             $third?->update([$side => null]);
         });

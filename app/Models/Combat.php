@@ -26,11 +26,13 @@ class Combat extends Model
         'exempt',
         'troisieme_place',
         'score',
+        'joue_at',
     ];
 
     protected $casts = [
         'exempt' => 'boolean',
         'troisieme_place' => 'boolean',
+        'joue_at' => 'datetime',
         'round' => 'integer',
         'position' => 'integer',
     ];
