@@ -135,18 +135,34 @@
                 <option value="{{ $d }}" @selected($d === now()->toDateString())>{{ \Illuminate\Support\Carbon::parse($d)->locale('fr')->translatedFormat('l j F Y') }}</option>
             @endforeach
         </select>
+        <input type="text" id="reportStart" class="form-control form-control-sm" style="width: 90px;" placeholder="{{ __('rapport.settings_start') }}" title="{{ __('rapport.settings_start') }} (09:00)">
+        <input type="text" id="reportEnd" class="form-control form-control-sm" style="width: 120px;" placeholder="{{ __('rapport.settings_end') }}" title="{{ __('rapport.settings_end') }} (14:00)">
+        <input type="text" id="reportPace" class="form-control form-control-sm" style="width: 130px;" placeholder="{{ __('rapport.settings_pace') }}" title="{{ __('rapport.settings_pace') }} (4)">
         <a class="btn btn-sm btn-outline-success js-report" data-lang="fr" target="_blank" href="#"><i class="fas fa-print me-1"></i> {{ __('messages.competitions.report_fr') }}</a>
         <a class="btn btn-sm btn-outline-success js-report" data-lang="ar" target="_blank" href="#"><i class="fas fa-print me-1"></i> {{ __('messages.competitions.report_ar') }}</a>
         <small class="text-muted w-100">{{ __('messages.competitions.report_help') }}</small>
     </div>
 </div>
 <script>
-    document.querySelectorAll('.js-report').forEach(function (link) {
-        link.addEventListener('click', function () {
-            this.href = @js(route('admin.competitions.report', $competition)) + '?lang=' + this.dataset.lang
-                + '&aires=' + @js($aires) + '&date=' + document.getElementById('reportDay').value;
+    (function () {
+        // Horaires et rythme retenus sur cet appareil pour cette compétition.
+        var KEY = 'report.settings.' + @js($competition->id), fields = { debut: 'reportStart', fin: 'reportEnd', rythme: 'reportPace' };
+        var saved = {};
+        try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+        Object.keys(fields).forEach(function (k) { document.getElementById(fields[k]).value = saved[k] || ''; });
+        document.querySelectorAll('.js-report').forEach(function (link) {
+            link.addEventListener('click', function () {
+                var url = @js(route('admin.competitions.report', $competition)) + '?lang=' + this.dataset.lang
+                    + '&aires=' + @js($aires) + '&date=' + document.getElementById('reportDay').value;
+                Object.keys(fields).forEach(function (k) {
+                    saved[k] = document.getElementById(fields[k]).value.trim();
+                    if (saved[k]) { url += '&' + k + '=' + encodeURIComponent(saved[k]); }
+                });
+                try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+                this.href = url;
+            });
         });
-    });
+    })();
 </script>
 
 {{-- Ordre de passage de tous les combats --}}

@@ -908,7 +908,7 @@ return [
         'report_title' => 'Rapport journalier',
         'report_fr' => 'Rapport (français)',
         'report_ar' => 'التقرير (العربية)',
-        'report_help' => 'Combats du jour, avancement, podiums, médailles, combats restants et prévision de fin, avec un texte explicatif. Page prête à imprimer ou à enregistrer en PDF depuis le navigateur.',
+        'report_help' => 'Combats du jour, avancement, podiums, médailles, combats restants et prévision de fin, avec un texte explicatif. Indiquez le début, la fin de la journée et le temps maximum d'un combat (ex. 4) pour une prévision juste. Page prête à imprimer ou à enregistrer en PDF depuis le navigateur.',
         'chrono' => 'Chrono',
         'chrono_toggle' => 'Agrandir / réduire',
         'chrono_big' => 'Ouvrir le chrono en grand écran (autre onglet)',

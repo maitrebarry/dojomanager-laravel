@@ -35,6 +35,8 @@
         .actions { max-width: 210mm; margin: 12px auto; display: flex; gap: 8px; justify-content: center; }
         .actions a, .actions button { border: 0; border-radius: 6px; padding: 8px 14px; background: #0f5132; color: #fff; font-weight: 700; cursor: pointer; text-decoration: none; font-size: 14px; }
         .actions .light { background: #6b7280; }
+        .actions.settings { flex-wrap: wrap; align-items: center; font-size: 13px; }
+        .actions.settings input { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; font-size: 14px; }
         .page { max-width: 210mm; margin: 0 auto 20px; background: #fff; padding: 12mm; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
         .banner { background: #0f5132; color: #fff; border-radius: 8px; padding: 10px 16px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
         .banner h1 { margin: 0; font-size: 20px; }
@@ -74,6 +76,14 @@
     <a href="{{ $otherLang }}" class="light">{{ $t('other_language') }}</a>
     <button type="button" class="light" onclick="window.close()">✖ {{ $t('close') }}</button>
 </div>
+{{-- Horaires de la journée et rythme annoncé : servent à la prévision (non imprimé). --}}
+<form class="actions settings" method="GET">
+    @foreach(['lang', 'date', 'aires'] as $keep)<input type="hidden" name="{{ $keep }}" value="{{ request($keep) }}">@endforeach
+    <label>{{ $t('settings_start') }} <input name="debut" value="{{ $options['start'] }}" placeholder="09:00" size="5"></label>
+    <label>{{ $t('settings_end') }} <input name="fin" value="{{ $options['end'] }}" placeholder="14:00" size="5"></label>
+    <label>{{ $t('settings_pace') }} <input name="rythme" value="{{ $options['pace'] ? \App\Support\Duration::format($options['pace']) : '' }}" placeholder="4" size="4"></label>
+    <button type="submit">↻ {{ $t('settings_apply') }}</button>
+</form>
 
 <div class="page">
     <div class="banner">
@@ -101,16 +111,20 @@
     <div class="narrative">
         <p>{{ $r['fights_today']->isNotEmpty() ? $t('narrative_today', ['date' => $date($r['day']), 'count' => $r['fights_today']->count()]) : $t('narrative_none', ['date' => $date($r['day'])]) }}
            {{ $t('narrative_total', ['played' => $r['fights_played'], 'total' => $r['fights_total'], 'percent' => $percent]) }}</p>
+        @if($r['day_start'] && $r['day_end'])<p>{{ $t('narrative_day', ['start' => $r['day_start']->format('H:i'), 'end' => $r['day_end']->format('H:i')]) }}</p>@endif
         <p>{{ $t('narrative_categories', ['finished' => $r['categories_finished'], 'categories' => $r['categories'], 'today' => $r['finished_today']->count()]) }}</p>
         @if($r['fights_remaining'])
             <p>
                 {{ $t('narrative_remaining', ['count' => $r['fights_remaining']]) }}
-                @if($r['pace_seconds'])
+                @if($r['pace_source'] === 'set')
+                    {{ $t('narrative_pace_set', ['pace' => $duration($r['pace_per_area']), 'aires' => $r['aires'], 'duration' => $duration($r['seconds_left'])]) }}
+                @elseif($r['pace_seconds'])
                     {{ $t('narrative_pace', ['pace' => $duration($r['pace_seconds']), 'duration' => $duration($r['seconds_left'])]) }}
                 @else
                     {{ $t('narrative_theory', ['per_fight' => $duration($r['theoretical_seconds'] * $r['aires']), 'aires' => $r['aires'], 'duration' => $duration($r['seconds_left'])]) }}
                 @endif
-                @if($r['estimated_end']){{ $t('narrative_end', ['time' => $r['estimated_end']->format('H:i')]) }}@endif
+                @if($r['resume_at'] && $r['estimated_end']){{ $t('narrative_resume', ['start' => $r['resume_at']->format('H:i'), 'time' => $r['estimated_end']->format('H:i')]) }}
+                @elseif($r['estimated_end']){{ $t('narrative_end', ['time' => $r['estimated_end']->format('H:i')]) }}@endif
             </p>
         @elseif($r['fights_total'])
             <p>{{ $t('narrative_done') }}</p>

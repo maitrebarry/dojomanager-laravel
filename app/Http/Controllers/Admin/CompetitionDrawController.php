@@ -327,10 +327,25 @@ class CompetitionDrawController extends Controller
             $day = now()->startOfDay();
         }
         $aires = min(10, max(1, $request->integer('aires', 1)));
+        // Horaires (« 9h », « 14:00 », « 14h30 ») et rythme annoncé (« 4 » = 4 min par combat).
+        $hour = function (?string $value): ?string {
+            if (!preg_match('/^\s*(\d{1,2})\s*(?:[h:.]\s*(\d{2})?)?\s*$/i', (string) $value, $m) || (int) $m[1] > 23) {
+                return null;
+            }
+
+            return sprintf('%02d:%02d', $m[1], min(59, (int) ($m[2] ?? 0)));
+        };
+        $pace = \App\Support\Duration::parse($request->query('rythme'));
+        $options = [
+            'start' => $hour($request->query('debut')),
+            'end' => $hour($request->query('fin')),
+            'pace' => $pace && $pace >= 30 && $pace <= 3600 ? $pace : null,
+        ];
 
         return view('admin.competitions.rapport', [
             'competition' => $competition,
-            'report' => DailyReport::build($competition, $day, $aires),
+            'report' => DailyReport::build($competition, $day, $aires, $options),
+            'options' => $options,
             'lang' => $lang,
             'profile' => $competition->profile(),
         ]);
