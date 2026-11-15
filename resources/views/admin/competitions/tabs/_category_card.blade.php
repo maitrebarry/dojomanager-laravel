@@ -1,5 +1,7 @@
 {{-- Carte d'une catégorie (tirage, tableau, résultats). Rendue aussi seule après la saisie d'un résultat. --}}
-<div class="card border-0 shadow-sm mb-3" id="categorie-{{ $c->id }}">
+{{-- data-search : noms, prénoms et clubs des athlètes, pour le filtre de l'onglet Tirage. --}}
+<div class="card border-0 shadow-sm mb-3 js-category-card" id="categorie-{{ $c->id }}" data-category="{{ $c->id }}"
+     data-search="{{ \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii($categoryLabels[$c->id] . ' ' . $c->athletes->map(fn ($a) => $a->prenom . ' ' . $a->nom . ' ' . $a->club)->implode(' '))) }}">
     <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
         <span class="fw-bold me-1">{{ $categoryLabels[$c->id] }}</span>
         <span class="badge bg-dark">{{ $c->athletes_count }}</span>
@@ -35,7 +37,11 @@
     </div>
     <div class="card-body">
         @if($c->athletes_count < 2)
-            <div class="text-muted small">{{ __('messages.competitions.single_athlete') }}</div>
+            <div class="small">
+                <i class="fas fa-medal text-warning me-1"></i>
+                <strong>{{ $c->athletes->first()?->fullName() }}</strong>@if($c->athletes->first()?->club) <span class="text-muted">· {{ $c->athletes->first()->club }}</span>@endif
+                <span class="text-muted">— {{ __('messages.competitions.single_athlete') }}</span>
+            </div>
         @elseif($c->combats->isNotEmpty())
             <div style="overflow-x: auto;">
                 @include('admin.competitions._bracket', ['category' => $c, 'width' => 260, 'height' => min(170, max(50, $c->combats->where('round', 1)->count() * 2 * 10 + 7))])

@@ -5,7 +5,8 @@
 @elseif($category->tirage_at)
     <span class="badge bg-warning text-dark">{{ __('messages.competitions.draw_status_draft') }}</span>
 @elseif($count === 1)
-    <span class="badge bg-info text-dark" title="{{ __('messages.competitions.single_athlete') }}"><i class="fas fa-user me-1"></i>{{ __('messages.competitions.draw_status_single') }}</span>
+    @php $alone = $category->athletes->first(); @endphp
+    <span class="badge bg-info text-dark" title="{{ __('messages.competitions.single_athlete') }}"><i class="fas fa-user me-1"></i>{{ __('messages.competitions.draw_status_single_name', ['name' => $alone?->fullName()]) }}</span>
 @elseif($count === 0)
     <span class="badge bg-light text-muted border">{{ __('messages.competitions.draw_status_empty') }}</span>
 @else
