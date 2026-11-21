@@ -10,7 +10,8 @@ use Illuminate\Support\Collection;
  * Ordre de passage de tous les combats d'une compétition, tour par tour : d'abord les
  * tours les plus éloignés de la finale dans toutes les catégories, puis les quarts, les
  * demi-finales, les matchs pour la 3e place et enfin toutes les finales. Dans un même
- * tour, on suit l'ordre des catégories (cadets → seniors, du plus léger au plus lourd).
+ * tour, les plus âgés passent d'abord (seniors, puis juniors, cadets…), et dans un même
+ * groupe d'âge on suit l'ordre des catégories (du plus léger au plus lourd).
  * Les athlètes ont ainsi du repos entre deux combats et les finales clôturent la journée.
  *
  * Avec plusieurs aires de combat, les combats sont répartis à tour de rôle (1, 2, 1, 2…).
@@ -25,7 +26,15 @@ class FightOrder
     public static function for(Competition $competition, int $aires = 1): Collection
     {
         $aires = max(1, $aires);
-        $categoryRank = $competition->categories->values()->mapWithKeys(fn ($c, $i) => [$c->id => $i]);
+        // Groupes d'âge du plus âgé au plus jeune (âge minimum décroissant ; sans âge : à la fin),
+        // puis l'ordre des catégories (garçons puis filles, du plus léger au plus lourd).
+        $categoryRank = $competition->categories->values()
+            ->map(fn ($c, $i) => ['id' => $c->id, 'key' => [
+                -($c->age_min ?? $c->age_max ?? -1), $c->groupe, $c->sexe === 'M' ? 0 : ($c->sexe === 'F' ? 1 : 2),
+                $c->poids_max === null ? PHP_FLOAT_MAX : (float) $c->poids_max, $i,
+            ]])
+            ->sortBy('key')->values()
+            ->mapWithKeys(fn ($c, $i) => [$c['id'] => $i]);
 
         $fights = collect();
         foreach ($competition->categories as $category) {

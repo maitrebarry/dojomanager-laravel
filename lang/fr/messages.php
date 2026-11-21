@@ -947,7 +947,7 @@ return [
         'order_areas' => 'Aires de combat :',
         'order_area' => 'Aire',
         'order_pdf' => 'Ordre de passage (PDF)',
-        'order_help' => 'Tour par tour : d\'abord les premiers tours de toutes les catégories, puis les quarts, les demi-finales, les matchs pour la 3e place et toutes les finales à la fin, pour laisser du repos aux athlètes. Avec plusieurs aires, les combats sont répartis à tour de rôle. L\'ordre suit les tirages en cours.',
+        'order_help' => 'Tour par tour : d\'abord les premiers tours de toutes les catégories, puis les quarts, les demi-finales, les matchs pour la 3e place et toutes les finales à la fin, pour laisser du repos aux athlètes. Dans chaque tour, les Seniors passent d\'abord, puis les Juniors, les Cadets… Avec plusieurs aires, les combats sont répartis à tour de rôle. L\'ordre suit les tirages en cours.',
         'order_number' => 'Ordre',
         'order_bracket_no' => 'N° tableau',
         'order_bracket_no_help' => 'Numéro du combat dans le tableau de tirage de sa catégorie',
