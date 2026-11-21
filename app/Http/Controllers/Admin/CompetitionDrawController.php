@@ -34,22 +34,28 @@ class CompetitionDrawController extends Controller
     {
         $this->middleware('auth');
         $this->middleware('admin');
-        $this->middleware('permission:COMPETITION_MANAGE')->only(['presets', 'storeCategory', 'destroyCategory', 'groupDurations']);
-        $this->middleware('permission:COMPETITION_MANAGE,COMBAT_MANAGE')->except(['presets', 'storeCategory', 'destroyCategory', 'groupDurations']);
+        $this->middleware('permission:COMPETITION_MANAGE')->only(['presets', 'storeCategory', 'destroyCategory', 'groupDurations', 'updateGroup']);
+        $this->middleware('permission:COMPETITION_MANAGE,COMBAT_MANAGE')->except(['presets', 'storeCategory', 'destroyCategory', 'groupDurations', 'updateGroup']);
     }
 
     /* -------------------- Catégories -------------------- */
 
-    /** Ajoute les catégories de poids standard des groupes cochés (ex. Seniors garçons). */
+    /**
+     * Groupes standard cochés / décochés (ex. Seniors garçons) : un groupe coché est
+     * ajouté avec ses catégories de poids, un groupe déjà présent et décoché est retiré
+     * (ses athlètes deviennent « non classés ») sauf s'il a un tirage validé.
+     */
     public function presets(Request $request, Competition $competition): RedirectResponse
     {
         $this->guardScope($competition);
-        $data = $request->validate(['groupes' => ['required', 'array', 'min:1'], 'groupes.*' => ['string']]);
+        $data = $request->validate(['groupes' => ['nullable', 'array'], 'groupes.*' => ['string']]);
+        $checked = $data['groupes'] ?? [];
 
+        $profile = $competition->profile();
         $existing = CompetitionController::groups($competition->load('categories'));
         $order = (int) $competition->categories()->max('ordre');
         $created = 0;
-        foreach (Discipline::presetRows($competition->profile(), $data['groupes']) as $row) {
+        foreach (Discipline::presetRows($profile, $checked) as $row) {
             if (isset($existing[CompetitionCategory::makeGroupKey($row['groupe'], $row['sexe'])])) {
                 continue; // groupe déjà présent : on ne le double pas
             }
@@ -57,7 +63,37 @@ class CompetitionDrawController extends Controller
             $created++;
         }
 
-        return $this->afterCategoriesChange($competition, __('messages.competitions.categories_created', ['count' => $created]));
+        // Groupes standard présents mais décochés : retirés.
+        $removed = [];
+        $locked = [];
+        foreach ($profile['presets'] ?? [] as $groupe => $preset) {
+            foreach (['M', 'F'] as $sexe) {
+                $key = CompetitionCategory::makeGroupKey($groupe, $sexe);
+                if (empty($preset[$sexe]) || !isset($existing[$key]) || in_array($key, $checked, true)) {
+                    continue;
+                }
+                $categories = $competition->categories->filter(fn ($c) => $c->groupKey() === $key);
+                if ($categories->contains('tirage_valide', true)) {
+                    $locked[] = $existing[$key];
+                    continue;
+                }
+                $categories->each->delete();
+                $removed[] = $existing[$key];
+                ActivityLog::log(action: 'delete', subject: 'Competition', subjectId: $competition->id,
+                    description: 'Groupe retiré : ' . $existing[$key] . ' — ' . $competition->nom);
+            }
+        }
+
+        $messages = [];
+        if ($created) {
+            $messages[] = __('messages.competitions.categories_created', ['count' => $created]);
+        }
+        if ($removed) {
+            $messages[] = __('messages.competitions.groups_removed', ['groups' => implode(', ', $removed)]);
+        }
+        $response = $this->afterCategoriesChange($competition, $messages ? implode(' ', $messages) : __('messages.competitions.groups_unchanged'));
+
+        return $locked ? $response->with('error', __('messages.competitions.groups_locked', ['groups' => implode(', ', $locked)])) : $response;
     }
 
     /** Catégorie libre (ex. Minimes garçons -30 kg), selon le règlement de la fédération. */
@@ -102,6 +138,116 @@ class CompetitionDrawController extends Controller
 
         return redirect()->route('admin.competitions.show', [$competition, 'tab' => 'categories'])
             ->with('success', __('messages.competitions.group_durations_saved'));
+    }
+
+    /**
+     * Modifie un groupe (ex. Cadets garçons) : nom, âges et limites de poids
+     * (« -33 -37 -41 … +65 »). Les catégories gardées conservent leur tirage s'il
+     * reste juste ; les athlètes du groupe sont reclassés et les tirages provisoires
+     * touchés sont refaits. Refusé si un tirage du groupe est validé.
+     */
+    public function updateGroup(Request $request, Competition $competition): RedirectResponse
+    {
+        $this->guardScope($competition);
+        $data = $request->validate([
+            'key' => ['required', 'string'],
+            'groupe' => ['required', 'string', 'max:80'],
+            'age_min' => ['nullable', 'integer', 'min:3', 'max:99'],
+            'age_max' => ['nullable', 'integer', 'min:3', 'max:99', 'gte:age_min'],
+            'poids' => ['required', 'string', 'max:500'],
+        ]);
+        $categories = $competition->categories()->get()->filter(fn ($c) => $c->groupKey() === $data['key']);
+        abort_if($categories->isEmpty(), 404);
+        if ($categories->contains('tirage_valide', true)) {
+            throw ValidationException::withMessages(['poids' => __('messages.competitions.group_locked')]);
+        }
+        $limits = self::parseWeightLimits($data['poids']);
+        if ($limits === null) {
+            throw ValidationException::withMessages(['poids' => __('messages.competitions.group_weights_invalid')]);
+        }
+        $sexe = $categories->first()->sexe;
+        $data['age_min'] = isset($data['age_min']) ? (int) $data['age_min'] : null;
+        $data['age_max'] = isset($data['age_max']) ? (int) $data['age_max'] : null;
+        $groupe = trim($data['groupe']);
+        $newKey = CompetitionCategory::makeGroupKey($groupe, $sexe);
+        if ($newKey !== $data['key'] && $competition->categories()->get()->contains(fn ($c) => $c->groupKey() === $newKey)) {
+            throw ValidationException::withMessages(['groupe' => __('messages.competitions.group_exists')]);
+        }
+
+        $grams = fn ($kg) => $kg === null ? null : (int) round((float) $kg * 1000);
+        $manche = $categories->first()->manche_s;
+        $order = (int) $competition->categories()->max('ordre');
+        $kept = collect();
+        foreach ($limits as $max) {
+            $category = $categories->first(fn ($c) => $grams($c->poids_max) === $grams($max) && !$kept->contains($c->id));
+            if ($category) {
+                $category->update(['groupe' => $groupe, 'age_min' => $data['age_min'], 'age_max' => $data['age_max']]);
+            } else {
+                $category = $competition->categories()->create(['groupe' => $groupe, 'sexe' => $sexe, 'age_min' => $data['age_min'], 'age_max' => $data['age_max'], 'poids_max' => $max, 'manche_s' => $manche, 'ordre' => ++$order]);
+            }
+            $kept->push($category->id);
+        }
+        $removed = $categories->reject(fn ($c) => $kept->contains($c->id));
+        $removed->each->delete(); // leurs athlètes deviennent « non classés », puis sont reclassés
+
+        // Athlètes du groupe : renommage du groupe gardé à l'import, puis reclassement par poids.
+        $competition->athletes()->where('groupe', $data['key'])->update(['groupe' => $newKey]);
+        $assigner = new CategoryAssigner($competition->fresh());
+        $moved = 0;
+        $competition->athletes()->with('category')->whereIn('category_id', $kept)->whereNotNull('poids')->get()
+            ->each(function ($athlete) use ($assigner, $newKey, &$moved) {
+                $new = $assigner->categoryFor($athlete, $newKey);
+                if ($new?->id !== $athlete->category_id) {
+                    $this->draws->beforeChange($athlete->category);
+                    $this->draws->beforeChange($new);
+                    $athlete->update(['category_id' => $new?->id]);
+                    $moved++;
+                }
+            });
+        $this->log('update', $categories->first(), 'Groupe modifié : ' . $groupe . ' (' . $data['poids'] . ')');
+
+        $message = __('messages.competitions.group_updated', ['group' => $groupe, 'count' => count($limits)]);
+        if ($moved) {
+            $message .= ' ' . __('messages.competitions.group_moved', ['count' => $moved]);
+        }
+
+        return $this->afterCategoriesChange($competition, $message);
+    }
+
+    /**
+     * « -33 -37 -41 +41 », « 33; 37; 41; + » ou « 45 49 53,5 » → [33.0, 37.0, 41.0, null]
+     * (null = catégorie sans limite, « + » ou « +41 »). Null si la liste est invalide.
+     */
+    public static function parseWeightLimits(string $text): ?array
+    {
+        if (!preg_match_all('/(\+)?\s*(\d+(?:[.,]\d+)?)?/', $text, $matches, PREG_SET_ORDER)) {
+            return null;
+        }
+        $limits = [];
+        $open = false;
+        foreach ($matches as $m) {
+            if (($m[1] ?? '') === '+') {
+                $open = true;
+                continue;
+            }
+            if (($m[2] ?? '') !== '') {
+                $kg = (float) str_replace(',', '.', $m[2]);
+                if ($kg < 10 || $kg > 200) {
+                    return null;
+                }
+                $limits[(string) $kg] = $kg;
+            }
+        }
+        if (preg_match('/[^\d\s.,;+\-\/kgKG]/', $text)) {
+            return null;
+        }
+        sort($limits);
+        $limits = array_values($limits);
+        if ($open) {
+            $limits[] = null;
+        }
+
+        return $limits ?: null;
     }
 
     public function destroyCategory(Competition $competition, CompetitionCategory $category): RedirectResponse
