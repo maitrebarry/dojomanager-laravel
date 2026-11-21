@@ -381,13 +381,13 @@ class CompetitionAthleteController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet()->setTitle('Athlètes');
         $sheet->fromArray([
-            ['Nom', 'Prénom', 'Poids (kg)', 'Sexe (M/F)', 'Date de naissance ou âge', 'Club'],
-            ['TRAORE', 'Awa', 52.5, 'F', '12/03/2009', 'Salle Université'],
-            ['DIARRA', 'Moussa', 68, 'M', 17, ''],
+            ['Prénom', 'Nom', 'Poids (kg)', 'Sexe (M/F)', 'Date de naissance ou âge', 'Club'],
+            ['Awa', 'TRAORE', 52.5, 'F', '12/03/2009', 'Salle Université'],
+            ['Moussa', 'DIARRA', 68, 'M', 17, ''],
         ]);
         $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:C1')->getFont()->getColor()->setRGB('B91C1C');
-        $sheet->setCellValue('H1', 'Obligatoire : Nom, Prénom, Poids (en rouge). Le reste est facultatif.');
+        $sheet->getStyle('A1:B1')->getFont()->getColor()->setRGB('B91C1C');
+        $sheet->setCellValue('H1', 'Obligatoire : Prénom, Nom (en rouge). Le poids peut être saisi ici ou à la pesée ; le reste est facultatif.');
         foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
