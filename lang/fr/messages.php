@@ -1015,6 +1015,7 @@ return [
         'col_sexe' => 'Sexe',
         'col_naissance' => 'Âge',
         'col_club' => 'Club',
+        'col_groupe' => 'Groupe',
 
         'import' => 'Importer une liste',
         'import_file' => 'Fichier Excel, CSV ou PDF',

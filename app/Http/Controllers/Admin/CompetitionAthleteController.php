@@ -378,17 +378,32 @@ class CompetitionAthleteController extends Controller
     {
         $this->guardScope($competition);
 
+        // Groupes de la compétition (Cadets, Juniors…) : exemples et liste déroulante de la colonne G.
+        $groupNames = $competition->categories()->pluck('groupe')->unique()->values()->all();
+        $examples = [$groupNames[0] ?? 'Juniors', $groupNames[1] ?? $groupNames[0] ?? 'Seniors'];
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet()->setTitle('Athlètes');
         $sheet->fromArray([
-            ['Prénom', 'Nom', 'Poids (kg)', 'Sexe (M/F)', 'Date de naissance ou âge', 'Club'],
-            ['Awa', 'TRAORE', 52.5, 'F', '12/03/2009', 'Salle Université'],
-            ['Moussa', 'DIARRA', 68, 'M', 17, ''],
+            ['Prénom', 'Nom', 'Poids (kg)', 'Sexe (M/F)', 'Date de naissance ou âge', 'Club', 'Groupe'],
+            ['Awa', 'TRAORE', 52.5, 'F', '12/03/2009', 'Salle Université', $examples[0]],
+            ['Moussa', 'DIARRA', 68, 'M', 17, '', $examples[1]],
         ]);
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:G1')->getFont()->setBold(true);
         $sheet->getStyle('A1:B1')->getFont()->getColor()->setRGB('B91C1C');
-        $sheet->setCellValue('H1', 'Obligatoire : Prénom, Nom (en rouge). Le poids peut être saisi ici ou à la pesée ; le reste est facultatif.');
-        foreach (range('A', 'F') as $column) {
+        $sheet->setCellValue('I1', 'Obligatoire : Prénom, Nom (en rouge). Le poids peut être saisi ici ou à la pesée ; le reste est facultatif.');
+        $sheet->setCellValue('I2', 'Groupe : ' . ($groupNames ? implode(', ', $groupNames) : 'Cadets, Juniors, Seniors…')
+            . '. Vide = déduit de l\'âge et du sexe, ou choisi à l\'import pour toute la liste.');
+        if ($groupNames) {
+            // Liste déroulante sur la colonne Groupe (saisie libre refusée : le nom doit exister).
+            $validation = $sheet->getCell('G2')->getDataValidation();
+            $validation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST)
+                ->setAllowBlank(true)->setShowDropDown(true)->setShowErrorMessage(true)
+                ->setErrorTitle('Groupe inconnu')->setError('Choisissez un groupe de la liste : ' . implode(', ', $groupNames))
+                ->setFormula1('"' . implode(',', $groupNames) . '"');
+            $validation->setSqref('G2:G1000');
+        }
+        foreach (range('A', 'G') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 

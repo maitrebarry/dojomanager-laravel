@@ -24,7 +24,7 @@ class AthleteListParser
 
     /** Ordres de colonnes proposés pour une liste sans ligne de titres. */
     public const ORDERS = [
-        'modele' => ['prenom', 'nom', 'poids', 'sexe', 'naissance', 'club'],
+        'modele' => ['prenom', 'nom', 'poids', 'sexe', 'naissance', 'club', 'groupe'],
         'nom_prenom_age' => ['nom', 'prenom', 'naissance'],
         'nom_prenom_age_poids' => ['nom', 'prenom', 'naissance', 'poids'],
         'nom_prenom_age_club' => ['nom', 'prenom', 'naissance', 'club'],
