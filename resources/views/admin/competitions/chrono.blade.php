@@ -28,6 +28,10 @@
         .controls button { flex: 1 1 140px; border: 0; border-radius: 12px; padding: 16px 10px; font-size: clamp(16px, 2.6vw, 22px); font-weight: 700; color: #fff; cursor: pointer; }
         .start { background: #16a34a; flex-basis: 100% !important; font-size: clamp(22px, 5vw, 36px) !important; }
         .start.pause { background: #d97706; }
+        .silence { background: #dc2626; flex-basis: 100% !important; font-size: clamp(22px, 5vw, 36px) !important; animation: ring 0.6s ease-in-out infinite alternate; }
+        .silence[hidden] { display: none; }
+        @keyframes ring { from { box-shadow: 0 0 0 0 rgba(220,38,38,.8); } to { box-shadow: 0 0 0 14px rgba(220,38,38,0); } }
+        body.chrono-ringing .time { color: #fca5a5; }
         .next { background: #2563eb; } .reset { background: #475569; } .stop { background: #b91c1c; }
         details { width: 100%; max-width: 900px; background: #111a2e; border-radius: 10px; padding: 10px 14px; }
         summary { cursor: pointer; font-weight: 600; }
@@ -60,6 +64,7 @@
     <div class="bar" data-c="bar"><div></div></div>
 
     <div class="controls">
+        <button type="button" class="silence" data-c="silence" hidden>🔕 Arrêter la sonnerie</button>
         <button type="button" class="start" data-c="start">▶ Démarrer</button>
         <button type="button" class="next" data-c="next">⏭ Manche suivante</button>
         <button type="button" class="reset" data-c="reset">↺ Remettre à zéro</button>
@@ -77,7 +82,7 @@
             <button type="button" data-c="testBeep" style="background:#334155;color:#fff;border:0;border-radius:8px;padding:8px;">🔊 Tester le son</button>
         </div>
     </details>
-    <p class="hint">Barre d'espace : démarrer / pause. Le son est autorisé au premier appui sur « Démarrer » (règle des navigateurs) : testez-le avant le premier combat et montez le volume. Gardez cette page au premier plan : l'écran reste allumé pendant le décompte, mais certains téléphones coupent le son d'une page passée en arrière-plan.</p>
+    <p class="hint">Barre d'espace : démarrer / pause, ou arrêter la sonnerie. À la fin d'une manche ou du repos, la sonnerie continue jusqu'à « Arrêter la sonnerie ». Le son est autorisé au premier appui sur « Démarrer » (règle des navigateurs) : testez-le avant le premier combat et montez le volume. Gardez cette page au premier plan : l'écran reste allumé pendant le décompte, mais certains téléphones coupent le son d'une page passée en arrière-plan.</p>
 </main>
 
 @include('admin.competitions._chrono_engine')

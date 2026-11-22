@@ -2,7 +2,7 @@
     Moteur du chrono d'arbitrage, partagé par la page Chrono et le panneau flottant de
     l'onglet Tirage. Il pilote les éléments [data-c="…"] d'un bloc : time, phase, bar,
     start, next, reset, stop, roundTime, restTime, rounds, warn, autoRest, testBeep,
-    nameOne, nameTwo (tous facultatifs sauf time). Bips synthétisés et programmés sur
+    nameOne, nameTwo, silence (tous facultatifs sauf time). Bips synthétisés et programmés sur
     l'horloge audio : ils sonnent à l'heure même si la page est ralentie.
 
     DojoChrono(root, { key, defaults: {round, rest, rounds}, corners: [nom1, nom2], spaceKey, onDone })
@@ -34,28 +34,63 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
     var fight = null; // combat chargé : {id, one, two, round}
 
     // ---------- Son ----------
-    var audio = null, scheduled = [];
+    // Le bip 10 s avant la fin est court. La fin d'une manche ou d'un repos déclenche une
+    // sonnerie qui se répète jusqu'à « Arrêter la sonnerie » (ou au plus ALARM_MAX secondes).
+    // Tout est programmé à l'avance sur l'horloge audio : ça sonne même onglet en arrière-plan.
+    var ALARM_MAX = 180;
+    var audio = null, scheduled = [], alarms = [];
     function audioCtx() {
         if (!audio) { audio = new (window.AudioContext || window.webkitAudioContext)(); }
         if (audio.state === 'suspended') { audio.resume(); }
         return audio;
     }
-    function tone(at, freq, duration) {
+    function tone(at, freq, duration, list, volume) {
         var ctx = audioCtx(), osc = ctx.createOscillator(), gain = ctx.createGain();
+        volume = volume || 0.6;
         osc.type = 'square'; osc.frequency.value = freq;
         gain.gain.setValueAtTime(0.0001, at);
-        gain.gain.exponentialRampToValueAtTime(0.5, at + 0.02);
-        gain.gain.setValueAtTime(0.5, at + duration - 0.05);
+        gain.gain.exponentialRampToValueAtTime(volume, at + 0.02);
+        gain.gain.setValueAtTime(volume, at + duration - 0.04);
         gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
         osc.connect(gain).connect(ctx.destination);
         osc.start(at); osc.stop(at + duration + 0.05);
-        scheduled.push(osc);
+        list.push(osc);
     }
-    function cancelSounds() { scheduled.forEach(function (o) { try { o.stop(); } catch (e) {} }); scheduled = []; }
+    function stopAll(list) { list.forEach(function (o) { try { o.stop(); } catch (e) {} }); }
+    // Sons à venir du décompte (bip des 10 s, sonneries pas encore commencées).
+    function cancelSounds() {
+        stopAll(scheduled); scheduled = [];
+        var now = audio ? audio.currentTime : 0;
+        alarms = alarms.filter(function (a) { if (a.at > now + 0.05) { stopAll(a.oscs); return false; } return true; });
+    }
+    // Sonnerie : deux tons alternés (fin de manche) ou trois bips rapides (fin du repos), en boucle.
+    function alarm(at, kind) {
+        var a = { at: at, end: at + ALARM_MAX, oscs: [] };
+        for (var t = 0; t < ALARM_MAX; t += 1.2) {
+            if (kind === 'rest') {
+                tone(at + t, 1046, 0.18, a.oscs, 0.7); tone(at + t + 0.28, 1046, 0.18, a.oscs, 0.7); tone(at + t + 0.56, 1318, 0.3, a.oscs, 0.7);
+            } else {
+                tone(at + t, 988, 0.45, a.oscs, 0.75); tone(at + t + 0.55, 784, 0.45, a.oscs, 0.75);
+            }
+        }
+        alarms.push(a);
+    }
+    function isRinging() {
+        if (!audio) { return false; }
+        var now = audio.currentTime;
+        return alarms.some(function (a) { return a.at <= now + 0.05 && a.end > now; });
+    }
+    // Arrête la sonnerie en cours (pas celle, programmée, de la fin du repos qui vient de démarrer).
+    function silence() {
+        var now = audio ? audio.currentTime : 0;
+        alarms = alarms.filter(function (a) { if (a.at <= now + 0.05) { stopAll(a.oscs); return false; } return true; });
+        render();
+    }
     var sounds = {
-        endRound: function (at) { tone(at, 880, 1.6); },                              // long bip : fin de manche
-        endRest: function (at) { tone(at, 1046, 0.35); tone(at + 0.5, 1046, 0.35); },  // double bip : fin du repos
-        warning: function (at) { tone(at, 660, 0.25); }                                // bip court : 10 s
+        endRound: function (at) { alarm(at, 'round'); },
+        endRest: function (at) { alarm(at, 'rest'); },
+        warning: function (at) { tone(at, 660, 0.25, scheduled); },
+        test: function (at) { tone(at, 988, 0.45, scheduled, 0.75); tone(at + 0.55, 784, 0.45, scheduled, 0.75); }
     };
 
     // ---------- Décompte ----------
@@ -81,7 +116,10 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
             el('start').textContent = running ? '⏸ Pause' : (phase === 'done' ? '▶ Nouveau combat' : '▶ Démarrer');
             el('start').classList.toggle('pause', running);
         }
+        var ringing = isRinging();
         root.classList.toggle('chrono-running', running);
+        root.classList.toggle('chrono-ringing', ringing);
+        if (el('silence')) { el('silence').hidden = !ringing; }
     }
 
     function run() {
@@ -103,7 +141,7 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
     }
 
     function finish() {
-        cancelSounds(); running = false; keepAwake(false);
+        stopAll(scheduled); scheduled = []; running = false; keepAwake(false); // la sonnerie de fin continue
         phase = 'done'; remaining = 0;
         render();
         if (config.onDone) { config.onDone(fight); }
@@ -111,6 +149,12 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
 
     function startPause() {
         audioCtx();
+        // Sonnerie en cours : ce premier appui l'arrête seulement (sauf entre deux manches,
+        // où il lance aussi la manche suivante).
+        if (isRinging()) {
+            silence();
+            if (running || phase === 'done') { return; }
+        }
         if (running) { pause(); }
         else if (phase === 'done') { reset(); }
         else {
@@ -122,7 +166,7 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
 
     // Fin du temps : on enchaîne selon la phase (le son a déjà été joué par l'horloge audio).
     function phaseEnded() {
-        running = false; cancelSounds(); remaining = 0;
+        running = false; stopAll(scheduled); scheduled = []; remaining = 0; // la sonnerie continue
         if (phase === 'round') {
             if (round >= settings.rounds) { finish(); return; }
             if (settings.rest > 0) {
@@ -137,14 +181,14 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
 
     // « Manche suivante » : saute le temps restant (et le repos) jusqu'à la manche suivante.
     function goNext() {
-        cancelSounds(); running = false; keepAwake(false);
+        silence(); cancelSounds(); running = false; keepAwake(false);
         if (round >= settings.rounds && phase !== 'ready') { finish(); return; }
         round = Math.min(settings.rounds, round + 1); phase = 'between'; remaining = settings.round;
         render();
     }
 
     function reset() {
-        cancelSounds(); running = false; keepAwake(false);
+        silence(); cancelSounds(); running = false; keepAwake(false);
         phase = 'ready'; round = 1; remaining = settings.round;
         render();
     }
@@ -189,11 +233,12 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
     on('start', 'click', startPause);
     on('next', 'click', goNext);
     on('reset', 'click', reset);
-    on('stop', 'click', finish);
-    on('testBeep', 'click', function () { sounds.endRound(audioCtx().currentTime + 0.05); });
+    on('stop', 'click', function () { cancelSounds(); silence(); finish(); });
+    on('silence', 'click', silence);
+    on('testBeep', 'click', function () { sounds.test(audioCtx().currentTime + 0.05); });
     if (config.spaceKey) {
         document.addEventListener('keydown', function (e) {
-            if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); startPause(); }
+            if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); if (isRinging()) { silence(); } else { startPause(); } }
         });
     }
 
@@ -212,7 +257,9 @@ window.DojoChrono = window.DojoChrono || function (root, config) {
         },
         fight: function () { return fight; },
         isRunning: function () { return running; },
-        state: function () { return { phase: phase, round: round, running: running, remaining: running ? (endAt - performance.now()) / 1000 : remaining, settings: settings, scheduled: scheduled.length, fight: fight }; }
+        isRinging: isRinging,
+        silence: silence,
+        state: function () { return { phase: phase, round: round, running: running, remaining: running ? (endAt - performance.now()) / 1000 : remaining, settings: settings, scheduled: scheduled.length, alarms: alarms.length, ringing: isRinging(), fight: fight }; }
     };
 };
 </script>

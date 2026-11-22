@@ -22,6 +22,10 @@
     .chrono-panel .cp-buttons button { border: 0; border-radius: 8px; padding: 8px 4px; font-weight: 700; color: #fff; font-size: 13px; cursor: pointer; }
     .chrono-panel .cp-start { grid-column: 1 / -1; background: #16a34a; font-size: 18px !important; }
     .chrono-panel .cp-start.pause { background: #d97706; }
+    .chrono-panel .cp-silence { grid-column: 1 / -1; background: #dc2626; font-size: 18px !important; animation: cp-ring 0.6s ease-in-out infinite alternate; }
+    .chrono-panel .cp-silence[hidden] { display: none; }
+    .chrono-panel.chrono-ringing { box-shadow: 0 0 0 4px #dc2626, 0 10px 30px rgba(0,0,0,.35); }
+    @keyframes cp-ring { from { box-shadow: 0 0 0 0 rgba(220,38,38,.8); } to { box-shadow: 0 0 0 10px rgba(220,38,38,0); } }
     .chrono-panel .cp-next { background: #2563eb; } .chrono-panel .cp-reset { background: #475569; } .chrono-panel .cp-stop { background: #b91c1c; }
     .chrono-panel details { margin-top: 8px; font-size: 12px; color: #cbd5e1; }
     .chrono-panel details input[type=text], .chrono-panel details input[type=number] { width: 64px; background: #111a2e; color: #fff; border: 1px solid #334155; border-radius: 6px; padding: 2px 4px; }
@@ -50,6 +54,7 @@
     <div class="cp-time" data-c="time">0:00</div>
     <div class="cp-bar" data-c="bar"><div></div></div>
     <div class="cp-buttons">
+        <button type="button" class="cp-silence" data-c="silence" hidden>🔕 Arrêter la sonnerie</button>
         <button type="button" class="cp-start" data-c="start">▶ Démarrer</button>
         <button type="button" class="cp-next" data-c="next" title="Manche suivante">⏭ Manche</button>
         <button type="button" class="cp-reset" data-c="reset" title="Remettre à zéro">↺ Zéro</button>
@@ -101,7 +106,9 @@
 
         panel.querySelector('[data-panel="size"]').addEventListener('click', function () { show(panel.classList.contains('minimized') ? 'open' : 'min'); });
         panel.querySelector('[data-panel="close"]').addEventListener('click', function () {
-            if (window.dojoTirageChrono.isRunning() && !confirm(@js(__('messages.competitions.chrono_close_running')))) { return; }
+            var chrono = window.dojoTirageChrono;
+            if (chrono.isRunning() && !confirm(@js(__('messages.competitions.chrono_close_running')))) { return; }
+            if (chrono.isRunning() || chrono.isRinging()) { chrono.loadFight(chrono.fight()); } // arrête décompte et sonnerie
             show('closed');
         });
         document.querySelectorAll('.js-chrono-open').forEach(function (b) { b.addEventListener('click', function () { show('open'); }); });
