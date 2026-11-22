@@ -497,6 +497,8 @@ return [
         'total' => 'Pratiquants',
         'without_photo' => 'sans photo',
         'salles_with_master' => 'salles avec maître',
+        'salles_with_master_group' => 'Salles avec maître',
+        'salles_without_master_group' => 'Salles sans maître',
         'salles_without_master' => 'Salles sans maître : :count salle(s), :people pratiquant(s)',
         'salles_without_master_help' => 'Créées d\'après le club des combattants : leurs disciples y attendent qu\'un maître soit affecté à la salle.',
         'no_master' => 'sans maître',

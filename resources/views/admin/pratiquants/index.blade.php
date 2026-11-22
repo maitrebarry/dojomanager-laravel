@@ -12,37 +12,14 @@
 {{-- Pratiquants de la circonscription : consultation, export, cartes de licence, photos. --}}
 <p class="text-muted small">{{ __('messages.pratiquants.subtitle') }}</p>
 
-{{-- Totaux par salle : un clic filtre la liste. Salles sans maître (créées d'après le club des
-     combattants) à part : elles attendent qu'un maître y soit affecté. --}}
+{{-- Salles avec maître / sans maître (créées d'après le club des combattants) : choix en haut,
+     et liste déroulante des salles avec leur nombre de pratiquants dans les filtres. --}}
 @php
     $mastered = $salles->where('has_master', true);
     $orphans = $salles->where('has_master', false);
     $sum = fn ($list, $field) => $list->sum(fn ($s) => $perSalle[$s->id]->{$field} ?? 0);
     $mode = request('salles');
 @endphp
-<div class="row g-2 mb-2">
-    <div class="col-6 col-md-3 col-xl-2">
-        <a href="{{ route('admin.pratiquants.index') }}" class="card border-0 shadow-sm text-decoration-none h-100 {{ !request('salle') && !$mode ? 'border-start border-4 border-primary' : '' }}">
-            <div class="card-body py-2">
-                <div class="fs-4 fw-bold text-dark">{{ $sum($mastered, 'total') }}</div>
-                <div class="small text-muted">{{ __('messages.pratiquants.total') }} · {{ __('messages.pratiquants.salles_with_master') }}</div>
-                @if($sum($mastered, 'sans_photo'))<div class="small text-danger">{{ $sum($mastered, 'sans_photo') }} {{ __('messages.pratiquants.without_photo') }}</div>@endif
-            </div>
-        </a>
-    </div>
-    @foreach($mastered as $salle)
-        @php $stat = $perSalle[$salle->id] ?? null; @endphp
-        <div class="col-6 col-md-3 col-xl-2">
-            <a href="{{ route('admin.pratiquants.index', ['salle' => $salle->id]) }}" class="card border-0 shadow-sm text-decoration-none h-100 {{ (int) request('salle') === $salle->id ? 'border-start border-4 border-primary' : '' }}">
-                <div class="card-body py-2">
-                    <div class="fs-4 fw-bold text-dark">{{ $stat->total ?? 0 }}</div>
-                    <div class="small text-muted text-truncate" title="{{ $salle->nom }}">{{ $salle->nom }}</div>
-                    @if($stat && $stat->sans_photo)<div class="small text-danger">{{ $stat->sans_photo }} {{ __('messages.pratiquants.without_photo') }}</div>@endif
-                </div>
-            </a>
-        </div>
-    @endforeach
-</div>
 {{-- Choix toujours visible : salles avec maître (par défaut), sans maître, toutes. --}}
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3 small">
     <div class="btn-group btn-group-sm" role="group">
@@ -51,16 +28,28 @@
         <a href="{{ route('admin.pratiquants.index', ['salles' => 'aucune']) }}" class="btn {{ $mode === 'aucune' ? 'btn-warning' : 'btn-outline-warning text-dark' }}"><i class="fas fa-circle-question me-1"></i> {{ __('messages.pratiquants.filter_no_salle', ['count' => $withoutSalle->count()]) }}</a>
         <a href="{{ route('admin.pratiquants.index', ['salles' => 'toutes']) }}" class="btn {{ $mode === 'toutes' ? 'btn-dark' : 'btn-outline-dark' }}">{{ __('messages.pratiquants.filter_all', ['count' => $sum($salles, 'total') + $withoutSalle->count()]) }}</a>
     </div>
-    @foreach($orphans as $salle)
-        <a href="{{ route('admin.pratiquants.index', ['salle' => $salle->id]) }}" class="badge rounded-pill text-decoration-none {{ (int) request('salle') === $salle->id ? 'text-bg-secondary' : 'text-bg-light border text-dark' }}">{{ $salle->nom }} ({{ $perSalle[$salle->id]->total ?? 0 }})</a>
-    @endforeach
     <span class="text-muted w-100">{{ $orphans->isEmpty() ? __('messages.pratiquants.no_salles_without_master') : __('messages.pratiquants.salles_without_master_help') }}</span>
 </div>
 
 <form method="GET" class="card border-0 shadow-sm mb-3" id="filterForm">
     @if(request('salles'))<input type="hidden" name="salles" value="{{ request('salles') }}">@endif
     <div class="card-body row g-2 align-items-end">
-        <div class="col-md-3"><select name="salle" class="form-select form-select-sm js-auto"><option value="">{{ __('messages.pratiquants.all_salles') }}</option>@foreach($salles as $salle)<option value="{{ $salle->id }}" @selected((int) request('salle') === $salle->id)>{{ $salle->nom }}{{ $salle->has_master ? '' : ' — ' . __('messages.pratiquants.no_master') }}</option>@endforeach</select></div>
+        <div class="col-md-3">
+            {{-- Une salle choisie remplace le choix « avec / sans maître / sans salle ». --}}
+            <select name="salle" class="form-select form-select-sm js-auto" onchange="var h = this.form.querySelector('input[name=salles]'); if (h && this.value) { h.remove(); }">
+                <option value="">{{ __('messages.pratiquants.all_salles') }}</option>
+                @foreach([__('messages.pratiquants.salles_with_master_group') => $mastered, __('messages.pratiquants.salles_without_master_group') => $orphans] as $label => $list)
+                    @if($list->isNotEmpty())
+                        <optgroup label="{{ $label }}">
+                            @foreach($list as $salle)
+                                @php $stat = $perSalle[$salle->id] ?? null; @endphp
+                                <option value="{{ $salle->id }}" @selected((int) request('salle') === $salle->id)>{{ $salle->nom }} ({{ $stat->total ?? 0 }}{{ $stat && $stat->sans_photo ? ' · ' . $stat->sans_photo . ' ' . __('messages.pratiquants.without_photo') : '' }})</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                @endforeach
+            </select>
+        </div>
         <div class="col-md-2"><select name="grade" class="form-select form-select-sm js-auto"><option value="">{{ __('messages.pratiquants.all_grades') }}</option>@foreach($grades as $grade)<option value="{{ $grade->id }}" @selected((int) request('grade') === $grade->id)>{{ $grade->nom_grade }}</option>@endforeach</select></div>
         <div class="col-6 col-md-2"><select name="sexe" class="form-select form-select-sm js-auto"><option value="">{{ __('messages.pratiquants.all_sexes') }}</option><option value="M" @selected(request('sexe') === 'M')>M</option><option value="F" @selected(request('sexe') === 'F')>F</option></select></div>
         <div class="col-3 col-md-1"><input type="number" name="age_min" value="{{ request('age_min') }}" min="3" max="99" class="form-control form-control-sm js-auto" placeholder="{{ __('messages.pratiquants.age_min') }}"></div>
