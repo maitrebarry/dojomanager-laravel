@@ -203,7 +203,13 @@ class PratiquantController extends Controller
 
         return Disciple::visibleTo($request->user())
             ->when($request->query('statut') !== 'archives', fn ($q) => $q->whereNull('archived_at'), fn ($q) => $q->whereNotNull('archived_at'))
-            ->when($request->integer('salle'), fn ($q, $id) => $q->where('salle_id', $id))
+            // Une salle choisie : ses disciples. Sinon, par défaut, seulement les salles qui ont un
+            // maître ; « salles=sans » : celles créées d'après le club des combattants, sans maître.
+            ->when($request->integer('salle'),
+                fn ($q, $id) => $q->where('salle_id', $id),
+                fn ($q) => $q->when($request->query('salles') !== 'toutes', fn ($q) => $request->query('salles') === 'sans'
+                    ? $q->whereHas('salle', fn ($s) => self::withoutMaster($s))
+                    : $q->whereHas('salle', fn ($s) => self::withMaster($s))))
             ->when($request->integer('grade'), fn ($q, $id) => $q->where('grade_id', $id))
             ->when(in_array($request->query('sexe'), ['M', 'F'], true), fn ($q) => $q->where('sexe', $request->query('sexe')))
             ->when($request->filled('age_min'), fn ($q) => $q->whereYear('date_naissance', '<=', $year - $request->integer('age_min')))
@@ -216,8 +222,20 @@ class PratiquantController extends Controller
             });
     }
 
+    /** Salles du périmètre, avec « has_master » (maître rattaché ou compte maître de la salle). */
     private function salles(Request $request)
     {
-        return Salle::visibleTo($request->user())->orderBy('nom')->get(['id', 'nom']);
+        return Salle::visibleTo($request->user())->orderBy('nom')->get(['id', 'nom', 'maitre_id'])
+            ->each(function ($s) { $s->has_master = $s->maitre_id || $s->maitreUser()->exists(); });
+    }
+
+    private static function withMaster($query)
+    {
+        return $query->where(fn ($w) => $w->whereNotNull('maitre_id')->orWhereHas('maitreUser'));
+    }
+
+    private static function withoutMaster($query)
+    {
+        return $query->whereNull('maitre_id')->whereDoesntHave('maitreUser');
     }
 }

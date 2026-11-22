@@ -12,18 +12,25 @@
 {{-- Pratiquants de la circonscription : consultation, export, cartes de licence, photos. --}}
 <p class="text-muted small">{{ __('messages.pratiquants.subtitle') }}</p>
 
-{{-- Totaux par salle : un clic filtre la liste. --}}
-<div class="row g-2 mb-3">
+{{-- Totaux par salle : un clic filtre la liste. Salles sans maître (créées d'après le club des
+     combattants) à part : elles attendent qu'un maître y soit affecté. --}}
+@php
+    $mastered = $salles->where('has_master', true);
+    $orphans = $salles->where('has_master', false);
+    $sum = fn ($list, $field) => $list->sum(fn ($s) => $perSalle[$s->id]->{$field} ?? 0);
+    $mode = request('salles');
+@endphp
+<div class="row g-2 mb-2">
     <div class="col-6 col-md-3 col-xl-2">
-        <a href="{{ route('admin.pratiquants.index') }}" class="card border-0 shadow-sm text-decoration-none h-100 {{ request('salle') ? '' : 'border-start border-4 border-primary' }}">
+        <a href="{{ route('admin.pratiquants.index') }}" class="card border-0 shadow-sm text-decoration-none h-100 {{ !request('salle') && !$mode ? 'border-start border-4 border-primary' : '' }}">
             <div class="card-body py-2">
-                <div class="fs-4 fw-bold text-dark">{{ $perSalle->sum('total') }}</div>
-                <div class="small text-muted">{{ __('messages.pratiquants.total') }} · {{ __('messages.pratiquants.all_salles') }}</div>
-                @if($perSalle->sum('sans_photo'))<div class="small text-danger">{{ $perSalle->sum('sans_photo') }} {{ __('messages.pratiquants.without_photo') }}</div>@endif
+                <div class="fs-4 fw-bold text-dark">{{ $sum($mastered, 'total') }}</div>
+                <div class="small text-muted">{{ __('messages.pratiquants.total') }} · {{ __('messages.pratiquants.salles_with_master') }}</div>
+                @if($sum($mastered, 'sans_photo'))<div class="small text-danger">{{ $sum($mastered, 'sans_photo') }} {{ __('messages.pratiquants.without_photo') }}</div>@endif
             </div>
         </a>
     </div>
-    @foreach($salles as $salle)
+    @foreach($mastered as $salle)
         @php $stat = $perSalle[$salle->id] ?? null; @endphp
         <div class="col-6 col-md-3 col-xl-2">
             <a href="{{ route('admin.pratiquants.index', ['salle' => $salle->id]) }}" class="card border-0 shadow-sm text-decoration-none h-100 {{ (int) request('salle') === $salle->id ? 'border-start border-4 border-primary' : '' }}">
@@ -36,10 +43,22 @@
         </div>
     @endforeach
 </div>
+@if($orphans->isNotEmpty())
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 small">
+        <a href="{{ route('admin.pratiquants.index', ['salles' => 'sans']) }}" class="btn btn-sm {{ $mode === 'sans' ? 'btn-secondary' : 'btn-outline-secondary' }}">
+            <i class="fas fa-user-slash me-1"></i> {{ __('messages.pratiquants.salles_without_master', ['count' => $orphans->count(), 'people' => $sum($orphans, 'total')]) }}
+        </a>
+        @foreach($orphans as $salle)
+            <a href="{{ route('admin.pratiquants.index', ['salle' => $salle->id]) }}" class="badge rounded-pill text-decoration-none {{ (int) request('salle') === $salle->id ? 'text-bg-secondary' : 'text-bg-light border text-dark' }}">{{ $salle->nom }} ({{ $perSalle[$salle->id]->total ?? 0 }})</a>
+        @endforeach
+        <span class="text-muted">{{ __('messages.pratiquants.salles_without_master_help') }}</span>
+    </div>
+@endif
 
 <form method="GET" class="card border-0 shadow-sm mb-3" id="filterForm">
+    @if(request('salles'))<input type="hidden" name="salles" value="{{ request('salles') }}">@endif
     <div class="card-body row g-2 align-items-end">
-        <div class="col-md-3"><select name="salle" class="form-select form-select-sm js-auto"><option value="">{{ __('messages.pratiquants.all_salles') }}</option>@foreach($salles as $salle)<option value="{{ $salle->id }}" @selected((int) request('salle') === $salle->id)>{{ $salle->nom }}</option>@endforeach</select></div>
+        <div class="col-md-3"><select name="salle" class="form-select form-select-sm js-auto"><option value="">{{ __('messages.pratiquants.all_salles') }}</option>@foreach($salles as $salle)<option value="{{ $salle->id }}" @selected((int) request('salle') === $salle->id)>{{ $salle->nom }}{{ $salle->has_master ? '' : ' — ' . __('messages.pratiquants.no_master') }}</option>@endforeach</select></div>
         <div class="col-md-2"><select name="grade" class="form-select form-select-sm js-auto"><option value="">{{ __('messages.pratiquants.all_grades') }}</option>@foreach($grades as $grade)<option value="{{ $grade->id }}" @selected((int) request('grade') === $grade->id)>{{ $grade->nom_grade }}</option>@endforeach</select></div>
         <div class="col-6 col-md-2"><select name="sexe" class="form-select form-select-sm js-auto"><option value="">{{ __('messages.pratiquants.all_sexes') }}</option><option value="M" @selected(request('sexe') === 'M')>M</option><option value="F" @selected(request('sexe') === 'F')>F</option></select></div>
         <div class="col-3 col-md-1"><input type="number" name="age_min" value="{{ request('age_min') }}" min="3" max="99" class="form-control form-control-sm js-auto" placeholder="{{ __('messages.pratiquants.age_min') }}"></div>

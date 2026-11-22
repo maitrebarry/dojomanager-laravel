@@ -159,7 +159,7 @@ class CotisationAnnuelleController extends Controller
     }
 
     /**
-     * Forfait annuel des salles : une ligne par salle active de la ligue (déjà présentes
+     * Forfait annuel des salles : une ligne par salle active de la ligue ayant un maître (déjà présentes
      * ignorées). Renvoie le nombre de salles ajoutées.
      */
     private function snapshotSalles(CotisationAnnuelle $cotisation): int
@@ -167,7 +167,9 @@ class CotisationAnnuelleController extends Controller
         $montant = (float) $cotisation->montant;
         $present = $cotisation->membres()->pluck('salle_id')->flip();
         $added = 0;
+        // Salles affiliées, avec un maître (celles créées d'après le club des combattants attendent le leur).
         \App\Models\Salle::where('ligue_id', $cotisation->ligue_id)->where('active', true)
+            ->where(fn ($w) => $w->whereNotNull('maitre_id')->orWhereHas('maitreUser'))
             ->with('ligue.federation')->get()
             ->reject(fn ($salle) => isset($present[$salle->id]))
             ->each(function ($salle) use ($cotisation, $montant, &$added) {
