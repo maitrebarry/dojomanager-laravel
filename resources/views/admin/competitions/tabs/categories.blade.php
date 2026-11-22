@@ -128,7 +128,7 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse($categories->sortBy(fn ($c) => [$c->groupe, $c->sexe, $c->poids_max === null ? 999 : (float) $c->poids_max]) as $c)
+                @forelse($categories as $c)
                     <tr>
                         <td class="fw-semibold">{{ $categoryLabels[$c->id] }}</td>
                         <td>{{ $c->ageLabel() ?: '-' }}</td>

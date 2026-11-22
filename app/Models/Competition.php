@@ -44,7 +44,15 @@ class Competition extends Model
 
     public function categories(): HasMany
     {
-        return $this->hasMany(CompetitionCategory::class)->orderBy('ordre')->orderBy('id');
+        // Partout le même ordre : Seniors, Juniors, Cadets… (âge minimum décroissant, sans âge
+        // à la fin), garçons puis filles, du plus léger au plus lourd (« + » en dernier).
+        return $this->hasMany(CompetitionCategory::class)
+            ->orderByRaw('COALESCE(age_min, age_max, -1) DESC')
+            ->orderBy('groupe')
+            ->orderByRaw("CASE sexe WHEN 'M' THEN 0 WHEN 'F' THEN 1 ELSE 2 END")
+            ->orderByRaw('poids_max IS NULL')
+            ->orderBy('poids_max')
+            ->orderBy('id');
     }
 
     public function athletes(): HasMany
