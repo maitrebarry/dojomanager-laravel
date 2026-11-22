@@ -84,6 +84,13 @@ Route::middleware('auth')->group(function () {
         Route::post('licences/signature', [LicenceController::class, 'signatureSave'])->name('licences.signature.save');
 
         // Disciples (module cœur)
+        // Pratiquants de la circonscription (ligue / fédération) et photos en série
+        Route::get('pratiquants', [\App\Http\Controllers\Admin\PratiquantController::class, 'index'])->name('pratiquants.index');
+        Route::get('pratiquants/export.xlsx', [\App\Http\Controllers\Admin\PratiquantController::class, 'export'])->name('pratiquants.export');
+        Route::get('pratiquants/a-enregistrer', [\App\Http\Controllers\Admin\PratiquantController::class, 'toRegister'])->name('pratiquants.register');
+        Route::post('pratiquants/a-enregistrer', [\App\Http\Controllers\Admin\PratiquantController::class, 'register'])->name('pratiquants.register.store');
+        Route::get('pratiquants/photos', [\App\Http\Controllers\Admin\PratiquantController::class, 'photos'])->name('pratiquants.photos');
+        Route::post('pratiquants/{disciple}/photo', [\App\Http\Controllers\Admin\PratiquantController::class, 'storePhoto'])->name('pratiquants.photo');
         Route::patch('disciples/{disciple}/archive', [DiscipleController::class, 'archive'])->name('disciples.archive');
         Route::patch('disciples/{disciple}/restore', [DiscipleController::class, 'restore'])->name('disciples.restore');
         Route::get('disciples/{disciple}/recu', [DiscipleController::class, 'receipt'])->name('disciples.receipt');
@@ -122,6 +129,7 @@ Route::middleware('auth')->group(function () {
         Route::get('ceintures-noires/maitres/{maitre}/edit', [CeintureNoireController::class, 'editMaitre'])->name('ceintures-noires.maitres.edit');
         Route::put('ceintures-noires/maitres/{maitre}', [CeintureNoireController::class, 'updateMaitre'])->name('ceintures-noires.maitres.update');
         Route::resource('ceintures-noires', CeintureNoireController::class)->except(['show']);
+        Route::post('cotisations-annuelles/{cotisations_annuelle}/actualiser', [CotisationAnnuelleController::class, 'refresh'])->name('cotisations-annuelles.refresh');
         Route::post('cotisations-annuelles/membres/{membre}/payer', [CotisationAnnuelleController::class, 'pay'])->name('cotisations-annuelles.pay');
         Route::resource('cotisations-annuelles', CotisationAnnuelleController::class)->except(['edit', 'update']);
 
@@ -148,6 +156,7 @@ Route::middleware('auth')->group(function () {
             Route::put('athletes/{athlete}', [CompetitionAthleteController::class, 'update'])->name('athletes.update');
             Route::delete('athletes', [CompetitionAthleteController::class, 'destroyMany'])->name('athletes.destroy-many');
             Route::delete('athletes/{athlete}', [CompetitionAthleteController::class, 'destroy'])->name('athletes.destroy');
+            Route::post('athletes-disciples', [CompetitionAthleteController::class, 'addDisciples'])->name('athletes.disciples');
             Route::post('athletes-ranger', [CompetitionAthleteController::class, 'assign'])->name('athletes.assign');
             Route::post('pesee', [CompetitionAthleteController::class, 'weighIn'])->name('athletes.weigh');
             Route::post('import', [CompetitionAthleteController::class, 'import'])->name('athletes.import');

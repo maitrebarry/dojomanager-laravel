@@ -8,7 +8,17 @@
     <li class="breadcrumb-item active" aria-current="page">{{ $cotisation->annee }}</li>
 @endsection
 
+@section('actions')
+    @if($cotisation->type === 'SALLE' && Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('COTISATION_MANAGE')))
+        <form method="POST" action="{{ route('admin.cotisations-annuelles.refresh', $cotisation) }}">
+            @csrf
+            <button class="btn btn-outline-primary shadow-sm"><i class="fas fa-rotate me-1"></i> {{ __('messages.cotisations_annuelles.refresh_salles') }}</button>
+        </form>
+    @endif
+@endsection
+
 @section('content')
+<p class="text-muted small"><span class="badge {{ $cotisation->type === 'SALLE' ? 'text-bg-info' : 'text-bg-dark' }}">{{ __('messages.cotisations_annuelles.type_' . $cotisation->type) }}</span> {{ __('messages.cotisations_annuelles.type_' . $cotisation->type . '_help') }}</p>
 <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">{{ __('messages.cotisations.amount') }}</div><div class="h4 mb-0">{{ number_format($cotisation->montant, 0, ',', ' ') }}</div></div></div></div>
     <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small">{{ __('messages.cotisations_annuelles.total_due') }}</div><div class="h4 mb-0">{{ number_format($totaux['du'], 0, ',', ' ') }}</div></div></div></div>
@@ -21,9 +31,15 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
+                    @if($cotisation->type === 'SALLE')
+                        <th>{{ __('messages.cotisations_annuelles.salle') }}</th>
+                        <th>{{ __('messages.cotisations_annuelles.maitre') }}</th>
+                        <th class="text-center">{{ __('messages.cotisations_annuelles.disciples') }}</th>
+                    @else
                     <th>{{ __('messages.full_name') }}</th>
                     <th>{{ __('messages.grade') }}</th>
                     <th>{{ __('messages.salle') }}</th>
+                    @endif
                     <th class="text-end">{{ __('messages.cotisations.paid_amount') }}</th>
                     <th class="text-end">{{ __('messages.cotisations.remaining') }}</th>
                     <th>{{ __('messages.status') }}</th>
@@ -33,9 +49,16 @@
             <tbody>
                 @forelse($membres as $m)
                     <tr>
+                        @if($cotisation->type === 'SALLE')
+                            @php $salle = $salles[$m->salle_id] ?? null; @endphp
+                            <td class="fw-semibold">{{ $m->salle_nom }}</td>
+                            <td>{{ $salle?->maitreUser?->name ?? '-' }}</td>
+                            <td class="text-center">{{ $salle?->disciples_count ?? '-' }}</td>
+                        @else
                         <td class="fw-semibold">{{ $m->fullName() }}</td>
                         <td>{{ $m->grade_nom ?? '-' }}</td>
                         <td>{{ $m->salle_nom ?? '-' }}</td>
+                        @endif
                         <td class="text-end">{{ number_format($m->montant_paye, 0, ',', ' ') }}</td>
                         <td class="text-end">{{ number_format($m->reste_a_payer, 0, ',', ' ') }}</td>
                         <td><span class="badge bg-{{ $m->statutColor() }}">{{ $m->statut }}</span></td>

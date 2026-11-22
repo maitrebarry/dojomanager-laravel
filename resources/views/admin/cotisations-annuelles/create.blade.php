@@ -13,8 +13,17 @@
     @csrf
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <p class="text-muted">{{ __('messages.cotisations_annuelles.create_help') }}</p>
             <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">{{ __('messages.cotisations_annuelles.type') }}</label>
+                    @foreach($types as $type)
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="type" id="type{{ $type }}" value="{{ $type }}" @checked(old('type', $cotisation->type) === $type)>
+                            <label class="form-check-label" for="type{{ $type }}"><strong>{{ __('messages.cotisations_annuelles.type_' . $type) }}</strong>
+                                <small class="text-muted d-block">{{ __('messages.cotisations_annuelles.type_' . $type . '_help') }}</small></label>
+                        </div>
+                    @endforeach
+                </div>
                 <div class="col-md-4">
                     <label class="form-label">{{ __('messages.cotisations.year') }} <span class="text-danger">*</span></label>
                     <input type="number" name="annee" class="form-control" value="{{ old('annee', $cotisation->annee) }}" min="2000" max="2100" required>

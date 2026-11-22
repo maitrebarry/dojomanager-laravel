@@ -31,6 +31,12 @@
                 </a>
             @endif
 
+            @if($menu('DISCIPLE_READ', ['federation', 'ligue']))
+                <a class="nav-link {{ request()->routeIs('admin.pratiquants.*') ? 'active' : '' }}" href="{{ route('admin.pratiquants.index') }}">
+                    <i class="fas fa-users"></i> <span class="nav-text">{{ __('messages.pratiquants.menu') }}</span>
+                </a>
+            @endif
+
             @if($menu('CEINTURESNOIRES_READ', ['federation', 'ligue']))
                 <a class="nav-link {{ request()->routeIs('admin.ceintures-noires.*') ? 'active' : '' }}" href="{{ route('admin.ceintures-noires.index') }}">
                     <i class="fas fa-medal"></i> <span class="nav-text">{{ __('messages.ceintures_noires.title') }}</span>

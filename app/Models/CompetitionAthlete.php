@@ -27,6 +27,16 @@ class CompetitionAthlete extends Model
         'poids' => 'decimal:3',
     ];
 
+    /** Inscrit (ou complété) avec son club : devient disciple de cette salle (voir AthleteRegistry). */
+    protected static function booted(): void
+    {
+        static::saved(function (CompetitionAthlete $athlete) {
+            if (!$athlete->disciple_id && trim((string) $athlete->club) !== '') {
+                \App\Services\Competition\AthleteRegistry::sync($athlete);
+            }
+        });
+    }
+
     public function competition(): BelongsTo
     {
         return $this->belongsTo(Competition::class);

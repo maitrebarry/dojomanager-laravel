@@ -113,10 +113,17 @@ class CompetitionController extends Controller
             'profile' => $competition->profile(),
             'presets' => $competition->profile()['presets'],
             'orders' => \App\Services\Competition\AthleteListParser::ORDERS,
+            'disciples' => $tab === 'athletes' ? $this->disciplePicker($competition, $request) : collect(),
             'legacyCombats' => $competition->combats()->whereNull('category_id')
                 ->with(['combattant1', 'combattant2', 'vainqueur'])->get(),
             'page_title' => $competition->nom,
         ]);
+    }
+
+    /** Personnes proposées dans « Choisir parmi les disciples » : disciples et athlètes des compétitions précédentes. */
+    private function disciplePicker(Competition $competition, Request $request)
+    {
+        return \App\Services\Competition\KnownAthletes::list($competition, $request->user());
     }
 
     public function edit(Competition $competition): View

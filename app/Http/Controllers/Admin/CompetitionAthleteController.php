@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Competition;
 use App\Models\CompetitionAthlete;
+use App\Models\Disciple;
 use App\Services\Competition\AthleteListParser;
 use App\Services\Competition\CategoryAssigner;
 use App\Services\Competition\DrawService;
@@ -39,6 +40,116 @@ class CompetitionAthleteController extends Controller
         $this->middleware('auth');
         $this->middleware('admin');
         $this->middleware('permission:COMPETITION_MANAGE');
+    }
+
+    /**
+     * Disciples que l'utilisateur peut inscrire : ceux de son périmètre (salle, ligue,
+     * fédération) et du périmètre de la compétition (salles de la ligue organisatrice,
+     * sinon de la fédération), hors disciples archivés.
+     */
+    public static function disciplesFor(Competition $competition, $user)
+    {
+        return Disciple::visibleTo($user)
+            ->whereNull('archived_at')
+            ->when($competition->ligue_id,
+                fn ($q) => $q->whereHas('salle', fn ($s) => $s->where('ligue_id', $competition->ligue_id)),
+                fn ($q) => $q->when($competition->federation_id, fn ($q) => $q->whereHas('salle.ligue', fn ($l) => $l->where('federation_id', $competition->federation_id))));
+    }
+
+    /**
+     * Ajoute les disciples cochés : prénom, nom, sexe, date de naissance et club (la salle)
+     * sont repris de leur fiche, il ne reste que la pesée. Un disciple déjà inscrit n'est pas
+     * doublé ; un athlète saisi à la main avec les mêmes prénom, nom et date de naissance est
+     * relié à sa fiche.
+     */
+    public function addDisciples(Request $request, Competition $competition): RedirectResponse
+    {
+        $this->guardScope($competition);
+        $groups = CompetitionController::groups($competition->load('categories'));
+        $data = $request->validate([
+            'disciples' => ['nullable', 'array'],
+            'disciples.*' => ['integer'],
+            'athletes' => ['nullable', 'array'],
+            'athletes.*' => ['integer'],
+            'groupe' => ['nullable', Rule::in(array_keys($groups))],
+        ]);
+        if (empty($data['disciples']) && empty($data['athletes'])) {
+            throw ValidationException::withMessages(['disciples' => __('messages.competitions.disciples_none')]);
+        }
+
+        $disciples = self::disciplesFor($competition, $request->user())->with('salle')
+            ->whereIn('id', $data['disciples'] ?? [])->get();
+        $athletes = $competition->athletes()->get();
+        $added = 0;
+        $linked = 0;
+        $already = 0;
+        foreach ($disciples as $disciple) {
+            if ($athletes->contains('disciple_id', $disciple->id)) {
+                $already++;
+                continue;
+            }
+            $same = $athletes->first(fn ($a) => !$a->disciple_id
+                && Str::lower(Str::ascii($a->prenom . ' ' . $a->nom)) === Str::lower(Str::ascii($disciple->prenom . ' ' . $disciple->nom))
+                && (!$a->date_naissance || !$disciple->date_naissance || $a->date_naissance->isSameDay($disciple->date_naissance)));
+            if ($same) {
+                $same->update(array_filter([
+                    'disciple_id' => $disciple->id,
+                    'sexe' => $same->sexe ?: $disciple->sexe,
+                    'date_naissance' => $same->date_naissance ?: $disciple->date_naissance,
+                    'club' => $same->club ?: $disciple->salle?->nom,
+                ]));
+                $linked++;
+                continue;
+            }
+            $competition->athletes()->create([
+                'disciple_id' => $disciple->id,
+                'prenom' => $disciple->prenom,
+                'nom' => $disciple->nom,
+                'sexe' => in_array($disciple->sexe, ['M', 'F'], true) ? $disciple->sexe : null,
+                'date_naissance' => $disciple->date_naissance,
+                'club' => $disciple->salle?->nom,
+                'groupe' => $data['groupe'] ?? null,
+            ]);
+            $added++;
+        }
+        // Athlètes des compétitions précédentes : recopiés sans poids (à peser), sauf s'ils
+        // sont déjà inscrits ici (même prénom, nom et année de naissance).
+        $year = $competition->referenceYear();
+        $current = $competition->athletes()->get()->map(fn ($a) => [
+            'key' => \App\Services\Competition\KnownAthletes::nameKey($a->prenom, $a->nom),
+            'year' => $a->date_naissance?->year ?? ($a->age ? $year - $a->age : null),
+        ]);
+        $previous = \App\Services\Competition\KnownAthletes::previousAthletes($competition, $request->user())
+            ->whereIn('id', $data['athletes'] ?? [])->get();
+        foreach ($previous as $old) {
+            $person = ['key' => \App\Services\Competition\KnownAthletes::nameKey($old->prenom, $old->nom), 'year' => \App\Services\Competition\KnownAthletes::birthYear($old)];
+            if ($current->contains(fn ($c) => \App\Services\Competition\KnownAthletes::samePerson($c, $person))) {
+                $already++;
+                continue;
+            }
+            $competition->athletes()->create([
+                'prenom' => $old->prenom,
+                'nom' => $old->nom,
+                'sexe' => $old->sexe,
+                'date_naissance' => $old->date_naissance,
+                'age' => $old->date_naissance ? null : ($person['year'] ? $year - $person['year'] : null),
+                'club' => $old->club,
+                'groupe' => $data['groupe'] ?? (isset($groups[$old->groupe]) ? $old->groupe : null),
+            ]);
+            $current->push($person);
+            $added++;
+        }
+
+        ActivityLog::log(action: 'create', subject: 'Competition', subjectId: $competition->id,
+            description: $added . ' athlète(s) connu(s) inscrit(s) — ' . $competition->nom);
+
+        $message = trim(implode(' ', array_filter([
+            $added ? __('messages.competitions.disciples_added', ['count' => $added]) : null,
+            $linked ? __('messages.competitions.disciples_linked', ['count' => $linked]) : null,
+            $already ? __('messages.competitions.disciples_already', ['count' => $already]) : null,
+        ]))) ?: __('messages.competitions.disciples_none');
+
+        return redirect()->route('admin.competitions.show', [$competition, 'tab' => $added ? 'pesee' : 'athletes'])->with('success', $message);
     }
 
     public function update(Request $request, Competition $competition, CompetitionAthlete $athlete): RedirectResponse

@@ -17,6 +17,7 @@
             <thead class="table-light">
                 <tr>
                     <th>{{ __('messages.cotisations.year') }}</th>
+                    <th>{{ __('messages.cotisations_annuelles.type') }}</th>
                     <th class="text-end">{{ __('messages.cotisations.amount') }}</th>
                     <th class="text-center">{{ __('messages.cotisations_annuelles.members') }}</th>
                     <th class="text-end">{{ __('messages.cotisations_annuelles.total_due') }}</th>
@@ -28,6 +29,7 @@
                 @forelse($cotisations as $c)
                     <tr>
                         <td class="fw-bold">{{ $c->annee }}</td>
+                        <td><span class="badge {{ $c->type === 'SALLE' ? 'text-bg-info' : 'text-bg-dark' }}">{{ __('messages.cotisations_annuelles.type_' . $c->type) }}</span></td>
                         <td class="text-end">{{ number_format($c->montant, 0, ',', ' ') }}</td>
                         <td class="text-center">{{ $c->membres_count }}</td>
                         <td class="text-end">{{ number_format($c->total_du ?? 0, 0, ',', ' ') }}</td>
@@ -42,7 +44,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center py-5 text-muted">{{ __('messages.cotisations_annuelles.empty') }}</td></tr>
+                    <tr><td colspan="7" class="text-center py-5 text-muted">{{ __('messages.cotisations_annuelles.empty') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -4,6 +4,11 @@
 
 @section('actions')
     @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('DISCIPLE_UPDATE')))
+        <a href="{{ route('admin.pratiquants.photos') }}" class="btn btn-dark shadow-sm">
+            <i class="fas fa-camera me-1"></i> {{ __('messages.pratiquants.photos') }}
+        </a>
+    @endif
+    @if(Auth::user() && (Auth::user()->isSuperAdmin() || Auth::user()->hasPermission('DISCIPLE_UPDATE')))
         <a href="{{ route('admin.disciples.grades.index') }}" class="btn btn-outline-secondary shadow-sm">
             <i class="fas fa-arrow-up-right-dots me-1"></i> {{ __('messages.disciple_grades.button') }}
         </a>

@@ -8,6 +8,9 @@
 
 <div class="d-flex flex-wrap gap-2 mb-3">
     <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#addAthlete"><i class="fas fa-user-plus me-1"></i> {{ __('messages.competitions.add_athlete') }}</button>
+    @if($disciples->isNotEmpty())
+        <button class="btn btn-info text-white" type="button" data-bs-toggle="modal" data-bs-target="#pickDisciples"><i class="fas fa-users me-1"></i> {{ __('messages.competitions.pick_disciples') }}</button>
+    @endif
     <button class="btn btn-success" type="button" data-bs-toggle="collapse" data-bs-target="#importList"><i class="fas fa-file-import me-1"></i> {{ __('messages.competitions.import') }}</button>
     <a class="btn btn-outline-secondary" href="{{ route('admin.competitions.athletes.template', $competition) }}"><i class="fas fa-file-excel me-1"></i> {{ __('messages.competitions.import_template') }}</a>
     @if($competition->athletes->isNotEmpty())
@@ -320,3 +323,113 @@
         for (var i = 0; i < 3; i++) { addRow(false); }
     })();
 </script>
+
+{{-- Choisir parmi les disciples des salles de la ligue : fiche reprise, il ne reste que la pesée. --}}
+@if($disciples->isNotEmpty())
+@php
+    $groupFilters = $categories->groupBy(fn ($c) => $c->groupKey())->map(fn ($list) => [
+        'label' => $list->first()->groupLabel(), 'sexe' => $list->first()->sexe,
+        'min' => $list->first()->age_min, 'max' => $list->first()->age_max,
+    ]);
+    $salles = $disciples->pluck('salle')->filter()->unique()->sort()->values();
+@endphp
+<div class="modal fade" id="pickDisciples" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form method="POST" action="{{ route('admin.competitions.athletes.disciples', $competition) }}" class="modal-content" id="pickDisciplesForm">
+            @csrf
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-users me-1"></i> {{ __('messages.competitions.pick_disciples') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-4">
+                        <select class="form-select form-select-sm" data-pick="salle">
+                            <option value="">{{ __('messages.competitions.pick_all_salles') }}</option>
+                            @foreach($salles as $salle)<option>{{ $salle }}</option>@endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select form-select-sm" data-pick="group" name="groupe">
+                            <option value="">{{ __('messages.competitions.pick_all_groups') }}</option>
+                            @foreach($groupFilters as $key => $g)<option value="{{ $key }}" data-sexe="{{ $g['sexe'] }}" data-min="{{ $g['min'] }}" data-max="{{ $g['max'] }}">{{ $g['label'] }}@if($g['min'] || $g['max']) ({{ $g['min'] }}{{ $g['max'] ? '-' . $g['max'] : '+' }} ans)@endif</option>@endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="search" class="form-control form-control-sm" data-pick="search" placeholder="{{ __('messages.competitions.pick_search') }}">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center small mb-1">
+                    <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" data-pick="all"> {{ __('messages.competitions.pick_check_visible') }}</label>
+                    <span class="text-muted" data-pick="count"></span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light"><tr><th style="width: 32px;"></th><th>{{ __('messages.competitions.athlete') }}</th><th>{{ __('messages.competitions.sex') }}</th><th>{{ __('messages.competitions.age') }}</th><th>{{ __('messages.competitions.club') }}</th><th>{{ __('messages.competitions.pick_grade_source') }}</th></tr></thead>
+                        <tbody>
+                            @foreach($disciples as $d)
+                                @php [$kind, $refId] = explode(':', $d['ref']); @endphp
+                                <tr data-salle="{{ $d['salle'] }}" data-sexe="{{ $d['sexe'] }}" data-age="{{ $d['age'] }}" data-text="{{ \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii($d['name'] . ' ' . $d['salle'])) }}" class="{{ $d['in'] ? 'text-muted' : '' }}">
+                                    <td>@if($d['in'])<i class="fas fa-check text-success" title="{{ __('messages.competitions.pick_already') }}"></i>@else<input type="checkbox" class="form-check-input js-known" name="{{ $kind === 'd' ? 'disciples' : 'athletes' }}[]" value="{{ $refId }}">@endif</td>
+                                    <td class="fw-semibold">{{ $d['name'] }}@if($d['in']) <small class="text-success fw-normal">· {{ __('messages.competitions.pick_already') }}</small>@endif</td>
+                                    <td>{{ $d['sexe'] ?: '-' }}</td>
+                                    <td>{{ $d['age'] ?? '-' }}</td>
+                                    <td>{{ $d['salle'] ?: '-' }}</td>
+                                    <td class="small">@if($kind === 'd'){{ $d['grade'] ?: '-' }}@else<span class="badge text-bg-light border">{{ __('messages.competitions.pick_source_competition') }}</span>@endif</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <small class="text-muted d-block mt-2">{{ __('messages.competitions.pick_help') }}</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('messages.cancel') }}</button>
+                <button class="btn btn-primary" data-pick="submit" disabled><i class="fas fa-user-plus me-1"></i> <span>{{ __('messages.competitions.pick_add') }}</span></button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    (function () {
+        var form = document.getElementById('pickDisciplesForm');
+        var q = function (n) { return form.querySelector('[data-pick="' + n + '"]'); };
+        var rows = Array.from(form.querySelectorAll('tbody tr'));
+        var label = q('submit').querySelector('span'), base = label.textContent;
+        function visible(row) { return row.style.display !== 'none'; }
+        function refresh() {
+            var checked = form.querySelectorAll('input.js-known:checked').length;
+            q('submit').disabled = !checked;
+            label.textContent = base + (checked ? ' (' + checked + ')' : '');
+            q('count').textContent = rows.filter(visible).length + ' / ' + rows.length;
+        }
+        function filter() {
+            var salle = q('salle').value, g = q('group').selectedOptions[0], text = q('search').value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            rows.forEach(function (row) {
+                var age = row.dataset.age === '' ? null : +row.dataset.age, ok = true;
+                if (salle && row.dataset.salle !== salle) { ok = false; }
+                if (g && g.value) {
+                    if (g.dataset.sexe && row.dataset.sexe && row.dataset.sexe !== g.dataset.sexe) { ok = false; }
+                    if (age !== null && ((g.dataset.min && age < +g.dataset.min) || (g.dataset.max && age > +g.dataset.max))) { ok = false; }
+                }
+                if (text && row.dataset.text.indexOf(text) === -1) { ok = false; }
+                row.style.display = ok ? '' : 'none';
+                // Caché par un filtre : décoché (sinon il serait ajouté avec le groupe choisi).
+                var box = row.querySelector('input[type=checkbox]');
+                if (!ok && box) { box.checked = false; }
+            });
+            q('all').checked = false;
+            refresh();
+        }
+        ['salle', 'group'].forEach(function (n) { q(n).addEventListener('change', filter); });
+        q('search').addEventListener('input', filter);
+        q('all').addEventListener('change', function () {
+            var on = this.checked;
+            rows.filter(visible).forEach(function (row) { var box = row.querySelector('input[type=checkbox]'); if (box) { box.checked = on; } });
+            refresh();
+        });
+        form.addEventListener('change', function (e) { if (e.target.classList.contains('js-known')) { refresh(); } });
+        filter();
+    })();
+</script>
+@endif
