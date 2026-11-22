@@ -497,6 +497,41 @@ class CompetitionDrawController extends Controller
         ]);
     }
 
+    /**
+     * Palmarès : lauréats de chaque catégorie (Seniors d'abord), y compris les athlètes seuls
+     * dans leur catégorie (vainqueurs sans adversaire), catégories encore en cours, puis
+     * médailles par club.
+     */
+    public function palmaresPdf(Competition $competition)
+    {
+        $this->guardScope($competition);
+        $competition->load(['categories.combats', 'categories.athletes']);
+        $labels = CompetitionController::categoryLabels($competition);
+
+        $rows = $competition->categories->filter(fn ($c) => $c->athletes->isNotEmpty())->map(function ($c) use ($labels) {
+            $podium = $this->draws->podium($c);
+            $left = $c->combats->reject(fn ($f) => $f->exempt || $f->vainqueur_athlete_id)->count();
+
+            return [
+                'group' => $c->groupLabel(),
+                'label' => $labels[$c->id],
+                'podium' => $podium,
+                'single' => $c->athletes->count() === 1,
+                'status' => $podium['complete'] ? null
+                    : ($c->tirage_at ? __('messages.competitions.palmares_running', ['count' => $left]) : __('messages.competitions.palmares_not_drawn')),
+            ];
+        })->values();
+        abort_if($rows->isEmpty(), 404, __('messages.competitions.no_athletes'));
+        $podiums = $rows->pluck('podium');
+
+        return Pdf::loadView('admin.competitions.pdf.palmares', [
+            'competition' => $competition,
+            'rows' => $rows,
+            'medals' => CompetitionController::medals($podiums),
+            'finished' => $rows->filter(fn ($r) => $r['podium']['complete'])->count(),
+        ])->setPaper('a4', 'portrait')->stream('palmares-' . $competition->id . '.pdf');
+    }
+
     /** Ordre de passage de tous les combats (une section par aire de combat si ?aires=n). */
     public function orderPdf(Request $request, Competition $competition)
     {

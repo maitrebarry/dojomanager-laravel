@@ -140,6 +140,7 @@
         <input type="text" id="reportPace" class="form-control form-control-sm" style="width: 130px;" placeholder="{{ __('rapport.settings_pace') }}" title="{{ __('rapport.settings_pace') }} (4)">
         <a class="btn btn-sm btn-outline-success js-report" data-lang="fr" target="_blank" href="#"><i class="fas fa-print me-1"></i> {{ __('messages.competitions.report_fr') }}</a>
         <a class="btn btn-sm btn-outline-success js-report" data-lang="ar" target="_blank" href="#"><i class="fas fa-print me-1"></i> {{ __('messages.competitions.report_ar') }}</a>
+        <a class="btn btn-sm btn-outline-warning text-dark" target="_blank" href="{{ route('admin.competitions.palmares.pdf', $competition) }}" title="{{ __('messages.competitions.palmares_help') }}"><i class="fas fa-trophy me-1"></i> {{ __('messages.competitions.palmares_pdf') }}</a>
         <small class="text-muted w-100">{{ __('messages.competitions.report_help') }}</small>
     </div>
 </div>

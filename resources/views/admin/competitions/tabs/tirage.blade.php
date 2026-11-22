@@ -12,6 +12,9 @@
         <a class="btn btn-outline-dark" target="_blank" href="{{ route('admin.competitions.draw.pdf', $competition) }}"><i class="fas fa-file-pdf me-1"></i> {{ __('messages.competitions.draw_pdf') }}</a>
         <a class="btn btn-outline-dark" target="_blank" href="{{ route('admin.competitions.fights.pdf', $competition) }}"><i class="fas fa-list-ol me-1"></i> {{ __('messages.competitions.fights_pdf') }}</a>
     @endif
+    @if($categories->contains(fn ($c) => $c->athletes_count > 0))
+        <a class="btn btn-outline-warning text-dark" target="_blank" href="{{ route('admin.competitions.palmares.pdf', $competition) }}" title="{{ __('messages.competitions.palmares_help') }}"><i class="fas fa-trophy me-1"></i> {{ __('messages.competitions.palmares_pdf') }}</a>
+    @endif
 </div>
 
 <div id="medals">@include('admin.competitions.tabs._medals')</div>
