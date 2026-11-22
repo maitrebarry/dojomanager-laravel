@@ -43,17 +43,19 @@
         </div>
     @endforeach
 </div>
-@if($orphans->isNotEmpty())
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 small">
-        <a href="{{ route('admin.pratiquants.index', ['salles' => 'sans']) }}" class="btn btn-sm {{ $mode === 'sans' ? 'btn-secondary' : 'btn-outline-secondary' }}">
-            <i class="fas fa-user-slash me-1"></i> {{ __('messages.pratiquants.salles_without_master', ['count' => $orphans->count(), 'people' => $sum($orphans, 'total')]) }}
-        </a>
-        @foreach($orphans as $salle)
-            <a href="{{ route('admin.pratiquants.index', ['salle' => $salle->id]) }}" class="badge rounded-pill text-decoration-none {{ (int) request('salle') === $salle->id ? 'text-bg-secondary' : 'text-bg-light border text-dark' }}">{{ $salle->nom }} ({{ $perSalle[$salle->id]->total ?? 0 }})</a>
-        @endforeach
-        <span class="text-muted">{{ __('messages.pratiquants.salles_without_master_help') }}</span>
+{{-- Choix toujours visible : salles avec maître (par défaut), sans maître, toutes. --}}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 small">
+    <div class="btn-group btn-group-sm" role="group">
+        <a href="{{ route('admin.pratiquants.index') }}" class="btn {{ !$mode && !request('salle') ? 'btn-primary' : 'btn-outline-primary' }}"><i class="fas fa-user-tie me-1"></i> {{ __('messages.pratiquants.filter_with_master', ['count' => $sum($mastered, 'total')]) }}</a>
+        <a href="{{ route('admin.pratiquants.index', ['salles' => 'sans']) }}" class="btn {{ $mode === 'sans' ? 'btn-secondary' : 'btn-outline-secondary' }}"><i class="fas fa-user-slash me-1"></i> {{ __('messages.pratiquants.filter_without_master', ['count' => $sum($orphans, 'total'), 'salles' => $orphans->count()]) }}</a>
+        <a href="{{ route('admin.pratiquants.index', ['salles' => 'aucune']) }}" class="btn {{ $mode === 'aucune' ? 'btn-warning' : 'btn-outline-warning text-dark' }}"><i class="fas fa-circle-question me-1"></i> {{ __('messages.pratiquants.filter_no_salle', ['count' => $withoutSalle->count()]) }}</a>
+        <a href="{{ route('admin.pratiquants.index', ['salles' => 'toutes']) }}" class="btn {{ $mode === 'toutes' ? 'btn-dark' : 'btn-outline-dark' }}">{{ __('messages.pratiquants.filter_all', ['count' => $sum($salles, 'total') + $withoutSalle->count()]) }}</a>
     </div>
-@endif
+    @foreach($orphans as $salle)
+        <a href="{{ route('admin.pratiquants.index', ['salle' => $salle->id]) }}" class="badge rounded-pill text-decoration-none {{ (int) request('salle') === $salle->id ? 'text-bg-secondary' : 'text-bg-light border text-dark' }}">{{ $salle->nom }} ({{ $perSalle[$salle->id]->total ?? 0 }})</a>
+    @endforeach
+    <span class="text-muted w-100">{{ $orphans->isEmpty() ? __('messages.pratiquants.no_salles_without_master') : __('messages.pratiquants.salles_without_master_help') }}</span>
+</div>
 
 <form method="GET" class="card border-0 shadow-sm mb-3" id="filterForm">
     @if(request('salles'))<input type="hidden" name="salles" value="{{ request('salles') }}">@endif
@@ -70,6 +72,36 @@
     </div>
 </form>
 
+{{-- Combattants sans club (donc sans salle) : saisir leur club en fait des disciples de cette salle. --}}
+@if(in_array($mode, ['aucune', 'toutes'], true) && $withoutSalle->isNotEmpty())
+    <form method="POST" action="{{ route('admin.pratiquants.register.store') }}" class="card border-0 shadow-sm mb-3 border-start border-4 border-warning">
+        @csrf
+        <div class="card-header bg-white fw-semibold"><i class="fas fa-circle-question me-1 text-warning"></i> {{ __('messages.pratiquants.no_salle_title', ['count' => $withoutSalle->count()]) }}
+            <small class="text-muted fw-normal d-block">{{ __('messages.pratiquants.no_salle_help') }}</small></div>
+        <datalist id="sallesList">@foreach($sallesNames as $name)<option value="{{ $name }}">@endforeach</datalist>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light"><tr><th>{{ __('messages.pratiquants.col_name') }}</th><th class="text-center">{{ __('messages.pratiquants.col_sex') }}</th><th class="text-center">{{ __('messages.pratiquants.col_age') }}</th><th class="text-center">{{ __('messages.pratiquants.register_competitions') }}</th>@if($canFillClub)<th style="width: 35%;">{{ __('messages.pratiquants.register_club') }}</th>@endif</tr></thead>
+                <tbody>
+                    @foreach($withoutSalle as $p)
+                        <tr>
+                            <td class="fw-semibold">{{ $p['name'] }}</td>
+                            <td class="text-center">{{ $p['sexe'] ?: '-' }}</td>
+                            <td class="text-center">{{ $p['age'] ?? '-' }}</td>
+                            <td class="text-center">{{ count($p['ids']) }}</td>
+                            @if($canFillClub)<td><input type="text" name="clubs[{{ $p['ref'] }}]" list="sallesList" class="form-control form-control-sm" maxlength="150" placeholder="{{ __('messages.pratiquants.register_club_placeholder') }}"></td>@endif
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @if($canFillClub)<div class="card-footer bg-white"><button class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> {{ __('messages.pratiquants.register_save_clubs') }}</button></div>@endif
+    </form>
+@elseif($mode === 'aucune')
+    <div class="card border-0 shadow-sm mb-3"><div class="card-body text-center text-muted py-4">{{ __('messages.pratiquants.no_salle_none') }}</div></div>
+@endif
+
+@if($mode !== 'aucune')
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
         <button type="button" class="btn btn-sm btn-outline-secondary" id="selectPage">{{ __('messages.pratiquants.select_page') }}</button>
@@ -117,6 +149,8 @@
     </div>
     @if($disciples->hasPages())<div class="card-footer bg-white">{{ $disciples->links() }}</div>@endif
 </div>
+
+@endif
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

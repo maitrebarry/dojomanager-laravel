@@ -43,7 +43,19 @@ class PratiquantController extends Controller
             ->selectRaw('salle_id, COUNT(*) AS total, SUM(photo IS NULL OR photo = "") AS sans_photo')
             ->groupBy('salle_id')->get()->keyBy('salle_id');
 
+        // Combattants des compétitions de la ligue sans club (donc sans salle) : des pratiquants
+        // aussi, en attente de leur club. Affichés dans « Sans salle ».
+        $ligueId = $user->scopeContext()['ligue_id'] ?? null;
+        $year = now()->year;
+        $withoutSalle = !$ligueId ? collect() : \App\Services\Competition\KnownAthletes::unregistered($user, (int) $ligueId)['people']
+            ->filter(fn ($p) => trim((string) $p['club']) === '')
+            ->filter(fn ($p) => !($text = trim((string) $request->query('q'))) || str_contains($p['key'], \App\Services\Competition\KnownAthletes::nameKey($text, '')))
+            ->map(fn ($p) => $p + ['age' => $p['year'] ? $year - $p['year'] : null])->values();
+
         return view('admin.pratiquants.index', [
+            'withoutSalle' => $withoutSalle,
+            'canFillClub' => $ligueId && $user->hasPermission('DISCIPLE_CREATE'),
+            'sallesNames' => $ligueId ? Salle::where('ligue_id', $ligueId)->orderBy('nom')->pluck('nom') : collect(),
             'disciples' => $query->with(['salle:id,nom', 'grade:id,nom_grade'])
                 ->orderBy('prenom')->orderBy('nom')->paginate(50)->withQueryString(),
             'salles' => $this->salles($request),
@@ -184,7 +196,7 @@ class PratiquantController extends Controller
             $message .= ' ' . __('messages.pratiquants.linked', ['count' => $matches->count()]);
         }
 
-        return redirect()->route('admin.pratiquants.register')->with('success', $message);
+        return back()->with('success', $message);
     }
 
     /** Ligue de l'utilisateur : l'enregistrement des combattants se fait au niveau d'une ligue. */
