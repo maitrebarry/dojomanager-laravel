@@ -4,6 +4,14 @@
     @if(Auth::user()->hasPermission('DISCIPLE_CREATE') && !empty(Auth::user()->scopeContext()['ligue_id']))
         <a href="{{ route('admin.pratiquants.register') }}" class="btn btn-warning shadow-sm"><i class="fas fa-user-plus me-1"></i> {{ __('messages.pratiquants.register') }}</a>
     @endif
+    <a href="{{ route('admin.pratiquants.maitres') }}" class="btn btn-outline-primary shadow-sm"><i class="fas fa-user-tie me-1"></i> {{ __('messages.pratiquants.maitres_title') }}</a>
+    <a href="{{ route('admin.pratiquants.fiche', array_filter(['salle' => request('salle')])) }}" target="_blank" class="btn btn-outline-dark shadow-sm"><i class="fas fa-file-pdf me-1"></i> {{ request('salle') ? __('messages.pratiquants.fiche_pdf') : __('messages.pratiquants.fiche_all_pdf') }}</a>
+    @if(request('salle'))
+        <a href="{{ route('admin.pratiquants.fiche.excel', request('salle')) }}" class="btn btn-outline-success shadow-sm"><i class="fas fa-file-excel me-1"></i> {{ __('messages.pratiquants.fiche_excel') }}</a>
+    @endif
+    @if(Auth::user()->hasPermission('DISCIPLE_UPDATE'))
+        <a href="{{ route('admin.pratiquants.saisie', array_filter(['salle' => request('salle')])) }}" class="btn btn-outline-primary shadow-sm"><i class="fas fa-keyboard me-1"></i> {{ __('messages.pratiquants.saisie_title') }}</a>
+    @endif
     <a href="{{ route('admin.pratiquants.photos', array_filter(['salle' => request('salle')])) }}" class="btn btn-dark shadow-sm"><i class="fas fa-camera me-1"></i> {{ __('messages.pratiquants.photos') }}</a>
     <a href="{{ route('admin.pratiquants.export', request()->query()) }}" class="btn btn-outline-success shadow-sm"><i class="fas fa-file-excel me-1"></i> {{ __('messages.pratiquants.export') }}</a>
 @endsection

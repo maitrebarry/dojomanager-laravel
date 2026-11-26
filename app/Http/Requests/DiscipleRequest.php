@@ -29,6 +29,30 @@ class DiscipleRequest extends FormRequest
         ];
     }
 
+    /**
+     * Pas de doublon dans une salle : même prénom et nom (accents et majuscules ignorés) avec
+     * une date de naissance compatible = la même personne, déjà enregistrée.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($validator->errors()->isNotEmpty() || !$this->filled('salle_id')) {
+                return;
+            }
+            $current = $this->route('disciple');
+            $same = \App\Support\DiscipleDuplicates::find(
+                (int) $this->input('salle_id'), $this->input('prenom'), $this->input('nom'),
+                $this->input('date_naissance') ?: null,
+                $current instanceof \App\Models\Disciple ? $current->id : (is_numeric($current) ? (int) $current : null)
+            );
+            if ($same) {
+                $validator->errors()->add('nom', __('messages.disciples.duplicate', [
+                    'name' => trim($same->prenom . ' ' . $same->nom), 'nmle' => $same->nmle ?: '#' . $same->id,
+                ]));
+            }
+        });
+    }
+
     public function messages(): array
     {
         return [

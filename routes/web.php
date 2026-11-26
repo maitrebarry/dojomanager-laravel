@@ -89,6 +89,14 @@ Route::middleware('auth')->group(function () {
         Route::get('pratiquants/export.xlsx', [\App\Http\Controllers\Admin\PratiquantController::class, 'export'])->name('pratiquants.export');
         Route::get('pratiquants/a-enregistrer', [\App\Http\Controllers\Admin\PratiquantController::class, 'toRegister'])->name('pratiquants.register');
         Route::post('pratiquants/a-enregistrer', [\App\Http\Controllers\Admin\PratiquantController::class, 'register'])->name('pratiquants.register.store');
+        Route::get('pratiquants/fiche.pdf', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'fichePdf'])->name('pratiquants.fiche');
+        Route::get('pratiquants/fiche/{salle}.xlsx', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'ficheExcel'])->name('pratiquants.fiche.excel');
+        Route::post('pratiquants/saisie/{salle}/import', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'importExcel'])->name('pratiquants.saisie.import');
+        Route::get('pratiquants/saisie', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'saisie'])->name('pratiquants.saisie');
+        Route::post('pratiquants/saisie/{salle}', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'saveSaisie'])->name('pratiquants.saisie.save');
+        Route::get('pratiquants/maitres', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'maitres'])->name('pratiquants.maitres');
+        Route::post('pratiquants/salles', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'storeSalle'])->name('pratiquants.salles.store');
+        Route::post('pratiquants/maitres/{salle}', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'storeMaitre'])->name('pratiquants.maitres.store');
         Route::get('pratiquants/photos', [\App\Http\Controllers\Admin\PratiquantController::class, 'photos'])->name('pratiquants.photos');
         Route::post('pratiquants/{disciple}/photo', [\App\Http\Controllers\Admin\PratiquantController::class, 'storePhoto'])->name('pratiquants.photo');
         Route::patch('disciples/{disciple}/archive', [DiscipleController::class, 'archive'])->name('disciples.archive');
