@@ -3,29 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        @page { margin: 9mm 9mm 10mm; }
-        body { font-family: DejaVu Sans, sans-serif; font-size: 8.5px; color: #111827; }
+        @page { margin: 8mm 8mm 9mm; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #111827; }
         .salle { page-break-after: always; }
         .salle:last-child { page-break-after: auto; }
         .head { width: 100%; border-bottom: 2px solid #0f5132; margin-bottom: 5px; }
         .head td { vertical-align: bottom; }
-        .title { font-size: 13px; font-weight: bold; color: #0f5132; }
-        .sub { font-size: 10px; font-weight: bold; }
-        .meta { text-align: right; font-size: 9px; color: #374151; }
+        .head td.meta { width: 30%; }
+        .title { font-size: 17px; font-weight: bold; color: #0f5132; }
+        .sub { font-size: 13px; font-weight: bold; }
+        .meta { text-align: right; font-size: 10.5px; color: #374151; }
         .box { width: 100%; border: 1px solid #9ca3af; margin-bottom: 4px; }
-        .box td { padding: 3px 5px; font-size: 9px; }
+        .box td { padding: 6px 6px; font-size: 12px; }
         .line { border-bottom: 1px dotted #6b7280; display: inline-block; min-width: 150px; }
-        .help { font-size: 7.8px; color: #374151; margin: 0 0 4px; }
+        .help { font-size: 10px; color: #374151; margin: 0 0 4px; }
         table.grid { width: 100%; border-collapse: collapse; }
-        table.grid th { background: #e5e7eb; border: 1px solid #374151; padding: 2px 3px; font-size: 7.8px; }
-        table.grid td { border: 1px solid #374151; padding: 1px 3px; height: 21px; font-size: 8.5px; }
+        table.grid th { background: #e5e7eb; border: 1px solid #374151; padding: 4px 3px; font-size: 10.5px; }
+        table.grid td { border: 1px solid #374151; padding: 2px 4px; height: 31px; font-size: 11.5px; }
         table.grid tr { page-break-inside: avoid; }
         .known { color: #1f2937; }
         .center { text-align: center; }
         .new td { background: #fafafa; }
         .sign { width: 100%; margin-top: 8px; }
-        .sign td { font-size: 9px; padding-top: 4px; }
-        .grades { font-size: 7.5px; color: #4b5563; margin-top: 3px; }
+        .sign td { font-size: 12px; padding-top: 4px; }
+        .grades { font-size: 9.5px; color: #4b5563; margin-top: 3px; }
     </style>
 </head>
 <body>
@@ -42,7 +43,7 @@
                 <td>
                     <div class="title">FICHE DE RENSEIGNEMENTS — LICENCE RÉGIONALE</div>
                     @if(!empty($blank))
-                        <div class="sub" style="margin-top: 4px;">Nom de la salle : <span class="line" style="min-width: 260px;"></span> &nbsp; Adresse (quartier, ville) : <span class="line" style="min-width: 220px;"></span></div>
+                        <div class="sub" style="margin-top: 4px;">Nom de la salle : <span class="line" style="min-width: 210px;"></span> &nbsp; Adresse : <span class="line" style="min-width: 200px;"></span></div>
                     @else
                         <div class="sub">Salle : {{ mb_strtoupper($salle->nom) }}</div>
                     @endif
