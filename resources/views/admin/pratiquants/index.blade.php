@@ -5,7 +5,17 @@
         <a href="{{ route('admin.pratiquants.register') }}" class="btn btn-warning shadow-sm"><i class="fas fa-user-plus me-1"></i> {{ __('messages.pratiquants.register') }}</a>
     @endif
     <a href="{{ route('admin.pratiquants.maitres') }}" class="btn btn-outline-primary shadow-sm"><i class="fas fa-user-tie me-1"></i> {{ __('messages.pratiquants.maitres_title') }}</a>
-    <a href="{{ route('admin.pratiquants.fiche', array_filter(['salle' => request('salle')])) }}" target="_blank" class="btn btn-outline-dark shadow-sm"><i class="fas fa-file-pdf me-1"></i> {{ request('salle') ? __('messages.pratiquants.fiche_pdf') : __('messages.pratiquants.fiche_all_pdf') }}</a>
+    {{-- Fiches : vierge (salle pas encore dans le système) ou pré-remplies (salles connues). --}}
+    <div class="btn-group shadow-sm">
+        <a href="{{ route('admin.pratiquants.fiche.vierge', ['format' => 'pdf']) }}" target="_blank" class="btn btn-success"><i class="fas fa-file-pdf me-1"></i> {{ __('messages.pratiquants.vierge_pdf') }}</a>
+        <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"><span class="visually-hidden">{{ __('messages.pratiquants.fiches_more') }}</span></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{{ route('admin.pratiquants.fiche.vierge') }}"><i class="fas fa-file-excel me-1 text-success"></i> {{ __('messages.pratiquants.vierge_excel') }}</a></li>
+            <li><a class="dropdown-item" href="{{ route('admin.pratiquants.maitres') }}"><i class="fas fa-upload me-1 text-success"></i> {{ __('messages.pratiquants.import_fiche') }}</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" target="_blank" href="{{ route('admin.pratiquants.fiche', array_filter(['salle' => request('salle')])) }}"><i class="fas fa-file-pdf me-1"></i> {{ request('salle') ? __('messages.pratiquants.fiche_pdf') : __('messages.pratiquants.fiche_all_pdf') }}</a></li>
+        </ul>
+    </div>
     @if(request('salle'))
         <a href="{{ route('admin.pratiquants.fiche.excel', request('salle')) }}" class="btn btn-outline-success shadow-sm"><i class="fas fa-file-excel me-1"></i> {{ __('messages.pratiquants.fiche_excel') }}</a>
     @endif
