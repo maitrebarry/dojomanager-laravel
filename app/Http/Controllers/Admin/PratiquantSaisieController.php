@@ -282,7 +282,8 @@ class PratiquantSaisieController extends Controller
 
         $sheet = $book->getSheet(0)->setTitle('Disciples');
         $sheet->setCellValue('A1', 'FICHE DE RENSEIGNEMENTS — LICENCE RÉGIONALE');
-        $sheet->setCellValue('A2', ($blank ? 'Salle : (à écrire dans l\'onglet « Maître »)' : 'Salle : ' . mb_strtoupper($salle->nom)) . '   —   ' . ($salle->ligue?->nom ?? ''));
+        $sheet->setCellValue('A2', ($blank ? 'Salle : (à écrire dans l\'onglet « Maître »)' : 'Salle : ' . mb_strtoupper($salle->nom))
+            . '   —   ' . implode(' / ', array_filter([$salle->ligue?->federation?->nom, $salle->ligue?->nom])));
         $sheet->setCellValue('A3', $blank
             ? 'Écrivez d\'abord le nom de votre salle et vos informations dans l\'onglet « Maître », puis un disciple par ligne ici, et renvoyez ce fichier à la ligue.'
             : 'Vérifiez et complétez les informations, ajoutez vos nouveaux disciples sur les lignes vides, remplissez l\'onglet « Maître », puis renvoyez ce fichier à la ligue. Ne modifiez pas la colonne « Réf. ».');

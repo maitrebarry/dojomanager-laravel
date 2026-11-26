@@ -48,8 +48,9 @@
                     @endif
                 </td>
                 <td class="meta">
-                    <strong>{{ $salle->ligue?->nom }}</strong>@if($salle->ligue?->region) — {{ $salle->ligue->region }}@endif<br>
-                    {{ $salle->ligue?->federation?->nom }}<br>
+                    {{-- Fédération d'abord, puis la ligue qui lui est affiliée. --}}
+                    <strong>{{ $salle->ligue?->federation?->nom }}</strong><br>
+                    {{ $salle->ligue?->nom }}@if($salle->ligue?->region) — {{ $salle->ligue->region }}@endif<br>
                     Saison {{ now()->year }}-{{ now()->year + 1 }}
                 </td>
             </tr>
