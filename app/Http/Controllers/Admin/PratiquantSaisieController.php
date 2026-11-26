@@ -31,12 +31,15 @@ class PratiquantSaisieController extends Controller
 {
     private const BLANK_ROWS = 8;
 
+    /** Avertissement de l'import : la fiche donne un autre maître que celui de la salle. */
+    private ?string $maitreConflict = null;
+
     public function __construct()
     {
         $this->middleware('auth');
         $this->middleware('admin');
         $this->middleware('permission:DISCIPLE_READ');
-        $this->middleware('permission:DISCIPLE_UPDATE')->only(['saisie', 'saveSaisie', 'importExcel']);
+        $this->middleware('permission:DISCIPLE_UPDATE')->only(['saisie', 'saveSaisie', 'importExcel', 'importAny']);
         $this->middleware('permission:MAITRE_CREATE')->only(['storeMaitre']);
     }
 
@@ -218,17 +221,53 @@ class PratiquantSaisieController extends Controller
     private const EXCEL_COLUMNS = ['Matricule', 'Prénom', 'NOM', 'Sexe (M/F)', 'Date de naissance (jj/mm/aaaa)', 'Lieu de naissance', 'Adresse (quartier, ville)', 'Téléphone', 'Grade actuel', 'Date du grade (jj/mm/aaaa)', 'Réf.'];
     private const EXCEL_HEADER_ROW = 4;
     private const EXCEL_BLANK_ROWS = 40;
+    private const EXCEL_BLANK_ROWS_VIERGE = 150;
+    private const BLANK_ROWS_VIERGE = 30;
 
     /** Fiche Excel d'une salle : disciples connus pré-remplis, lignes libres, onglet Maître. */
     public function ficheExcel(Request $request, Salle $salle)
     {
         abort_unless(Salle::visibleTo($request->user())->whereKey($salle->id)->exists(), 403);
         $salle->load(['ligue.federation', 'maitre', 'maitreUser.grade']);
+
+        return $this->workbook($salle, false);
+    }
+
+    /** Fiche vierge (PDF ou Excel) pour une salle pas encore dans le système : le maître écrit tout. */
+    public function ficheVierge(Request $request)
+    {
+        $salle = $this->blankSalle($request);
+
+        if ($request->query('format') === 'pdf') {
+            return Pdf::loadView('admin.pratiquants.fiche_pdf', [
+                'salles' => collect([$salle]),
+                'disciples' => collect(),
+                'blankRows' => self::BLANK_ROWS_VIERGE,
+                'grades' => $this->grades($salle),
+                'blank' => true,
+            ])->setPaper('a4', 'landscape')->stream('fiche-licences-vierge.pdf');
+        }
+
+        return $this->workbook($salle, true);
+    }
+
+    /** Salle non enregistrée, rattachée à la ligue de l'utilisateur (pour l'en-tête et les grades). */
+    private function blankSalle(Request $request): Salle
+    {
+        $ligue = \App\Models\Ligue::with('federation')->find($request->user()->scopeContext()['ligue_id'] ?? null);
+        $salle = new Salle(['nom' => '', 'ligue_id' => $ligue?->id]);
+
+        return $salle->setRelation('ligue', $ligue)->setRelation('maitre', null)->setRelation('maitreUser', null);
+    }
+
+    private function workbook(Salle $salle, bool $blank)
+    {
         $grades = $this->grades($salle);
-        $disciples = $salle->disciples()->whereNull('archived_at')->with('grade:id,nom_grade')->orderBy('prenom')->orderBy('nom')->get();
+        $disciples = $blank ? collect() : $salle->disciples()->whereNull('archived_at')->with('grade:id,nom_grade')->orderBy('prenom')->orderBy('nom')->get();
 
         $book = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $book->getProperties()->setTitle('Fiche licences — ' . $salle->nom)->setKeywords('dojomanager-salle:' . $salle->id);
+        $book->getProperties()->setTitle('Fiche licences — ' . ($blank ? 'nouvelle salle' : $salle->nom))
+            ->setKeywords($blank ? 'dojomanager-fiche-vierge' : 'dojomanager-salle:' . $salle->id);
 
         // Listes (grades) dans un onglet caché, pour les listes déroulantes.
         $lists = $book->createSheet()->setTitle('Listes');
@@ -243,8 +282,10 @@ class PratiquantSaisieController extends Controller
 
         $sheet = $book->getSheet(0)->setTitle('Disciples');
         $sheet->setCellValue('A1', 'FICHE DE RENSEIGNEMENTS — LICENCE RÉGIONALE');
-        $sheet->setCellValue('A2', 'Salle : ' . mb_strtoupper($salle->nom) . '   —   ' . ($salle->ligue?->nom ?? ''));
-        $sheet->setCellValue('A3', 'Vérifiez et complétez les informations, ajoutez vos nouveaux disciples sur les lignes vides, remplissez l\'onglet « Maître », puis renvoyez ce fichier à la ligue. Ne modifiez pas la colonne « Réf. ».');
+        $sheet->setCellValue('A2', ($blank ? 'Salle : (à écrire dans l\'onglet « Maître »)' : 'Salle : ' . mb_strtoupper($salle->nom)) . '   —   ' . ($salle->ligue?->nom ?? ''));
+        $sheet->setCellValue('A3', $blank
+            ? 'Écrivez d\'abord le nom de votre salle et vos informations dans l\'onglet « Maître », puis un disciple par ligne ici, et renvoyez ce fichier à la ligue.'
+            : 'Vérifiez et complétez les informations, ajoutez vos nouveaux disciples sur les lignes vides, remplissez l\'onglet « Maître », puis renvoyez ce fichier à la ligue. Ne modifiez pas la colonne « Réf. ».');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setRGB('0F5132');
         $sheet->getStyle('A2')->getFont()->setBold(true);
         $sheet->getStyle('A3')->getFont()->setItalic(true)->setSize(9);
@@ -261,7 +302,7 @@ class PratiquantSaisieController extends Controller
             ], null, 'A' . $row);
             $row++;
         }
-        $last = $row + self::EXCEL_BLANK_ROWS - 1;
+        $last = $row + ($blank ? self::EXCEL_BLANK_ROWS_VIERGE : self::EXCEL_BLANK_ROWS) - 1;
         $sheet->getStyle("A{$row}:J{$last}")->getFill()->setFillType('solid')->getStartColor()->setRGB('FFF8E1'); // lignes des nouveaux
         $first = self::EXCEL_HEADER_ROW + 1;
         // Texte : dates et téléphones gardés tels quels (pas de conversion d'Excel).
@@ -280,26 +321,28 @@ class PratiquantSaisieController extends Controller
 
         $maitre = $book->createSheet(1)->setTitle('Maître');
         $maitre->fromArray([
-            ['INFORMATIONS DU MAÎTRE DE LA SALLE', ''],
+            ['INFORMATIONS DE LA SALLE ET DU MAÎTRE', ''],
             ['Salle', $salle->nom],
+            ['Adresse de la salle', $salle->adresse],
             ['Prénom et nom', $salle->maitre_display_name],
             ['Téléphone', $salle->maitre?->telephone ?: $salle->maitreUser?->phone],
             ['Grade', $salle->maitre_display_grade],
             ['E-mail', $salle->maitre?->email],
         ]);
         $maitre->getStyle('A1')->getFont()->setBold(true)->setSize(13);
-        $maitre->getStyle('A2:A6')->getFont()->setBold(true);
-        $maitre->getStyle('B4')->getNumberFormat()->setFormatCode('@');
-        $maitre->getColumnDimension('A')->setWidth(18);
-        $maitre->getColumnDimension('B')->setWidth(40);
+        $maitre->getStyle('A2:A7')->getFont()->setBold(true);
+        $maitre->getStyle('B5')->getNumberFormat()->setFormatCode('@');
+        $maitre->getStyle('B2:B7')->getFill()->setFillType('solid')->getStartColor()->setRGB('FFF8E1');
+        $maitre->getColumnDimension('A')->setWidth(20);
+        $maitre->getColumnDimension('B')->setWidth(45);
         if ($dan->isNotEmpty()) {
-            $this->listValidation($maitre, 'B5', 'Listes!$B$1:$B$' . $dan->count());
+            $this->listValidation($maitre, 'B6', 'Listes!$B$1:$B$' . $dan->count());
         }
         $book->setActiveSheetIndex(0);
 
         return response()->streamDownload(
             fn () => (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($book))->save('php://output'),
-            'fiche-licences-' . \Illuminate\Support\Str::slug($salle->nom) . '.xlsx',
+            'fiche-licences-' . ($blank ? 'vierge' : \Illuminate\Support\Str::slug($salle->nom)) . '.xlsx',
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         );
     }
@@ -311,18 +354,66 @@ class PratiquantSaisieController extends Controller
     public function importExcel(Request $request, Salle $salle): RedirectResponse
     {
         abort_unless(Salle::visibleTo($request->user())->whereKey($salle->id)->exists(), 403);
-        $request->validate(['fichier' => ['required', 'file', 'mimes:xlsx,xls,ods', 'max:10240']]);
-
-        try {
-            $book = \PhpOffice\PhpSpreadsheet\IOFactory::load($request->file('fichier')->getRealPath());
-        } catch (\Throwable) {
-            throw ValidationException::withMessages(['fichier' => __('messages.pratiquants.import_unreadable')]);
-        }
+        $book = $this->loadBook($request);
         // Fiche d'une autre salle : refusée (l'identifiant de la salle est dans les propriétés du fichier).
         if (preg_match('/dojomanager-salle:(\d+)/', (string) $book->getProperties()->getKeywords(), $m) && (int) $m[1] !== $salle->id) {
             $other = Salle::find((int) $m[1]);
             throw ValidationException::withMessages(['fichier' => __('messages.pratiquants.import_other_salle', ['salle' => $other?->nom ?? '#' . $m[1]])]);
         }
+
+        return $this->importInto($book, $salle, $request);
+    }
+
+    /**
+     * Import d'une fiche sans choisir la salle : fiche d'une salle connue (identifiant dans le
+     * fichier), ou fiche vierge dont l'onglet « Maître » donne le nom de la salle — retrouvée
+     * d'après son nom dans la ligue, ou créée.
+     */
+    public function importAny(Request $request): RedirectResponse
+    {
+        $book = $this->loadBook($request);
+        if (preg_match('/dojomanager-salle:(\d+)/', (string) $book->getProperties()->getKeywords(), $m)) {
+            $salle = Salle::visibleTo($request->user())->find((int) $m[1]);
+            abort_unless($salle, 403);
+
+            return $this->importInto($book, $salle, $request);
+        }
+
+        $info = $this->maitreValues($book->getSheetByName('Maître'));
+        $name = trim((string) ($info['salle'] ?? ''));
+        if ($name === '') {
+            throw ValidationException::withMessages(['fichier' => __('messages.pratiquants.import_no_salle')]);
+        }
+        $ligueId = $request->user()->scopeContext()['ligue_id'] ?? null;
+        abort_unless($ligueId, 403, __('messages.pratiquants.ligue_only'));
+        $key = \App\Services\Competition\KnownAthletes::clubKey($name);
+        $salle = Salle::where('ligue_id', $ligueId)->get()->first(fn ($s) => \App\Services\Competition\KnownAthletes::clubKey($s->nom) === $key);
+        $isNew = false;
+        if (!$salle) {
+            abort_unless($request->user()->hasPermission('SALLE_CREATE'), 403);
+            $salle = Salle::create(['ligue_id' => $ligueId, 'nom' => $name, 'adresse' => ($info['adresse de la salle'] ?? '') ?: null, 'active' => true]);
+            ActivityLog::log(action: 'create', subject: 'Salle', subjectId: $salle->id, description: 'Salle créée par import de fiche : ' . $salle->nom);
+            $isNew = true;
+        } elseif (!$salle->adresse && !empty($info['adresse de la salle'])) {
+            $salle->update(['adresse' => $info['adresse de la salle']]);
+        }
+
+        return $this->importInto($book, $salle, $request,
+            __($isNew ? 'messages.pratiquants.import_salle_created' : 'messages.pratiquants.import_salle_found', ['salle' => $salle->nom]));
+    }
+
+    private function loadBook(Request $request): \PhpOffice\PhpSpreadsheet\Spreadsheet
+    {
+        $request->validate(['fichier' => ['required', 'file', 'mimes:xlsx,xls,ods', 'max:10240']]);
+        try {
+            return \PhpOffice\PhpSpreadsheet\IOFactory::load($request->file('fichier')->getRealPath());
+        } catch (\Throwable) {
+            throw ValidationException::withMessages(['fichier' => __('messages.pratiquants.import_unreadable')]);
+        }
+    }
+
+    private function importInto(\PhpOffice\PhpSpreadsheet\Spreadsheet $book, Salle $salle, Request $request, ?string $note = null): RedirectResponse
+    {
         $sheet = $book->getSheetByName('Disciples') ?? $book->getSheet(0);
 
         $grades = $this->grades($salle)->mapWithKeys(fn ($g) => [$this->simple($g->nom_grade) => $g->id]);
@@ -366,12 +457,13 @@ class PratiquantSaisieController extends Controller
             description: "Import de la fiche Excel — {$salle->nom} : {$updated} mis à jour, {$created} ajoutés" . ($maitreSaved ? ', maître renseigné' : ''));
 
         $redirect = redirect()->route('admin.pratiquants.saisie', ['salle' => $salle->id])
-            ->with('success', __('messages.pratiquants.saisie_saved', ['updated' => $updated, 'created' => $created])
+            ->with('success', ($note ? $note . ' ' : '') . __('messages.pratiquants.saisie_saved', ['updated' => $updated, 'created' => $created])
                 . ($merged ? ' ' . __('messages.pratiquants.duplicates_merged', ['count' => $merged]) : '')
                 . ($maitreSaved ? ' ' . __('messages.pratiquants.import_maitre', ['name' => $maitreSaved]) : ''));
         $warnings = array_filter([
             $errors ? __('messages.pratiquants.saisie_errors', ['names' => implode(', ', $errors)]) : null,
             $unknownGrades ? __('messages.pratiquants.import_unknown_grades', ['grades' => implode(', ', array_unique($unknownGrades))]) : null,
+            $this->maitreConflict,
         ]);
 
         return $warnings ? $redirect->with('warning', implode(' ', $warnings)) : $redirect;
@@ -383,10 +475,16 @@ class PratiquantSaisieController extends Controller
         if (!$sheet) {
             return null;
         }
-        $values = collect($sheet->toArray(null, true, false, false))
-            ->mapWithKeys(fn ($line) => [$this->simple((string) ($line[0] ?? '')) => trim((string) ($line[1] ?? ''))]);
+        $values = $this->maitreValues($sheet);
         $name = $values['prenom et nom'] ?? '';
         if ($name === '') {
+            return null;
+        }
+        // Salle qui a déjà un autre maître : on ne l'écrase pas depuis une fiche.
+        $current = $salle->maitre_display_name;
+        if ($current && $this->simple($current) !== $this->simple($name)) {
+            $this->maitreConflict = __('messages.pratiquants.import_maitre_conflict', ['salle' => $salle->nom, 'current' => $current, 'name' => $name]);
+
             return null;
         }
         $maitre = $salle->maitre ?? new Maitre();
@@ -399,6 +497,13 @@ class PratiquantSaisieController extends Controller
         $salle->update(['maitre_id' => $maitre->id]);
 
         return $name;
+    }
+
+    /** Onglet « Maître » : libellé simplifié (« salle », « prenom et nom »…) → valeur. */
+    private function maitreValues(?\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet): \Illuminate\Support\Collection
+    {
+        return !$sheet ? collect() : collect($sheet->toArray(null, true, false, false))
+            ->mapWithKeys(fn ($line) => [$this->simple((string) ($line[0] ?? '')) => trim((string) ($line[1] ?? ''))]);
     }
 
     /** Date d'une cellule : texte « jj/mm/aaaa » gardé, nombre Excel converti. */

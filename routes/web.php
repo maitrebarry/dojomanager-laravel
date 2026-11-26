@@ -90,6 +90,8 @@ Route::middleware('auth')->group(function () {
         Route::get('pratiquants/a-enregistrer', [\App\Http\Controllers\Admin\PratiquantController::class, 'toRegister'])->name('pratiquants.register');
         Route::post('pratiquants/a-enregistrer', [\App\Http\Controllers\Admin\PratiquantController::class, 'register'])->name('pratiquants.register.store');
         Route::get('pratiquants/fiche.pdf', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'fichePdf'])->name('pratiquants.fiche');
+        Route::get('pratiquants/fiche-vierge', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'ficheVierge'])->name('pratiquants.fiche.vierge');
+        Route::post('pratiquants/import-fiche', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'importAny'])->name('pratiquants.import');
         Route::get('pratiquants/fiche/{salle}.xlsx', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'ficheExcel'])->name('pratiquants.fiche.excel');
         Route::post('pratiquants/saisie/{salle}/import', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'importExcel'])->name('pratiquants.saisie.import');
         Route::get('pratiquants/saisie', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'saisie'])->name('pratiquants.saisie');

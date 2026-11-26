@@ -27,6 +27,28 @@
     </div>
 </div>
 
+{{-- Recensement des salles pas encore dans le système : fiche vierge à remplir au stylo, recopiée
+     dans le modèle Excel vierge, puis importée (la salle est créée d'après son nom). --}}
+<div class="card border-0 shadow-sm mb-3 border-start border-4 border-success">
+    <div class="card-body">
+        <div class="fw-semibold mb-1"><i class="fas fa-file-signature me-1 text-success"></i> {{ __('messages.pratiquants.vierge_title') }}</div>
+        <ol class="small text-muted mb-2 ps-3">
+            <li>{{ __('messages.pratiquants.vierge_step1') }}</li>
+            <li>{{ __('messages.pratiquants.vierge_step2') }}</li>
+            <li>{{ __('messages.pratiquants.vierge_step3') }}</li>
+        </ol>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <a href="{{ route('admin.pratiquants.fiche.vierge', ['format' => 'pdf']) }}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="fas fa-file-pdf me-1"></i> {{ __('messages.pratiquants.vierge_pdf') }}</a>
+            <a href="{{ route('admin.pratiquants.fiche.vierge') }}" class="btn btn-sm btn-outline-success"><i class="fas fa-file-excel me-1"></i> {{ __('messages.pratiquants.vierge_excel') }}</a>
+            <form method="POST" action="{{ route('admin.pratiquants.import') }}" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center ms-md-auto">
+                @csrf
+                <input type="file" name="fichier" accept=".xlsx,.xls,.ods" class="form-control form-control-sm w-auto" required>
+                <button class="btn btn-sm btn-success"><i class="fas fa-upload me-1"></i> {{ __('messages.pratiquants.import_submit') }}</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 @if($canCreateSalle)
     {{-- Salle pas encore dans le système : ajout rapide, avec son maître s'il est connu. --}}
     <form method="POST" action="{{ route('admin.pratiquants.salles.store') }}" class="card border-0 shadow-sm mb-3">

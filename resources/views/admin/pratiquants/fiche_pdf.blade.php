@@ -41,7 +41,11 @@
             <tr>
                 <td>
                     <div class="title">FICHE DE RENSEIGNEMENTS — LICENCE RÉGIONALE</div>
-                    <div class="sub">Salle : {{ mb_strtoupper($salle->nom) }}</div>
+                    @if(!empty($blank))
+                        <div class="sub" style="margin-top: 4px;">Nom de la salle : <span class="line" style="min-width: 260px;"></span> &nbsp; Adresse (quartier, ville) : <span class="line" style="min-width: 220px;"></span></div>
+                    @else
+                        <div class="sub">Salle : {{ mb_strtoupper($salle->nom) }}</div>
+                    @endif
                 </td>
                 <td class="meta">
                     <strong>{{ $salle->ligue?->nom }}</strong>@if($salle->ligue?->region) — {{ $salle->ligue->region }}@endif<br>
@@ -53,16 +57,17 @@
 
         <table class="box">
             <tr>
-                <td style="width: 45%;"><strong>Maître de la salle :</strong> <span class="line" style="min-width: 220px;">{{ $maitreName }}</span></td>
+                <td style="width: 45%;"><strong>Maître (prénom et nom) :</strong> <span class="line" style="min-width: 220px;">{{ $maitreName }}</span></td>
                 <td style="width: 28%;"><strong>Téléphone :</strong> <span class="line" style="min-width: 110px;">{{ $maitrePhone }}</span></td>
                 <td><strong>Grade :</strong> <span class="line" style="min-width: 90px;">{{ $maitreGrade }}</span></td>
             </tr>
         </table>
-        <p class="help">
-            Merci de&nbsp;<strong>vérifier</strong>&nbsp;les informations déjà connues (corrigez-les si besoin en les barrant), de&nbsp;<strong>compléter les cases vides</strong>&nbsp;et d'ajouter
-            vos nouveaux disciples sur les lignes libres. Ces informations figureront sur la carte de licence régionale. Joignez une&nbsp;<strong>photo d'identité récente</strong>
-            de chaque disciple (prénom et nom écrits au dos) et cochez la colonne « Photo ». Dates au format jj/mm/aaaa.
-        </p>
+        @if(!empty($blank))
+        <p class="help">Remplissez EN MAJUSCULES et lisiblement, un disciple par ligne. Dates au format jj/mm/aaaa (ou l'année seule si la date exacte n'est pas connue). Écrivez le grade tel qu'il est (ex. 7eme KEUP, 1er DAN). Utilisez plusieurs fiches si nécessaire, en reportant le nom de la salle sur chacune. La colonne « Matricule » est remplie par la ligue.</p>
+        @endif
+        @if(empty($blank))
+        <p class="help">Merci de vérifier les informations déjà connues (corrigez-les si besoin en les barrant), de compléter les cases vides et d'ajouter vos nouveaux disciples sur les lignes libres. Ces informations figureront sur la carte de licence régionale. Dates au format jj/mm/aaaa.</p>
+        @endif
 
         <table class="grid">
             <thead>
@@ -74,11 +79,10 @@
                     <th style="width: 4%;">Sexe<br>M / F</th>
                     <th style="width: 8%;">Date de naissance</th>
                     <th style="width: 10%;">Lieu de naissance</th>
-                    <th style="width: 13%;">Adresse (quartier, ville)</th>
+                    <th style="width: 17%;">Adresse (quartier, ville)</th>
                     <th style="width: 9%;">Téléphone</th>
                     <th style="width: 8%;">Grade actuel</th>
                     <th style="width: 8%;">Date du grade</th>
-                    <th style="width: 4%;">Photo</th>
                 </tr>
             </thead>
             <tbody>
@@ -96,14 +100,13 @@
                         <td>{{ $d->telephone }}</td>
                         <td>{{ $d->grade?->nom_grade }}</td>
                         <td class="center">{{ $d->date_obtention_grade?->format('d/m/Y') }}</td>
-                        <td class="center">{{ $d->photo ? '✓' : '' }}</td>
                     </tr>
                 @endforeach
                 @for($n = 1; $n <= $blankRows; $n++)
                     <tr class="new">
                         <td class="center">{{ $list->count() + $n }}</td>
-                        <td style="color: #9ca3af; font-size: 7px;">nouveau</td>
-                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td style="color: #9ca3af; font-size: 7px;">{{ empty($blank) ? 'nouveau' : '' }}</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                     </tr>
                 @endfor
             </tbody>
