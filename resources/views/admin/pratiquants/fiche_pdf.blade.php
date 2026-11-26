@@ -64,7 +64,7 @@
             </tr>
         </table>
         @if(!empty($blank))
-        <p class="help">Remplissez EN MAJUSCULES et lisiblement, un disciple par ligne. Dates au format jj/mm/aaaa (ou l'année seule si la date exacte n'est pas connue). Écrivez le grade tel qu'il est (ex. 7eme KEUP, 1er DAN). Utilisez plusieurs fiches si nécessaire, en reportant le nom de la salle sur chacune. La colonne « Matricule » est remplie par la ligue.</p>
+        <p class="help">Remplissez EN MAJUSCULES et lisiblement, un disciple par ligne. Dates au format jj/mm/aaaa (ou l'année seule si la date exacte n'est pas connue). Écrivez le grade tel qu'il est (ex. 7eme KEUP, 1er DAN). Utilisez plusieurs fiches si nécessaire, en reportant le nom de la salle sur chacune.</p>
         @endif
         @if(empty($blank))
         <p class="help">Merci de vérifier les informations déjà connues (corrigez-les si besoin en les barrant), de compléter les cases vides et d'ajouter vos nouveaux disciples sur les lignes libres. Ces informations figureront sur la carte de licence régionale. Dates au format jj/mm/aaaa.</p>
@@ -74,16 +74,14 @@
             <thead>
                 <tr>
                     <th style="width: 3%;">N°</th>
-                    <th style="width: 8%;">Matricule</th>
-                    <th style="width: 11%;">Prénom</th>
-                    <th style="width: 10%;">NOM</th>
+                    <th style="width: 15%;">Prénom</th>
+                    <th style="width: 14%;">NOM</th>
                     <th style="width: 4%;">Sexe<br>M / F</th>
                     <th style="width: 8%;">Date de naissance</th>
                     <th style="width: 10%;">Lieu de naissance</th>
-                    <th style="width: 17%;">Adresse (quartier, ville)</th>
+                    <th style="width: 21%;">Adresse (quartier, ville)</th>
                     <th style="width: 9%;">Téléphone</th>
-                    <th style="width: 8%;">Grade actuel</th>
-                    <th style="width: 8%;">Date du grade</th>
+                    <th style="width: 12%;">Grade actuel</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,7 +89,6 @@
                     @php [$birthDate, $birthPlace] = [$d->date_naissance?->format('d/m/Y') ?? '', preg_replace('/^.*\s+à\s+/iu', '', (string) $d->date_lieu_naissance)]; @endphp
                     <tr class="known">
                         <td class="center">{{ $i + 1 }}</td>
-                        <td>{{ $d->nmle }}</td>
                         <td>{{ $d->prenom }}</td>
                         <td>{{ mb_strtoupper($d->nom) }}</td>
                         <td class="center">{{ $d->sexe }}</td>
@@ -100,14 +97,12 @@
                         <td>{{ $d->adresse }}</td>
                         <td>{{ $d->telephone }}</td>
                         <td>{{ $d->grade?->nom_grade }}</td>
-                        <td class="center">{{ $d->date_obtention_grade?->format('d/m/Y') }}</td>
                     </tr>
                 @endforeach
                 @for($n = 1; $n <= $blankRows; $n++)
                     <tr class="new">
                         <td class="center">{{ $list->count() + $n }}</td>
-                        <td style="color: #9ca3af; font-size: 7px;">{{ empty($blank) ? 'nouveau' : '' }}</td>
-                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                     </tr>
                 @endfor
             </tbody>

@@ -218,7 +218,7 @@ class PratiquantSaisieController extends Controller
     }
 
     /** Colonnes de la fiche Excel (onglet Disciples), dans l'ordre. */
-    private const EXCEL_COLUMNS = ['Matricule', 'Prénom', 'NOM', 'Sexe (M/F)', 'Date de naissance (jj/mm/aaaa)', 'Lieu de naissance', 'Adresse (quartier, ville)', 'Téléphone', 'Grade actuel', 'Date du grade (jj/mm/aaaa)', 'Réf.'];
+    private const EXCEL_COLUMNS = ['Prénom', 'NOM', 'Sexe (M/F)', 'Date de naissance (jj/mm/aaaa)', 'Lieu de naissance', 'Adresse (quartier, ville)', 'Téléphone', 'Grade actuel', 'Réf.'];
     private const EXCEL_HEADER_ROW = 4;
     private const EXCEL_BLANK_ROWS = 40;
     private const EXCEL_BLANK_ROWS_VIERGE = 150;
@@ -291,32 +291,32 @@ class PratiquantSaisieController extends Controller
         $sheet->getStyle('A2')->getFont()->setBold(true);
         $sheet->getStyle('A3')->getFont()->setItalic(true)->setSize(9);
         $sheet->fromArray(self::EXCEL_COLUMNS, null, 'A' . self::EXCEL_HEADER_ROW);
-        $sheet->getStyle('A' . self::EXCEL_HEADER_ROW . ':K' . self::EXCEL_HEADER_ROW)->getFont()->setBold(true);
-        $sheet->getStyle('A' . self::EXCEL_HEADER_ROW . ':K' . self::EXCEL_HEADER_ROW)->getFill()->setFillType('solid')->getStartColor()->setRGB('E5E7EB');
+        $sheet->getStyle('A' . self::EXCEL_HEADER_ROW . ':I' . self::EXCEL_HEADER_ROW)->getFont()->setBold(true);
+        $sheet->getStyle('A' . self::EXCEL_HEADER_ROW . ':I' . self::EXCEL_HEADER_ROW)->getFill()->setFillType('solid')->getStartColor()->setRGB('E5E7EB');
 
         $row = self::EXCEL_HEADER_ROW + 1;
         foreach ($disciples as $d) {
             $sheet->fromArray([
-                $d->nmle, $d->prenom, mb_strtoupper($d->nom), $d->sexe,
+                $d->prenom, mb_strtoupper($d->nom), $d->sexe,
                 $d->date_naissance?->format('d/m/Y'), preg_replace('/^.*\s+à\s+/iu', '', (string) $d->date_lieu_naissance),
-                $d->adresse, $d->telephone, $d->grade?->nom_grade, $d->date_obtention_grade?->format('d/m/Y'), $d->id,
+                $d->adresse, $d->telephone, $d->grade?->nom_grade, $d->id,
             ], null, 'A' . $row);
             $row++;
         }
         $last = $row + ($blank ? self::EXCEL_BLANK_ROWS_VIERGE : self::EXCEL_BLANK_ROWS) - 1;
-        $sheet->getStyle("A{$row}:J{$last}")->getFill()->setFillType('solid')->getStartColor()->setRGB('FFF8E1'); // lignes des nouveaux
+        $sheet->getStyle("A{$row}:H{$last}")->getFill()->setFillType('solid')->getStartColor()->setRGB('FFF8E1'); // lignes des nouveaux
         $first = self::EXCEL_HEADER_ROW + 1;
         // Texte : dates et téléphones gardés tels quels (pas de conversion d'Excel).
-        foreach (['E', 'H', 'J'] as $col) {
+        foreach (['D', 'G'] as $col) {
             $sheet->getStyle("{$col}{$first}:{$col}{$last}")->getNumberFormat()->setFormatCode('@');
         }
-        $this->listValidation($sheet, "D{$first}:D{$last}", '"M,F"');
+        $this->listValidation($sheet, "C{$first}:C{$last}", '"M,F"');
         if ($grades->isNotEmpty()) {
-            $this->listValidation($sheet, "I{$first}:I{$last}", 'Listes!$A$1:$A$' . $grades->count());
+            $this->listValidation($sheet, "H{$first}:H{$last}", 'Listes!$A$1:$A$' . $grades->count());
         }
-        $sheet->getStyle("K{$first}:K{$last}")->getFont()->getColor()->setRGB('9CA3AF');
-        foreach (range('A', 'K') as $col) {
-            $sheet->getColumnDimension($col)->setWidth(match ($col) { 'A' => 16, 'B', 'C', 'F' => 18, 'G' => 26, 'E', 'J' => 15, 'D' => 9, 'K' => 7, default => 14 });
+        $sheet->getStyle("I{$first}:I{$last}")->getFont()->getColor()->setRGB('9CA3AF');
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setWidth(match ($col) { 'A', 'B', 'E' => 18, 'F' => 26, 'D' => 15, 'C' => 9, 'I' => 7, default => 14 });
         }
         $sheet->freezePane('C' . $first);
 
@@ -424,30 +424,55 @@ class PratiquantSaisieController extends Controller
         $rows = [];
         $unknownGrades = [];
         $n = 0;
-        foreach ($sheet->toArray(null, true, false, false) as $index => $line) {
-            if ($index < self::EXCEL_HEADER_ROW) {
-                continue; // titre, consignes, en-têtes
+        // Colonnes repérées par leur titre : fiches récentes (sans matricule) comme anciennes.
+        $lines = $sheet->toArray(null, true, false, false);
+        $headerIndex = collect($lines)->search(fn ($line) => collect($line)->contains(fn ($c) => str_starts_with($this->simple((string) $c), 'prenom')));
+        if ($headerIndex === false) {
+            throw ValidationException::withMessages(['fichier' => __('messages.pratiquants.import_no_header')]);
+        }
+        $col = [];
+        foreach ($lines[$headerIndex] as $i => $title) {
+            $t = $this->simple((string) $title);
+            $field = match (true) {
+                str_starts_with($t, 'matricule') => 'matricule',
+                str_starts_with($t, 'prenom') => 'prenom',
+                $t === 'nom' || str_starts_with($t, 'nom ') => 'nom',
+                str_starts_with($t, 'sexe') => 'sexe',
+                str_starts_with($t, 'date de naissance') => 'naissance',
+                str_starts_with($t, 'lieu') => 'lieu',
+                str_starts_with($t, 'adresse') => 'adresse',
+                str_starts_with($t, 'telephone') => 'telephone',
+                str_starts_with($t, 'date du grade') => 'date_grade',
+                str_starts_with($t, 'grade') => 'grade',
+                str_starts_with($t, 'ref') => 'ref',
+                default => null,
+            };
+            if ($field && !isset($col[$field])) {
+                $col[$field] = $i;
             }
-            $cell = fn (int $i) => trim((string) ($line[$i] ?? ''));
-            if ($cell(1) === '' && $cell(2) === '') {
+        }
+        foreach (array_slice($lines, $headerIndex + 1) as $line) {
+            $cell = fn (string $f) => isset($col[$f]) ? trim((string) ($line[$col[$f]] ?? '')) : '';
+            $raw = fn (string $f) => isset($col[$f]) ? ($line[$col[$f]] ?? null) : null;
+            if ($cell('prenom') === '' && $cell('nom') === '') {
                 continue;
             }
-            $id = (int) $cell(10);
+            $id = (int) $cell('ref');
             $disciple = ($id && $existing->contains('id', $id) ? $existing->firstWhere('id', $id) : null)
-                ?? ($cell(0) !== '' ? $byNmle[mb_strtoupper($cell(0))] ?? null : null)
-                ?? $byName[$this->simple($cell(1) . ' ' . $cell(2))] ?? null;
+                ?? ($cell('matricule') !== '' ? $byNmle[mb_strtoupper($cell('matricule'))] ?? null : null)
+                ?? $byName[$this->simple($cell('prenom') . ' ' . $cell('nom'))] ?? null;
             $gradeId = null;
-            if ($cell(8) !== '') {
-                $gradeId = $grades[$this->simple($cell(8))] ?? null;
+            if ($cell('grade') !== '') {
+                $gradeId = $grades[$this->simple($cell('grade'))] ?? null;
                 if (!$gradeId) {
-                    $unknownGrades[] = $cell(8);
+                    $unknownGrades[] = $cell('grade');
                 }
             }
             $rows[$disciple ? $disciple->id : 'new' . (++$n)] = [
-                'prenom' => $cell(1), 'nom' => $cell(2),
-                'sexe' => in_array(mb_strtoupper($cell(3)), ['M', 'F'], true) ? mb_strtoupper($cell(3)) : null,
-                'date_naissance' => $this->excelDate($line[4] ?? null), 'lieu' => $cell(5), 'adresse' => $cell(6),
-                'telephone' => $cell(7), 'grade_id' => $gradeId, 'date_grade' => $this->excelDate($line[9] ?? null),
+                'prenom' => $cell('prenom'), 'nom' => $cell('nom'),
+                'sexe' => in_array(mb_strtoupper($cell('sexe')), ['M', 'F'], true) ? mb_strtoupper($cell('sexe')) : null,
+                'date_naissance' => $this->excelDate($raw('naissance')), 'lieu' => $cell('lieu'), 'adresse' => $cell('adresse'),
+                'telephone' => $cell('telephone'), 'grade_id' => $gradeId, 'date_grade' => $this->excelDate($raw('date_grade')),
             ];
         }
 

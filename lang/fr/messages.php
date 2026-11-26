@@ -514,6 +514,7 @@ return [
         'vierge_step3' => 'Importez le fichier Excel : la salle est retrouvée d\'après son nom ou créée, le maître et les disciples sont enregistrés, sans doublon.',
         'vierge_pdf' => 'Fiche vierge (PDF)',
         'vierge_excel' => 'Modèle Excel vierge',
+        'import_no_header' => 'Ligne de titres introuvable dans l\'onglet « Disciples » : utilisez le modèle Excel (titres « Prénom », « NOM »…).',
         'import_no_salle' => 'Le nom de la salle manque : écrivez-le dans l\'onglet « Maître » (ligne « Salle »).',
         'import_salle_created' => 'Nouvelle salle créée : « :salle ».',
         'import_maitre_conflict' => 'La salle « :salle » a déjà pour maître :current : le maître écrit sur la fiche (:name) n\'a pas été enregistré. Changez-le dans « Maîtres des salles » si c\'est voulu.',
