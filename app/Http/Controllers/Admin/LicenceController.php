@@ -236,7 +236,8 @@ class LicenceController extends Controller
             // Carte de salle (maître) : précise la salle concernée, ex. « LICENCE DE LA
             // SALLE DOJO CENTRAL ». Ligue/fédération gardent leur libellé générique.
             'license_label' => ($role === 'maitre' && $salle)
-                ? $meta['badge_type'] . ' DE LA SALLE ' . mb_strtoupper($salle->nom)
+                // « SALLE UNIVERSITE » ne donne pas « … DE LA SALLE SALLE UNIVERSITE ».
+                ? $meta['badge_type'] . ' DE LA SALLE ' . preg_replace('/^SALLE\s+/u', '', mb_strtoupper($salle->nom))
                 : $meta['badge_type'],
             'photo' => $this->photoData($d),
             'signature' => $signature?->signature_data,

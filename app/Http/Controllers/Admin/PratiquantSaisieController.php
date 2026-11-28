@@ -48,7 +48,7 @@ class PratiquantSaisieController extends Controller
     {
         $salles = Salle::visibleTo($request->user())
             ->when($request->integer('salle'), fn ($q, $id) => $q->whereKey($id))
-            ->with(['ligue.federation', 'maitre', 'maitreUser.grade'])
+            ->with(['ligue.federation', 'maitre', 'maitreUser.grade', 'salleMere:id,nom'])
             ->orderBy('nom')->get();
         abort_if($salles->isEmpty(), 404);
 
@@ -325,19 +325,22 @@ class PratiquantSaisieController extends Controller
             ['INFORMATIONS DE LA SALLE ET DU MAÎTRE', ''],
             ['Salle', $salle->nom],
             ['Adresse de la salle', $salle->adresse],
+            ['Salle mère', $salle->salleMere?->nom],
             ['Prénom et nom', $salle->maitre_display_name],
             ['Téléphone', $salle->maitre?->telephone ?: $salle->maitreUser?->phone],
             ['Grade', $salle->maitre_display_grade],
             ['E-mail', $salle->maitre?->email],
         ]);
         $maitre->getStyle('A1')->getFont()->setBold(true)->setSize(13);
-        $maitre->getStyle('A2:A7')->getFont()->setBold(true);
-        $maitre->getStyle('B5')->getNumberFormat()->setFormatCode('@');
-        $maitre->getStyle('B2:B7')->getFill()->setFillType('solid')->getStartColor()->setRGB('FFF8E1');
+        $maitre->getStyle('A2:A8')->getFont()->setBold(true);
+        $maitre->getStyle('B6')->getNumberFormat()->setFormatCode('@');
+        $maitre->getStyle('B2:B8')->getFill()->setFillType('solid')->getStartColor()->setRGB('FFF8E1');
         $maitre->getColumnDimension('A')->setWidth(20);
         $maitre->getColumnDimension('B')->setWidth(45);
+        $maitre->setCellValue('C4', '(si votre salle dérive d\'une autre salle)');
+        $maitre->getStyle('C4')->getFont()->setItalic(true)->setSize(9);
         if ($dan->isNotEmpty()) {
-            $this->listValidation($maitre, 'B6', 'Listes!$B$1:$B$' . $dan->count());
+            $this->listValidation($maitre, 'B7', 'Listes!$B$1:$B$' . $dan->count());
         }
         $book->setActiveSheetIndex(0);
 
@@ -478,6 +481,7 @@ class PratiquantSaisieController extends Controller
 
         [$updated, $created, $errors, $merged] = $this->applyRows($salle, $rows, $request->user()->hasPermission('DISCIPLE_CREATE'));
         $maitreSaved = $this->importMaitre($book->getSheetByName('Maître'), $salle);
+        $mereNote = $this->importMere($this->maitreValues($book->getSheetByName('Maître'))['salle mere'] ?? '', $salle);
 
         ActivityLog::log(action: 'import', subject: 'Salle', subjectId: $salle->id,
             description: "Import de la fiche Excel — {$salle->nom} : {$updated} mis à jour, {$created} ajoutés" . ($maitreSaved ? ', maître renseigné' : ''));
@@ -485,7 +489,8 @@ class PratiquantSaisieController extends Controller
         $redirect = redirect()->route('admin.pratiquants.saisie', ['salle' => $salle->id])
             ->with('success', ($note ? $note . ' ' : '') . __('messages.pratiquants.saisie_saved', ['updated' => $updated, 'created' => $created])
                 . ($merged ? ' ' . __('messages.pratiquants.duplicates_merged', ['count' => $merged]) : '')
-                . ($maitreSaved ? ' ' . __('messages.pratiquants.import_maitre', ['name' => $maitreSaved]) : ''));
+                . ($maitreSaved ? ' ' . __('messages.pratiquants.import_maitre', ['name' => $maitreSaved]) : '')
+                . ($mereNote ? ' ' . $mereNote : ''));
         $warnings = array_filter([
             $errors ? __('messages.pratiquants.saisie_errors', ['names' => implode(', ', $errors)]) : null,
             $unknownGrades ? __('messages.pratiquants.import_unknown_grades', ['grades' => implode(', ', array_unique($unknownGrades))]) : null,
@@ -496,6 +501,30 @@ class PratiquantSaisieController extends Controller
     }
 
     /** Onglet « Maître » : fiche Maître de la salle créée ou mise à jour. Renvoie son nom, ou null. */
+    /**
+     * « Salle mère » de la fiche : retrouvée d'après son nom dans la ligue, ou créée (elle fait
+     * partie de la région). Une salle qui a déjà une salle mère la garde. Renvoie une note.
+     */
+    private function importMere(string $name, Salle $salle): ?string
+    {
+        $name = trim($name);
+        if ($name === '' || $salle->salle_mere_id) {
+            return null;
+        }
+        $key = \App\Services\Competition\KnownAthletes::clubKey($name);
+        if ($key === \App\Services\Competition\KnownAthletes::clubKey($salle->nom)) {
+            return null; // la salle elle-même
+        }
+        $mere = Salle::where('ligue_id', $salle->ligue_id)->get()->first(fn ($s) => \App\Services\Competition\KnownAthletes::clubKey($s->nom) === $key);
+        if ($mere && in_array($mere->id, $salle->descendantIds(), true)) {
+            return null; // filiation qui tournerait en rond
+        }
+        $mere ??= Salle::create(['ligue_id' => $salle->ligue_id, 'nom' => $name, 'active' => true]);
+        $salle->update(['salle_mere_id' => $mere->id]);
+
+        return __('messages.salles.mere_saved', ['salle' => $salle->nom, 'mere' => $mere->nom]);
+    }
+
     private function importMaitre(?\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, Salle $salle): ?string
     {
         if (!$sheet) {
@@ -564,17 +593,34 @@ class PratiquantSaisieController extends Controller
         $complete = fn ($q) => $q->whereNull('archived_at')->whereNotNull('sexe')->whereNotNull('date_naissance')
             ->whereNotNull('date_lieu_naissance')->where('date_lieu_naissance', '!=', '')->whereNotNull('grade_id')
             ->whereNotNull('photo')->where('photo', '!=', '');
-        $salles = Salle::visibleTo($request->user())->with(['maitre', 'maitreUser.grade'])
+        $salles = Salle::visibleTo($request->user())->with(['maitre', 'maitreUser.grade', 'salleMere:id,nom'])
             ->withCount(['disciples' => fn ($q) => $q->whereNull('archived_at'), 'disciples as complete_count' => $complete])
             ->orderBy('nom')->get();
+        $salles = Salle::tree($salles);
 
         return view('admin.pratiquants.maitres', [
             'salles' => $salles,
+            'canSetMere' => $request->user()->hasPermission('SALLE_UPDATE'),
             'canCreateSalle' => $request->user()->hasPermission('SALLE_CREATE') && !empty($request->user()->scopeContext()['ligue_id']),
             'grades' => Grade::where('type_grade', 'DAN')->orderBy('niveau')->get(['id', 'nom_grade']),
             'canAccount' => $request->user()->hasPermission('UTILISATEUR_CREATE'),
             'page_title' => __('messages.pratiquants.maitres_title'),
         ]);
+    }
+
+    /** Salle mère d'une salle (filiation), depuis « Maîtres des salles ». */
+    public function setMere(Request $request, Salle $salle): RedirectResponse
+    {
+        abort_unless(Salle::visibleTo($request->user())->whereKey($salle->id)->exists() && $request->user()->hasPermission('SALLE_UPDATE'), 403);
+        $data = $request->validate([
+            'salle_mere_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::notIn($salle->descendantIds())],
+        ], ['salle_mere_id.not_in' => __('messages.salles.mere_cycle')]);
+        $mere = isset($data['salle_mere_id']) ? Salle::visibleTo($request->user())->find($data['salle_mere_id']) : null;
+        $salle->update(['salle_mere_id' => $mere?->id]);
+
+        return back()->with('success', $mere
+            ? __('messages.salles.mere_saved', ['salle' => $salle->nom, 'mere' => $mere->nom])
+            : __('messages.salles.mere_removed', ['salle' => $salle->nom]));
     }
 
     /** Nouvelle salle de la ligue (pas encore dans le système), avec son maître s'il est connu. */

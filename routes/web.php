@@ -84,6 +84,14 @@ Route::middleware('auth')->group(function () {
         Route::post('licences/signature', [LicenceController::class, 'signatureSave'])->name('licences.signature.save');
 
         // Disciples (module cœur)
+        // Filiation des salles : vue globale ligue / fédération
+        Route::get('salles-arbre', [\App\Http\Controllers\Admin\SalleArbreController::class, 'index'])->name('salles-arbre.index');
+
+        // Maître d'une salle mère : salles dérivées et espace de ses subalternes
+        Route::get('salles-derivees', [\App\Http\Controllers\Admin\SalleDeriveeController::class, 'index'])->name('salles-derivees.index');
+        Route::get('salles-derivees/{salle}/disciples', [\App\Http\Controllers\Admin\SalleDeriveeController::class, 'disciples'])->name('salles-derivees.disciples');
+        Route::post('salles-derivees', [\App\Http\Controllers\Admin\SalleDeriveeController::class, 'store'])->name('salles-derivees.store');
+
         // Pratiquants de la circonscription (ligue / fédération) et photos en série
         Route::get('pratiquants', [\App\Http\Controllers\Admin\PratiquantController::class, 'index'])->name('pratiquants.index');
         Route::get('pratiquants/export.xlsx', [\App\Http\Controllers\Admin\PratiquantController::class, 'export'])->name('pratiquants.export');
@@ -97,6 +105,7 @@ Route::middleware('auth')->group(function () {
         Route::get('pratiquants/saisie', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'saisie'])->name('pratiquants.saisie');
         Route::post('pratiquants/saisie/{salle}', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'saveSaisie'])->name('pratiquants.saisie.save');
         Route::get('pratiquants/maitres', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'maitres'])->name('pratiquants.maitres');
+        Route::post('pratiquants/salles/{salle}/mere', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'setMere'])->name('pratiquants.salles.mere');
         Route::post('pratiquants/salles', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'storeSalle'])->name('pratiquants.salles.store');
         Route::post('pratiquants/maitres/{salle}', [\App\Http\Controllers\Admin\PratiquantSaisieController::class, 'storeMaitre'])->name('pratiquants.maitres.store');
         Route::get('pratiquants/photos', [\App\Http\Controllers\Admin\PratiquantController::class, 'photos'])->name('pratiquants.photos');

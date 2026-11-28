@@ -29,7 +29,7 @@ class SalleController extends Controller
     {
         $salles = Salle::query()
             ->visibleTo($request->user())
-            ->with(['ligue:id,nom', 'maitre:id,nom_complet', 'maitreUser:id,salle_id,name,grade_id', 'maitreUser.grade:id,nom_grade'])
+            ->with(['ligue:id,nom', 'maitre:id,nom_complet', 'maitreUser:id,salle_id,name,grade_id', 'maitreUser.grade:id,nom_grade', 'salleMere:id,nom'])
             ->withCount('disciples')
             ->when($request->filled('search'), fn ($q) => $q->where('nom', 'like', '%' . $request->query('search') . '%'))
             ->when($request->filled('ligue'), fn ($q) => $q->where('ligue_id', $request->query('ligue')))
@@ -50,6 +50,7 @@ class SalleController extends Controller
             'salle' => new Salle(['active' => true]),
             'ligues' => Ligue::visibleTo(request()->user())->orderBy('nom')->get(['id', 'nom']),
             'maitres' => Maitre::visibleTo(request()->user())->orderBy('nom_complet')->get(['id', 'nom_complet']),
+            'meres' => Salle::visibleTo(request()->user())->orderBy('nom')->get(['id', 'nom', 'ligue_id']),
             'page_title' => __('messages.salles.add'),
         ]);
     }
@@ -70,6 +71,8 @@ class SalleController extends Controller
             'salle' => $salle,
             'ligues' => Ligue::visibleTo(request()->user())->orderBy('nom')->get(['id', 'nom']),
             'maitres' => Maitre::visibleTo(request()->user())->orderBy('nom_complet')->get(['id', 'nom_complet']),
+            // Salle mère possible : toute salle sauf elle-même et ses descendantes.
+            'meres' => Salle::visibleTo(request()->user())->whereNotIn('id', $salle->descendantIds())->orderBy('nom')->get(['id', 'nom', 'ligue_id']),
             'page_title' => __('messages.salles.edit'),
         ]);
     }
@@ -77,7 +80,7 @@ class SalleController extends Controller
     public function update(Request $request, Salle $salle): RedirectResponse
     {
         $this->guardScope($salle);
-        $salle->update($this->validateData($request));
+        $salle->update($this->validateData($request, $salle));
 
         return redirect()->route('admin.settings', ['tab' => 'salles'])
             ->with('success', __('messages.salles.updated'));
@@ -97,7 +100,7 @@ class SalleController extends Controller
             ->with('success', __('messages.salles.deleted'));
     }
 
-    private function validateData(Request $request): array
+    private function validateData(Request $request, ?Salle $salle = null): array
     {
         $validated = $request->validate([
             'nom' => ['required', 'string', 'max:140'],
@@ -106,8 +109,9 @@ class SalleController extends Controller
             'mensualite' => ['nullable', 'numeric', 'min:0'],
             'ligue_id' => ['required', 'exists:ligues,id'],
             'maitre_id' => ['nullable', 'exists:maitres,id'],
+            'salle_mere_id' => ['nullable', 'exists:salles,id', \Illuminate\Validation\Rule::notIn($salle ? $salle->descendantIds() : [])],
             'active' => ['nullable', 'boolean'],
-        ]);
+        ], ['salle_mere_id.not_in' => __('messages.salles.mere_cycle')]);
 
         $validated['active'] = $request->boolean('active');
 

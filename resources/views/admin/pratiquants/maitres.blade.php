@@ -82,7 +82,26 @@
                 @foreach($salles as $salle)
                     @php $hasMaster = $salle->maitre_id || $salle->maitreUser; @endphp
                     <tr>
-                        <td class="fw-semibold">{{ $salle->nom }}</td>
+                        <td>
+                            {{-- Filiation : salle dérivée en retrait sous sa salle mère. --}}
+                            <div class="fw-semibold" style="padding-left: {{ ($salle->depth ?? 0) * 22 }}px;">
+                                @if($salle->depth ?? 0)<i class="fas fa-level-up-alt fa-rotate-90 text-muted me-1"></i>@endif{{ $salle->nom }}
+                            </div>
+                            @if($canSetMere)
+                                <form method="POST" action="{{ route('admin.pratiquants.salles.mere', $salle) }}" style="padding-left: {{ ($salle->depth ?? 0) * 22 }}px;">
+                                    @csrf
+                                    <select name="salle_mere_id" class="form-select form-select-sm w-auto d-inline-block mt-1 text-muted" style="font-size: 12px;" onchange="this.form.submit()" title="{{ __('messages.salles.mere') }}">
+                                        <option value="">{{ __('messages.salles.mere') }} : —</option>
+                                        @foreach($salles as $other)
+                                            @continue($other->id === $salle->id)
+                                            <option value="{{ $other->id }}" @selected($salle->salle_mere_id === $other->id)>{{ __('messages.salles.derives_from', ['mere' => $other->nom]) }}</option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                            @elseif($salle->salleMere)
+                                <small class="text-muted">{{ __('messages.salles.derives_from', ['mere' => $salle->salleMere->nom]) }}</small>
+                            @endif
+                        </td>
                         <td class="text-center">{{ $salle->disciples_count }}</td>
                         <td>
                             @php $pct = $salle->disciples_count ? round($salle->complete_count / $salle->disciples_count * 100) : 0; @endphp

@@ -31,6 +31,18 @@
                 </a>
             @endif
 
+            @if($menu(null, ['maitre']) && $u?->salle_id)
+                <a class="nav-link {{ request()->routeIs('admin.salles-derivees.*') ? 'active' : '' }}" href="{{ route('admin.salles-derivees.index') }}">
+                    <i class="fas fa-sitemap"></i> <span class="nav-text">{{ __('messages.salles_derivees.menu') }}</span>
+                </a>
+            @endif
+
+            @if($menu(null, ['federation', 'ligue']))
+                <a class="nav-link {{ request()->routeIs('admin.salles-arbre.*') ? 'active' : '' }}" href="{{ route('admin.salles-arbre.index') }}">
+                    <i class="fas fa-sitemap"></i> <span class="nav-text">{{ __('messages.salles_arbre.menu') }}</span>
+                </a>
+            @endif
+
             @if($menu('DISCIPLE_READ', ['federation', 'ligue']))
                 <a class="nav-link {{ request()->routeIs('admin.pratiquants.*') ? 'active' : '' }}" href="{{ route('admin.pratiquants.index') }}">
                     <i class="fas fa-users"></i> <span class="nav-text">{{ __('messages.pratiquants.menu') }}</span>

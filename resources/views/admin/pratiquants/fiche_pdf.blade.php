@@ -44,8 +44,9 @@
                     <div class="title">FICHE DE RENSEIGNEMENTS — LICENCE RÉGIONALE</div>
                     @if(!empty($blank))
                         <div class="sub" style="margin-top: 4px;">Nom de la salle : <span class="line" style="min-width: 210px;"></span> &nbsp; Adresse : <span class="line" style="min-width: 200px;"></span></div>
+                        <div class="sub" style="margin-top: 4px; font-weight: normal;">Salle mère (si votre salle dérive d'une autre salle) : <span class="line" style="min-width: 250px;"></span></div>
                     @else
-                        <div class="sub">Salle : {{ mb_strtoupper($salle->nom) }}</div>
+                        <div class="sub">Salle : {{ mb_strtoupper($salle->nom) }}@if($salle->salleMere) <span style="font-weight: normal;">— dérive de {{ $salle->salleMere->nom }}</span>@endif</div>
                     @endif
                 </td>
                 <td class="meta">

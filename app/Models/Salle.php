@@ -27,6 +27,7 @@ class Salle extends Model
         'active',
         'ligue_id',
         'maitre_id',
+        'salle_mere_id',
     ];
 
     protected $casts = [
@@ -37,6 +38,60 @@ class Salle extends Model
     public function ligue(): BelongsTo
     {
         return $this->belongsTo(Ligue::class);
+    }
+
+    /** Salle mère dont cette salle dérive (filiation, information seulement). */
+    public function salleMere(): BelongsTo
+    {
+        return $this->belongsTo(Salle::class, 'salle_mere_id');
+    }
+
+    /** Salles dérivées de celle-ci. */
+    public function sallesDerivees(): HasMany
+    {
+        return $this->hasMany(Salle::class, 'salle_mere_id')->orderBy('nom');
+    }
+
+    /**
+     * Salles à ne pas proposer comme salle mère de celle-ci : elle-même et toute sa
+     * descendance (sinon la filiation tournerait en rond).
+     */
+    public function descendantIds(): array
+    {
+        $ids = [$this->id];
+        $frontier = [$this->id];
+        while ($frontier) {
+            $frontier = Salle::whereIn('salle_mere_id', $frontier)->whereNotIn('id', $ids)->pluck('id')->all();
+            $ids = array_merge($ids, $frontier);
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Range des salles en arbre de filiation : chaque salle mère suivie de ses salles
+     * dérivées (attribut « depth » = niveau, 0 pour une salle sans mère dans la liste).
+     */
+    public static function tree($salles)
+    {
+        $ids = $salles->pluck('id')->flip();
+        $children = $salles->groupBy(fn ($s) => $s->salle_mere_id && isset($ids[$s->salle_mere_id]) ? $s->salle_mere_id : 0);
+        $out = collect();
+        $seen = [];
+        $walk = function ($parentId, $depth) use (&$walk, $children, $out, &$seen) {
+            foreach ($children[$parentId] ?? [] as $salle) {
+                if (isset($seen[$salle->id])) {
+                    continue;
+                }
+                $seen[$salle->id] = true;
+                $salle->depth = $depth;
+                $out->push($salle);
+                $walk($salle->id, $depth + 1);
+            }
+        };
+        $walk(0, 0);
+
+        return $out->concat($salles->reject(fn ($s) => isset($seen[$s->id]))); // rien n'est perdu
     }
 
     public function maitre(): BelongsTo

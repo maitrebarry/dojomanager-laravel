@@ -40,12 +40,12 @@
 
         .page-title { height: 8mm; line-height: 8mm; color: #6b7280; font-size: 3mm; font-weight: 800; text-align: center; }
 
-        .cards-grid { width: 190mm; margin: 0 auto; border-collapse: separate; border-spacing: 6mm 6mm; table-layout: fixed; }
+        .cards-grid { width: 190mm; margin: 0 auto; border-collapse: separate; border-spacing: 6mm 12mm; table-layout: fixed; }
         .cards-grid td { width: 86mm; height: 54mm; padding: 0; vertical-align: top; }
 
         /* Traits de coupe (recto seulement) : repères aux 4 coins de chaque carte, dans
            l'espace entre les cartes, alignés sur le bord de coupe. */
-        .card-slot { position: relative; width: 86mm; height: 54mm; }
+        .card-slot { position: relative; width: 86mm; height: 54mm; box-sizing: border-box; }
         .crop { position: absolute; width: 0; height: 0; }
         .crop::before, .crop::after { content: ""; position: absolute; background: #111827; }
         .crop::before { top: -.075mm; width: 3mm; height: .15mm; }
@@ -60,7 +60,10 @@
         .crop.bl::after, .crop.br::after { top: .8mm; }
 
         .sheet-card {
-            width: 86mm; height: 54mm; position: relative; overflow: hidden;
+            /* border-box : le cadre est compris dans les 86×54mm. Sans cela, chaque carte du
+               recto mesurait 87×55mm et le verso (sans cadre) se décalait un peu plus à
+               chaque rangée. */
+            width: 86mm; height: 54mm; box-sizing: border-box; position: relative; overflow: hidden;
             border: .55mm solid var(--primary); border-radius: 2.2mm;
             background: var(--bg); box-sizing: border-box;
         }
@@ -74,50 +77,50 @@
         }
         .sheet-card > * { position: absolute; z-index: 1; }
 
-        .sheet-ministry { left: 3mm; top: 2mm; width: 56mm; font-size: 1.55mm; line-height: 1.08; font-weight: 900; }
-        .sheet-republic { right: 3mm; top: 2mm; width: 23mm; text-align: center; font-size: 1.65mm; line-height: 1.08; font-weight: 900; }
+        .sheet-ministry { left: 3mm; top: 2mm; width: 55mm; font-size: 1.8mm; line-height: 1.08; font-weight: 900; }
+        .sheet-republic { right: 2.5mm; top: 2mm; width: 25mm; text-align: center; font-size: 1.85mm; line-height: 1.08; font-weight: 900; }
         .sheet-flag { width: 10mm; height: 5.8mm; margin: .8mm auto 0; border: .18mm solid rgba(17, 24, 39, .2); }
         .sheet-flag i { display: block; float: left; width: 33.33%; height: 100%; }
         .sheet-flag i:nth-child(1) { background: #14b53a; }
         .sheet-flag i:nth-child(2) { background: #fcd116; }
         .sheet-flag i:nth-child(3) { background: #ce1126; }
 
-        .sheet-title { left: 3mm; top: 11mm; width: 62mm; color: var(--primary); font-size: 2.45mm; line-height: 1.08; font-weight: 900; overflow-wrap: break-word; }
+        .sheet-title { left: 3mm; top: 11.5mm; width: 62mm; color: var(--primary); font-size: 2.55mm; line-height: 1.08; font-weight: 900; overflow-wrap: break-word; }
 
         .sheet-photo {
-            left: 3mm; top: 22.5mm; width: 15mm; height: 19mm; border: .3mm solid #1f2937;
+            left: 3mm; top: 23mm; width: 17mm; height: 21.5mm; border: .3mm solid #1f2937;
             border-radius: 1.4mm; overflow: hidden; background: #e5e7eb; text-align: center;
-            line-height: 19mm; color: #6b7280; font-size: 4mm; font-weight: 900;
+            line-height: 21.5mm; color: #6b7280; font-size: 4.5mm; font-weight: 900;
         }
         .sheet-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-        .sheet-name { left: 23mm; top: 22.5mm; width: 58mm; color: var(--primary); font-size: 2mm; line-height: 1.05; font-weight: 900; }
+        .sheet-name { left: 22.5mm; top: 22.6mm; width: 60mm; color: var(--primary); font-size: 2.55mm; line-height: 1.05; font-weight: 900; }
 
-        .sheet-fields { left: 23mm; top: 26mm; width: 58mm; }
+        .sheet-fields { left: 22.5mm; top: 26mm; width: 60.5mm; }
         .sheet-fields div {
-            position: relative; min-height: 2.55mm; border-bottom: .15mm solid rgba(17, 24, 39, .15);
-            line-height: 1.05; font-size: 1.55mm; clear: both;
+            position: relative; height: 2.62mm; border-bottom: .15mm solid rgba(17, 24, 39, .15);
+            line-height: 2.62mm; font-size: 1.95mm; clear: both; overflow: hidden;
         }
-        .sheet-fields strong { display: block; float: left; width: 13mm; color: #4b5563; font-weight: 900; }
-        .sheet-fields span { display: block; margin-left: 13.5mm; font-weight: 800; overflow-wrap: break-word; word-break: break-word; }
+        .sheet-fields strong { display: block; float: left; width: 14.5mm; color: #4b5563; font-weight: 900; }
+        .sheet-fields span { display: block; margin-left: 15mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 800; overflow-wrap: break-word; word-break: break-word; }
 
         /* Verso — comme la carte ligue (Kieup) : on coupe en suivant le recto, et le verso
            n'a ni cadre ni fond, avec son contenu à 6mm des bords. Le décalage que fait
            l'imprimante entre les deux faces (constaté ~5mm) reste alors invisible au lieu
            de couper le texte ou de faire apparaître un cadre décalé.
-           Hauteur : titre 6mm + tableau ≤ 39,8mm + signature 5,6mm (lignes fixes --grade-row). */
+           Hauteur : titre 6,3mm + en-tête 3,6mm + lignes ≤ 34,8mm + signature 5,6mm (lignes fixes --grade-row). */
         .sheet-card-back { border: 0; border-radius: 0; background: #fff; }
         .sheet-card-back::before, .sheet-card-back::after { display: none; }
 
-        .sheet-signature { left: 6mm; right: 6mm; bottom: 2.2mm; height: 5.6mm; color: #4b5563; text-align: center; font-size: 1.35mm; font-weight: 900; }
+        .sheet-signature { left: 6mm; right: 6mm; bottom: 2mm; height: 5.6mm; color: #4b5563; text-align: center; font-size: 1.7mm; font-weight: 900; }
         .sheet-signature img { height: 3.8mm; max-width: 34mm; object-fit: contain; display: block; margin: 0 auto .2mm; }
         .sheet-signature span { display: block; line-height: 1.05; text-transform: uppercase; }
 
         .sheet-grade-title {
             left: 6mm; right: 6mm; top: 2.2mm; color: #374151; text-align: center; line-height: 1;
-            font-family: Georgia, "Times New Roman", serif; font-size: 3.4mm; font-weight: 900;
+            font-family: Georgia, "Times New Roman", serif; font-size: 3.6mm; font-weight: 900;
         }
-        .sheet-grade-table-wrap { left: 6mm; right: 6mm; top: 6mm; }
+        .sheet-grade-table-wrap { left: 6mm; right: 6mm; top: 6.3mm; }
         .sheet-grade-table {
             width: 100%; border-collapse: collapse; table-layout: fixed;
             background: #fff; color: #111827; font-family: Georgia, "Times New Roman", serif;
@@ -126,14 +129,14 @@
             box-sizing: border-box; border: .22mm solid rgba(31, 41, 55, .82); padding: 0 .6mm; line-height: 1; vertical-align: middle;
             white-space: nowrap; overflow: hidden;
         }
-        .sheet-grade-table th { height: 3mm; text-align: center; font-size: 1.3mm; font-weight: 900; }
-        .sheet-grade-table td { height: var(--grade-row); font-size: 1.8mm; font-weight: 800; }
+        .sheet-grade-table th { height: 3.6mm; text-align: center; font-size: 1.62mm; font-weight: 900; }
+        .sheet-grade-table td { height: var(--grade-row); font-size: 2.2mm; font-weight: 800; }
         .sheet-grade-table th:nth-child(1), .sheet-grade-table td:nth-child(1) { width: 22%; }
         .sheet-grade-table th:nth-child(2), .sheet-grade-table td:nth-child(2) { width: 27%; }
         .sheet-grade-table th:nth-child(3), .sheet-grade-table td:nth-child(3) { width: 51%; }
         .sheet-grade-sig { display: flex; align-items: center; justify-content: center; gap: .6mm; height: calc(var(--grade-row) - .3mm); overflow: hidden; }
         .sheet-grade-sig img { height: 100%; max-width: 12mm; flex: none; object-fit: contain; display: block; }
-        .sheet-grade-sig span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 1.15mm; font-weight: 800; text-transform: uppercase; }
+        .sheet-grade-sig span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 1.4mm; font-weight: 800; text-transform: uppercase; }
 
         .empty-sheet { padding-top: 80mm; text-align: center; color: #6b7280; font-weight: 800; }
 
@@ -149,7 +152,8 @@
     </style>
 </head>
 @php
-    $chunks = collect($cards)->chunk(8);
+    // 6 cartes par feuille (3 rangées de 2) : plus d'espace entre les rangées pour la coupe.
+    $chunks = collect($cards)->chunk(6);
 @endphp
 <body>
     <div class="sheet-actions">
@@ -218,7 +222,7 @@
                                     <div class="sheet-card sheet-card-back">
                                         <div class="sheet-grade-title">GRADES</div>
                                         <div class="sheet-grade-table-wrap">
-                                            <table class="sheet-grade-table" style="--grade-row: {{ min(3.6, 36.8 / max(count($c['grade_rows']), 1)) }}mm;">
+                                            <table class="sheet-grade-table" style="--grade-row: {{ min(3.85, 34.8 / max(count($c['grade_rows']), 1)) }}mm;">
                                                 <thead>
                                                     <tr>
                                                         <th>Grade</th>

@@ -46,7 +46,9 @@
             <tbody>
                 @forelse($salles as $salle)
                     <tr>
-                        <td class="fw-semibold">{{ $salle->nom }}</td>
+                        <td class="fw-semibold">{{ $salle->nom }}
+                            @if($salle->salleMere)<small class="d-block text-muted fw-normal"><i class="fas fa-level-up-alt fa-rotate-90 me-1"></i>{{ __('messages.salles.derives_from', ['mere' => $salle->salleMere->nom]) }}</small>@endif
+                        </td>
                         <td>{{ $salle->ligue?->nom ?? '-' }}</td>
                         <td>{{ $salle->maitre_display_name ?? '-' }}</td>
                         <td>{{ $salle->mensualite ? number_format($salle->mensualite, 0, ',', ' ') . ' FCFA' : '-' }}</td>

@@ -33,6 +33,16 @@
                 </select>
             </div>
             <div class="col-md-6">
+                <label class="form-label">{{ __('messages.salles.mere') }}</label>
+                <select name="salle_mere_id" class="form-select">
+                    <option value="">{{ __('messages.salles.no_mere') }}</option>
+                    @foreach($meres ?? [] as $mere)
+                        <option value="{{ $mere->id }}" {{ (string) old('salle_mere_id', $salle->salle_mere_id) === (string) $mere->id ? 'selected' : '' }}>{{ $mere->nom }}</option>
+                    @endforeach
+                </select>
+                <small class="text-muted">{{ __('messages.salles.mere_help') }}</small>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label">{{ __('messages.salles.monthly_fee') }} (FCFA)</label>
                 <input type="number" step="0.01" min="0" name="mensualite" class="form-control" value="{{ old('mensualite', $salle->mensualite) }}">
             </div>
