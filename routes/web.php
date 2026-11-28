@@ -178,6 +178,8 @@ Route::middleware('auth')->group(function () {
             Route::post('athletes-disciples', [CompetitionAthleteController::class, 'addDisciples'])->name('athletes.disciples');
             Route::post('athletes-ranger', [CompetitionAthleteController::class, 'assign'])->name('athletes.assign');
             Route::post('pesee', [CompetitionAthleteController::class, 'weighIn'])->name('athletes.weigh');
+            Route::post('pesee/ajout', [CompetitionAthleteController::class, 'quickAdd'])->name('athletes.quick');
+            Route::post('pesee/athletes/{athlete}', [CompetitionAthleteController::class, 'quickUpdate'])->name('athletes.quick-update');
             Route::post('import', [CompetitionAthleteController::class, 'import'])->name('athletes.import');
             Route::get('import/apercu', [CompetitionAthleteController::class, 'preview'])->name('athletes.preview');
             Route::post('import/confirmer', [CompetitionAthleteController::class, 'confirm'])->name('athletes.confirm');

@@ -227,7 +227,174 @@ class CompetitionAthleteController extends Controller
      * Pesée : enregistre les poids saisis (champ poids[id]) et range chaque athlète pesé
      * dans sa catégorie. Une catégorie au tirage validé n'est pas modifiée.
      */
-    public function weighIn(Request $request, Competition $competition): RedirectResponse
+    /**
+     * Pesée : ajout sur place d'un athlète absent de la liste (prénom, nom, sexe, âge ou
+     * naissance, club, poids). Rangé aussitôt dans sa catégorie ; refusé s'il est déjà inscrit.
+     */
+    public function quickAdd(Request $request, Competition $competition): \Illuminate\Http\JsonResponse
+    {
+        $this->guardScope($competition);
+        $groups = CompetitionController::groups($competition->load('categories'));
+        $data = $request->validate([
+            'prenom' => ['required', 'string', 'max:100'],
+            'nom' => ['required', 'string', 'max:100'],
+            'sexe' => ['nullable', Rule::in(['M', 'F'])],
+            'naissance' => ['nullable', 'string', 'max:20'],
+            'club' => ['nullable', 'string', 'max:150'],
+            'poids' => ['nullable', 'string', 'max:10'],
+            'groupe' => ['nullable', Rule::in(array_keys($groups))],
+        ]);
+        $year = $competition->referenceYear();
+        $birth = trim((string) ($data['naissance'] ?? ''));
+        $date = null;
+        $age = null;
+        if (preg_match('/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/', $birth, $m) && checkdate((int) $m[2], (int) $m[1], (int) $m[3])) {
+            $date = sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+        } elseif (preg_match('/^(19|20)\d{2}$/', $birth)) {
+            $age = $year - (int) $birth;
+        } elseif (preg_match('/^\d{1,2}$/', $birth)) {
+            $age = (int) $birth;
+        } elseif ($birth !== '') {
+            throw ValidationException::withMessages(['naissance' => __('messages.competitions.quick_birth_invalid')]);
+        }
+        $poids = null;
+        if (trim((string) ($data['poids'] ?? '')) !== '') {
+            $raw = str_replace([',', ' ', 'kg'], ['.', '', ''], trim($data['poids']));
+            if (!is_numeric($raw) || (float) $raw < 10 || (float) $raw > 200) {
+                throw ValidationException::withMessages(['poids' => __('messages.competitions.quick_weight_invalid')]);
+            }
+            $poids = (float) $raw;
+        }
+
+        // Déjà inscrit (même prénom et nom, année de naissance compatible) : pas de doublon.
+        $key = \App\Services\Competition\KnownAthletes::nameKey($data['prenom'], $data['nom']);
+        $birthYear = $date ? (int) substr($date, 0, 4) : ($age ? $year - $age : null);
+        $same = $competition->athletes()->get()->first(fn ($a) => \App\Services\Competition\KnownAthletes::samePerson(
+            ['key' => \App\Services\Competition\KnownAthletes::nameKey($a->prenom, $a->nom), 'year' => $a->date_naissance?->year ?? ($a->age ? $year - $a->age : null)],
+            ['key' => $key, 'year' => $birthYear]
+        ));
+        if ($same) {
+            throw ValidationException::withMessages(['nom' => __('messages.competitions.quick_exists', ['name' => $same->fullName()])]);
+        }
+
+        $athlete = new CompetitionAthlete([
+            'competition_id' => $competition->id,
+            'prenom' => trim($data['prenom']),
+            'nom' => trim($data['nom']),
+            'sexe' => $data['sexe'] ?? null,
+            'date_naissance' => $date,
+            'age' => $date ? null : $age,
+            'club' => trim((string) ($data['club'] ?? '')) ?: null,
+            'poids' => $poids,
+            'groupe' => $data['groupe'] ?? null,
+        ]);
+        $category = $poids !== null ? (new CategoryAssigner($competition))->categoryFor($athlete) : null;
+        if ($category?->tirage_valide) {
+            $category = null; // un tirage validé ne reçoit pas d'athlète : reste « non classé »
+        }
+        if ($category) {
+            $this->draws->beforeChange($category);
+        }
+        $athlete->category_id = $category?->id;
+        $athlete->save();
+        $redraw = $this->draws->redrawCanceled();
+        ActivityLog::log(action: 'create', subject: 'Competition', subjectId: $competition->id,
+            description: 'Athlète ajouté à la pesée : ' . $athlete->fullName() . ' — ' . $competition->nom);
+
+        $labels = CompetitionController::categoryLabels($competition->fresh()->load('categories'));
+
+        return response()->json([
+            'athlete' => [
+                'id' => $athlete->id,
+                'prenom' => $athlete->prenom,
+                'nom' => $athlete->nom,
+                'age' => $athlete->sportAge($year),
+                'naissance' => $athlete->date_naissance?->format('d/m/Y') ?? ($athlete->age ? (string) $athlete->age : ''),
+                'sexe' => $athlete->sexe,
+                'club' => $athlete->club,
+                'poids' => $poids !== null ? \App\Models\CompetitionCategory::formatKg($poids) : '',
+                'category' => $category ? ($labels[$category->id] ?? '') : null,
+                'group' => $category?->groupKey() ?? $athlete->groupe,
+            ],
+            'message' => __('messages.competitions.quick_added', ['name' => $athlete->fullName()]),
+            'redraw' => $redraw,
+        ]);
+    }
+
+    /**
+     * Pesée : correction sur place du club ou de l'âge (âge, année ou date de naissance) d'un
+     * athlète. Un nouvel âge peut changer son groupe : il est rangé à nouveau aussitôt.
+     */
+    public function quickUpdate(Request $request, Competition $competition, CompetitionAthlete $athlete): \Illuminate\Http\JsonResponse
+    {
+        $this->guardScope($competition);
+        abort_unless($athlete->competition_id === $competition->id, 404);
+        $data = $request->validate(['club' => ['nullable', 'string', 'max:150'], 'naissance' => ['nullable', 'string', 'max:20']]);
+        $year = $competition->referenceYear();
+
+        if ($request->has('club')) {
+            $athlete->club = trim((string) ($data['club'] ?? '')) ?: null;
+        }
+        if ($request->has('naissance')) {
+            $birth = trim((string) ($data['naissance'] ?? ''));
+            if ($birth === '') {
+                $athlete->date_naissance = null;
+                $athlete->age = null;
+            } elseif (preg_match('/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/', $birth, $m) && checkdate((int) $m[2], (int) $m[1], (int) $m[3])) {
+                $athlete->date_naissance = sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+                $athlete->age = null;
+            } elseif (preg_match('/^(19|20)\d{2}$/', $birth)) {
+                $athlete->date_naissance = null;
+                $athlete->age = $year - (int) $birth;
+            } elseif (preg_match('/^\d{1,2}$/', $birth)) {
+                $athlete->date_naissance = null;
+                $athlete->age = (int) $birth;
+            } else {
+                throw ValidationException::withMessages(['naissance' => __('messages.competitions.quick_birth_invalid')]);
+            }
+        }
+        if (!$athlete->isDirty()) {
+            return $this->athleteRow($competition, $athlete, null);
+        }
+
+        // Rangement à nouveau (le club compte pour la séparation des clubs au tirage).
+        $old = $athlete->category;
+        $new = $athlete->poids !== null ? (new CategoryAssigner($competition))->categoryFor($athlete) : $old;
+        if ($old?->tirage_valide || ($new?->id !== $old?->id && $new?->tirage_valide)) {
+            throw ValidationException::withMessages(['naissance' => __('messages.competitions.weighed_locked', ['names' => $athlete->fullName()])]);
+        }
+        $this->draws->beforeChange($old);
+        if ($new && $new->id !== $old?->id) {
+            $this->draws->beforeChange($new);
+        }
+        $athlete->category_id = $new?->id;
+        $athlete->save();
+
+        return $this->athleteRow($competition, $athlete->fresh(), $this->draws->redrawCanceled());
+    }
+
+    /** Ligne de pesée d'un athlète, pour la mise à jour sur place. */
+    private function athleteRow(Competition $competition, CompetitionAthlete $athlete, ?string $redraw): \Illuminate\Http\JsonResponse
+    {
+        $labels = CompetitionController::categoryLabels($competition->fresh()->load('categories'));
+        $athlete->load('category');
+
+        return response()->json([
+            'row' => [
+                'id' => $athlete->id,
+                'age' => $athlete->sportAge($competition->referenceYear()),
+                'naissance' => $athlete->date_naissance?->format('d/m/Y') ?? ($athlete->age ? (string) $athlete->age : ''),
+                'club' => $athlete->club,
+                'poids' => $athlete->poids !== null ? \App\Models\CompetitionCategory::formatKg((float) $athlete->poids) : '',
+                'category' => $athlete->category_id ? ($labels[$athlete->category_id] ?? '') : null,
+                'locked' => (bool) $athlete->category?->tirage_valide,
+                'group' => $athlete->category?->groupKey() ?? $athlete->groupe,
+            ],
+            'redraw' => $redraw,
+        ]);
+    }
+
+    public function weighIn(Request $request, Competition $competition): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->guardScope($competition);
         $request->validate(['poids' => ['required', 'array']]);
@@ -237,14 +404,17 @@ class CompetitionAthleteController extends Controller
         $saved = 0;
         $invalid = [];
         $locked = [];
+        $status = []; // id => saved | invalid | locked | unchanged | cleared (pour l'enregistrement automatique)
 
         foreach ($athletes as $athlete) {
             $raw = str_replace([',', ' ', 'kg'], ['.', '', ''], trim((string) $request->input('poids.' . $athlete->id)));
             if ($raw === '' || ($athlete->poids !== null && (float) $raw === (float) $athlete->poids)) {
+                $status[$athlete->id] = 'unchanged';
                 continue; // rien saisi, ou poids inchangé
             }
             if (!is_numeric($raw) || (float) $raw < 10 || (float) $raw > 200) {
                 $invalid[] = $athlete->fullName();
+                $status[$athlete->id] = 'invalid';
                 continue;
             }
 
@@ -253,6 +423,7 @@ class CompetitionAthleteController extends Controller
             $new = $assigner->categoryFor($athlete);
             if ($old?->tirage_valide || $new?->tirage_valide) {
                 $locked[] = $athlete->fullName();
+                $status[$athlete->id] = 'locked';
                 continue;
             }
             $this->draws->beforeChange($old);
@@ -262,6 +433,29 @@ class CompetitionAthleteController extends Controller
             $athlete->category_id = $new?->id;
             $athlete->save();
             $saved++;
+            $status[$athlete->id] = 'saved';
+        }
+
+        $redraw = $this->draws->redrawCanceled();
+
+        // Enregistrement automatique (un poids à la fois) : réponse JSON pour mettre la ligne à jour.
+        if ($request->wantsJson()) {
+            $labels = CompetitionController::categoryLabels($competition->fresh()->load('categories'));
+            $rows = $competition->athletes()->with('category')->whereIn('id', array_keys($status))->get()->map(fn ($a) => [
+                'id' => $a->id,
+                'status' => $status[$a->id],
+                'poids' => $a->poids !== null ? \App\Models\CompetitionCategory::formatKg((float) $a->poids) : '',
+                'category' => $a->category_id ? ($labels[$a->category_id] ?? '') : null,
+                'locked' => (bool) $a->category?->tirage_valide,
+                'group' => $a->category?->groupKey(),
+                'message' => match ($status[$a->id]) {
+                    'invalid' => __('messages.competitions.weighed_invalid', ['names' => $a->fullName()]),
+                    'locked' => __('messages.competitions.weighed_locked', ['names' => $a->fullName()]),
+                    default => null,
+                },
+            ])->values();
+
+            return response()->json(['rows' => $rows, 'redraw' => $redraw]);
         }
 
         $redirect = redirect()->route('admin.competitions.show', [$competition, 'tab' => 'pesee'])
@@ -273,7 +467,7 @@ class CompetitionAthleteController extends Controller
         if ($locked) {
             $warnings[] = __('messages.competitions.weighed_locked', ['names' => implode(', ', $locked)]);
         }
-        if ($redraw = $this->draws->redrawCanceled()) {
+        if ($redraw) {
             $warnings[] = $redraw; // tirages provisoires refaits avec les nouveaux poids
         }
 

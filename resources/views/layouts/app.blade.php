@@ -900,6 +900,80 @@
             dojoShowButtonSpinner(e.submitter || form.querySelector('button[type="submit"], input[type="submit"]'));
         });
 
+        // Dates de naissance : saisie au clavier « jj/mm/aaaa » au lieu du calendrier (pénible pour
+        // remonter les années). Le champ date d'origine reste dans le formulaire, caché, et porte
+        // la valeur envoyée (aaaa-mm-jj) ; le bouton 📅 l'ouvre pour qui préfère le calendrier.
+        // Concerne les champs date dont le nom contient « naissance », ou marqués data-typed-date.
+        (function () {
+            function iso(text) {
+                var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+                if (!m) { return null; }
+                var d = new Date(+m[3], +m[2] - 1, +m[1]);
+                if (d.getFullYear() !== +m[3] || d.getMonth() !== +m[2] - 1 || d.getDate() !== +m[1]) { return null; }
+                return m[3] + '-' + m[2] + '-' + m[1];
+            }
+            function display(value) {
+                var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || '');
+                return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
+            }
+            function enhance(native) {
+                if (native.dataset.typedReady) { return; }
+                native.dataset.typedReady = '1';
+                var text = document.createElement('input');
+                text.type = 'text';
+                text.className = native.className;
+                text.placeholder = 'jj/mm/aaaa';
+                text.inputMode = 'numeric';
+                text.autocomplete = 'off';
+                text.maxLength = 10;
+                text.required = native.required;
+                text.disabled = native.disabled;
+                text.value = display(native.value);
+                if (native.id) { text.id = native.id; native.removeAttribute('id'); } // les <label for> visent la saisie
+
+                var group = document.createElement('div');
+                group.className = 'input-group';
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'btn btn-outline-secondary';
+                button.title = 'Calendrier';
+                button.textContent = '📅';
+                button.disabled = native.disabled;
+                native.parentNode.insertBefore(group, native);
+                group.appendChild(text);
+                group.appendChild(button);
+                group.appendChild(native);
+                // Caché mais présent : il garde son nom et sa valeur pour l'envoi du formulaire.
+                native.required = false;
+                native.tabIndex = -1;
+                native.setAttribute('aria-hidden', 'true');
+                native.style.cssText = 'position:absolute;opacity:0;width:1px;height:1px;padding:0;border:0;pointer-events:none;right:0;bottom:0;';
+
+                function sync() {
+                    var digits = text.value.replace(/\D/g, '').slice(0, 8);
+                    var formatted = digits.length > 4 ? digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4)
+                        : digits.length > 2 ? digits.slice(0, 2) + '/' + digits.slice(2) : digits;
+                    if (formatted !== text.value) { text.value = formatted; }
+                    var value = formatted === '' ? '' : iso(formatted);
+                    native.value = value || '';
+                    text.setCustomValidity(formatted !== '' && !value ? 'Date invalide : écrivez jj/mm/aaaa (ex. 12/03/2009)' : '');
+                    native.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                text.addEventListener('input', sync);
+                text.addEventListener('blur', function () { if (text.validationMessage) { text.reportValidity(); } });
+                button.addEventListener('click', function () {
+                    try { native.showPicker(); } catch (e) { native.style.pointerEvents = 'auto'; native.focus(); native.click(); }
+                });
+                native.addEventListener('input', function () { text.value = display(native.value); text.setCustomValidity(''); });
+                native.addEventListener('change', function (e) { if (e.isTrusted) { text.value = display(native.value); text.setCustomValidity(''); } });
+            }
+            function scan(root) {
+                (root || document).querySelectorAll('input[type="date"][name*="naissance"], input[type="date"][data-typed-date]').forEach(enhance);
+            }
+            document.addEventListener('DOMContentLoaded', function () { scan(); });
+            window.dojoTypedDates = scan;
+        })();
+
         window.dojoConfirmDelete = function (formEl, message) {
             if (!window.Swal) { return confirm(message || 'Confirmer ?'); }
             Swal.fire({
